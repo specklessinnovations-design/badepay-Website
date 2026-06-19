@@ -1,49 +1,50 @@
-import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
+import React from 'react';
+import { Loader2 } from 'lucide-react';
 
-import { cn } from "@/lib/utils";
-
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground shadow hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
-        outline:
-          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
-
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  size?: 'sm' | 'md' | 'lg' | 'icon';
+  isLoading?: boolean;
+  fullWidth?: boolean;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
-    return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
-    );
-  },
-);
-Button.displayName = "Button";
+export const buttonVariants = ({ variant = 'primary', size = 'md', fullWidth = false }: Partial<ButtonProps>) => {
+  const baseStyles =
+    'inline-flex items-center justify-center rounded-xl font-bold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98]';
 
-export { Button, buttonVariants };
+  const variants = {
+    primary:
+      'bg-[#6fe8d6] text-[#1a1a1a] shadow-[0_4px_16px_rgba(111,232,214,0.25)] hover:bg-[#5dd4c0] focus:ring-[#6fe8d6]',
+    secondary:
+      'bg-[var(--surface-secondary)] text-[var(--text-primary)] shadow-[0_2px_8px_rgba(0,0,0,0.1)] hover:bg-[var(--surface-tertiary)] focus:ring-[var(--accent)]',
+    outline:
+      'border-2 border-[var(--border)] bg-transparent text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] focus:ring-[var(--accent)]',
+    ghost: 'bg-transparent text-[var(--text-primary)] hover:bg-[var(--surface-secondary)] focus:ring-[var(--accent)]',
+    danger:
+      'bg-[var(--color-danger)] text-white shadow-[0_2px_12px_rgba(239,68,68,0.25)] hover:bg-[#DC2626] focus:ring-[var(--color-danger)]',
+  };
+
+  const sizes = {
+    sm: 'h-9 px-4 text-sm',
+    md: 'h-11 px-6 text-sm',
+    lg: 'h-14 px-8 text-base',
+    icon: 'h-10 w-10',
+  };
+
+  return `${baseStyles} ${variants[variant as keyof typeof variants] || variants.primary} ${sizes[size as keyof typeof sizes] || sizes.md} ${fullWidth ? 'w-full' : ''}`;
+};
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className = '', variant = 'primary', size = 'md', isLoading = false, fullWidth = false, children, disabled, ...props }, ref) => {
+    const classes = `${buttonVariants({ variant, size, fullWidth })} ${className}`;
+
+    return (
+      <button ref={ref} className={classes} disabled={isLoading || disabled} {...props}>
+        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {children}
+      </button>
+    );
+  }
+);
+
+Button.displayName = 'Button';

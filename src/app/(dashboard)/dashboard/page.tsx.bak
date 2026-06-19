@@ -1,0 +1,260 @@
+'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  Plus,
+  Send,
+  ArrowLeftRight,
+  QrCode,
+  Receipt,
+  Smartphone,
+  Wifi,
+  Zap,
+  Tv,
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+} from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useTransactionStore } from '@/store/useTransactionStore';
+import { formatNGN, formatTimeAgo } from '@/utils/formatting';
+import {
+  getGreeting,
+  formatAccountDisplay,
+  computeMonthlyChange,
+  getKycTierInfo,
+  formatDisplayName,
+} from '@/lib/personalHelpers';
+import { HomeWalletModals, type HomeModalType } from '@/components/dashboard/HomeWalletModals';
+
+type QuickActionId = 'add' | 'send' | 'transfer' | 'scan' | 'bills';
+
+const QUICK_ACTIONS: { id: QuickActionId; label: string; icon: React.ElementType; href?: string }[] = [
+  { id: 'add', label: 'Add money', icon: Plus },
+  { id: 'send', label: 'Send', icon: Send },
+  { id: 'transfer', label: 'Transfer', icon: ArrowLeftRight },
+  { id: 'scan', label: 'Scan', icon: QrCode, href: '/scan' },
+  { id: 'bills', label: 'Bills', icon: Receipt, href: '/bills' },
+];
+
+const PAY_TOP_UP = [
+  { label: 'Airtime', icon: Smartphone, href: '/bills?type=airtime' },
+  { label: 'Data', icon: Wifi, href: '/bills?type=data' },
+  { label: 'Electricity', icon: Zap, href: '/bills?type=electricity' },
+  { label: 'Cable TV', icon: Tv, href: '/bills?type=cable' },
+];
+
+export default function DashboardHome() {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const syncUserFromStorage = useAuthStore((s) => s.syncUserFromStorage);
+  const transactions = useTransactionStore((s) => s.transactions);
+  const recent = useMemo(() => transactions.slice(0, 3), [transactions]);
+  const [showBalance, setShowBalance] = useState(true);
+
+  useEffect(() => {
+    syncUserFromStorage();
+  }, [syncUserFromStorage]);
+
+  if (!user) return null;
+
+  const monthlyChange = computeMonthlyChange(transactions);
+  const kyc = getKycTierInfo(user.kycLevel);
+  const accountDisplay = formatAccountDisplay(user.accountNumber);
+
+  const handleQuickAction = (id: QuickActionId, href?: string) => {
+    if (href) {
+      router.push(href);
+      return;
+    }
+    if (id === 'add') {
+      router.push('/add-money');
+    } else if (id === 'send') {
+      router.push('/send');
+    } else if (id === 'transfer') {
+      router.push('/transfer');
+    }
+  };
+
+  return (
+    <div className="space-y-6 lg:space-y-8">
+      <div className="flex items-center justify-between pt-1 lg:pt-0">
+        <span className="text-xs font-bold tracking-widest text-[var(--text-tertiary)] uppercase">Dashboard</span>
+      </div>
+
+      <section className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+        <div>
+          <p className="text-sm font-bold text-[var(--text-secondary)]">{getGreeting()}</p>
+          <h1 className="text-display lg:text-4xl font-black">
+            {formatDisplayName(user.firstName)}
+          </h1>
+        </div>
+
+        <div className="surface-card relative mt-5 overflow-hidden p-6 lg:mt-0 bg-gradient-to-br from-[var(--card)] to-[var(--surface-secondary)]">
+          <div
+            className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-30"
+            style={{ background: 'radial-gradient(circle, rgba(197,255,65,0.4) 0%, transparent 70%)' }}
+          />
+          <div
+            className="pointer-events-none absolute -left-8 -bottom-8 h-24 w-24 rounded-full opacity-20"
+            style={{ background: 'radial-gradient(circle, rgba(197,255,65,0.3) 0%, transparent 70%)' }}
+          />
+          <div className="relative z-10">
+            <p className="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wider">Available balance</p>
+            <div className="mt-2 flex items-center gap-3">
+              <p className="text-4xl font-black text-[var(--text-primary)] tracking-tight">
+                {showBalance ? formatNGN(user.balance) : '₦ ••••••'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowBalance(!showBalance)}
+                className="rounded-full p-2 text-[var(--text-tertiary)] hover:bg-[var(--surface-tertiary)] transition-colors icon-hover-effect"
+                aria-label={showBalance ? 'Hide balance' : 'Show balance'}
+              >
+                {showBalance ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            <p className="mt-3 text-sm font-semibold text-[var(--text-tertiary)]">
+              {accountDisplay || '—'} · BadePay
+            </p>
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--surface-tertiary)] px-4 py-2">
+              {monthlyChange >= 0 ? (
+                <TrendingUp size={16} className="text-[#10B981]" />
+              ) : (
+                <TrendingDown size={16} className="text-[#EF4444]" />
+              )}
+              <span className={`text-sm font-bold ${monthlyChange >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                {monthlyChange >= 0 ? '+' : ''}
+                {monthlyChange.toFixed(1)}% this month
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-lg font-black text-[var(--text-primary)]">Quick Actions</h2>
+        <div className="grid grid-cols-5 gap-3 sm:gap-4 lg:grid-cols-5 lg:max-w-2xl">
+          {QUICK_ACTIONS.map(({ id, label, icon: Icon, href }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleQuickAction(id, href)}
+              className="group flex flex-col items-center gap-3 rounded-2xl p-4 transition-all duration-300 hover:scale-105 hover:bg-[var(--surface-secondary)] active:scale-95 border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-sm)]"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#c5ff41]/10 border border-[#c5ff41]/20 shadow-[var(--shadow-glow)] transition-all duration-300 group-hover:bg-[#c5ff41]/20 group-hover:scale-110">
+                <Icon size={24} className="text-[#c5ff41]" />
+              </div>
+              <span className="text-center text-xs font-bold text-[var(--text-primary)]">{label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {user.kycLevel < 2 && kyc.nextBenefit && (
+        <Link
+          href="/profile/kyc"
+          className="surface-card flex items-center justify-between border-2 border-[#c5ff41]/30 bg-gradient-to-r from-[#c5ff41]/10 to-transparent p-5 glow-accent transition-all duration-300 hover:scale-[1.02] hover:border-[#c5ff41]/50"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#c5ff41]/20">
+              <ShieldCheck size={24} className="text-[#c5ff41]" />
+            </div>
+            <div>
+              <p className="font-black text-[var(--text-primary)]">Complete Tier 2 verification</p>
+              <p className="mt-1 text-sm font-bold text-[var(--text-secondary)]">{kyc.nextBenefit}</p>
+            </div>
+          </div>
+          <ChevronRight size={24} className="shrink-0 text-[#c5ff41]" />
+        </Link>
+      )}
+
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-black text-[var(--text-primary)]">Pay & top up</h2>
+          <Link href="/bills" className="text-sm font-bold text-[#c5ff41] hover:text-[#b8e63a] transition-colors">
+            See all →
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-4">
+          {PAY_TOP_UP.map(({ label, icon: Icon, href }) => (
+            <Link
+              key={label}
+              href={href}
+              className="surface-card surface-card-interactive group flex flex-col items-center gap-3 p-5"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#c5ff41]/10 border border-[#c5ff41]/20 transition-all duration-300 group-hover:bg-[#c5ff41]/20 group-hover:scale-110 group-hover:shadow-[var(--shadow-glow)]">
+                <Icon size={28} className="text-[#c5ff41]" />
+              </div>
+              <span className="text-sm font-bold text-[var(--text-primary)]">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-black text-[var(--text-primary)]">Recent activity</h2>
+          <Link href="/activity" className="text-sm font-bold text-[#c5ff41] hover:text-[#b8e63a] transition-colors">
+            View all →
+          </Link>
+        </div>
+
+        {recent.length === 0 ? (
+          <div className="surface-card p-10 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--surface-secondary)]">
+              <ArrowLeftRight size={32} className="text-[var(--text-tertiary)]" />
+            </div>
+            <p className="font-black text-[var(--text-primary)]">No activity yet</p>
+            <p className="mt-2 text-sm font-bold text-[var(--text-secondary)]">
+              Your transfers, payments and card usage will appear here.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push('/add-money')}
+              className="mt-6 rounded-full bg-[#c5ff41] px-8 py-3 text-sm font-black text-[#1a1a1a] shadow-[var(--shadow-glow)] transition-all duration-300 hover:scale-105 hover:shadow-[var(--shadow-glow-strong)]"
+            >
+              Add money
+            </button>
+          </div>
+        ) : (
+          <div className="surface-card divide-y divide-[var(--border)]">
+            {recent.map((tx) => (
+              <Link
+                key={tx.id}
+                href="/activity"
+                className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-[var(--surface-secondary)]"
+              >
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-secondary)]">
+                    {tx.type === 'credit' ? (
+                      <TrendingDown size={20} className="text-[#10B981]" />
+                    ) : (
+                      <TrendingUp size={20} className="text-[#EF4444]" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-black text-[var(--text-primary)]">{tx.name}</p>
+                    <p className="text-xs font-bold text-[var(--text-tertiary)]">{formatTimeAgo(tx.date)}</p>
+                  </div>
+                </div>
+                <p
+                  className={`ml-4 font-black ${tx.type === 'credit' ? 'text-[#10B981]' : 'text-[var(--text-primary)]'}`}
+                >
+                  {tx.type === 'credit' ? '+' : '−'}
+                  {formatNGN(tx.amount)}
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+    </div>
+  );
+}

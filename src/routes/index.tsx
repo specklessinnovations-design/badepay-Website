@@ -1136,7 +1136,7 @@ export default function LandingPage() {
                 <p style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", fontWeight: 300, lineHeight: 1.8, marginBottom: 10 }}>No POS machine. No long waits. Just a QR code — customers pay instantly in naira.</p>
                 <p style={{ fontSize: 12, fontStyle: "italic", color: "rgba(255,255,255,0.2)", marginBottom: 36 }}>Your QR Code. Your Business. Instant Naira Payments.</p>
                 <div className="cta-btns" style={{ display: "flex", gap: 12 }}>
-                  <Link to="/register?role=merchant" onClick={handleGetStartedClick}><button className="btn-lime">Register Your Business</button></Link>
+                  <Link to="/register" search={{ role: "merchant" }} onClick={handleGetStartedClick}><button className="btn-lime">Register Your Business</button></Link>
                   <button className="btn-ghost-dark" onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}>Request a Demo</button>
                 </div>
               </div>

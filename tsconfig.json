@@ -13,8 +13,12 @@
     "noEmit": true,
 
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
     "noImplicitAny": false,
+    "strictNullChecks": true,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "alwaysStrict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": false,

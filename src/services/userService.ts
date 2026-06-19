@@ -1,14 +1,4 @@
-import apiClient from '@/lib/apiClient';
-
-export const userService = {
-  profile: async () => apiClient.get('/users/me'),
-  updateProfile: async (data: any) => apiClient.patch('/users/me', data),
-  setPin: async (pin: string) => apiClient.post('/users/me/pin', { pin }),
-  verifyPin: async (pin: string) => apiClient.post('/users/me/pin/verify', { pin }),
-};
-
-export default userService;
-// FRONTEND-ONLY MODE: userService and notificationService are stubbed.
+// FRONTEND-ONLY MODE: stubbed.
 import { mockNotifications } from '@/mock/notifications';
 
 const mockUser = {
@@ -29,13 +19,16 @@ const mockUser = {
 
 export const userService = {
   getProfile: async () => mockUser,
-  updateProfile: async () => mockUser,
+  profile: async () => mockUser,
+  updateProfile: async (_data?: any) => mockUser,
   lookup: async () => mockUser,
+  setPin: async (_pin: string) => ({ ok: true }),
+  verifyPin: async (_pin: string) => ({ ok: true }),
 };
 
 export const notificationService = {
   getAll: async () => mockNotifications,
-  getUnreadCount: async () => mockNotifications.filter((n) => !n.read).length,
+  getUnreadCount: async () => mockNotifications.filter((n: any) => !n.read).length,
   markOneRead: async () => {},
   markAllRead: async () => {},
   delete: async () => {},
@@ -50,3 +43,5 @@ export const qrService = {
   generate: async () => ({ qrToken: 'mock-qr-token', qrCodeUrl: '' }),
   decode: async () => ({ userId: 'mock-user', name: 'Mock User' }),
 };
+
+export default userService;

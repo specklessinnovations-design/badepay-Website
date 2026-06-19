@@ -201,7 +201,7 @@ function Router() {
 
       {/* Customer-facing store */}
       <Route path="/store/:slug">
-        {(params) => <CustomerStore slug={params.slug} />}
+        {(params: any) => <CustomerStore slug={params?.slug} />}
       </Route>
 
       {/* Fallback */}

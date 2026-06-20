@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, ReactNode, CSSProperties } from "react";
 import { Link, useLocation } from "wouter";
+import { PrivacyPolicyModal } from "@/components/ui/privacy-policy-modal";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -302,9 +303,11 @@ export default function LandingPage() {
 
   const phoneStages: ("scan" | "confirm" | "success")[] = ["scan", "confirm", "success"];
 
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+
   const handleGetStartedClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    navigate("/register");
+    setPrivacyOpen(true);
   };
 
   return (
@@ -1196,6 +1199,11 @@ export default function LandingPage() {
         </SnapSection>
 
       </div>
+      <PrivacyPolicyModal
+        open={privacyOpen}
+        onAccept={() => { setPrivacyOpen(false); navigate("/register"); }}
+        onDecline={() => setPrivacyOpen(false)}
+      />
     </>
   );
 }

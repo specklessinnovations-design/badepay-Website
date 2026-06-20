@@ -1,3 +1,7 @@
+/**
+ * BadePay Bills Service
+ * Connects to the real backend API for bill payments.
+ */
 import apiClient from '@/lib/apiClient';
 
 export const billsService = {

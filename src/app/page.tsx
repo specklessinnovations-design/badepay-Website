@@ -1199,6 +1199,11 @@ export default function LandingPage() {
         </SnapSection>
 
       </div>
+      <PrivacyPolicyModal
+        open={privacyOpen}
+        onAccept={() => { setPrivacyOpen(false); navigate("/register"); }}
+        onDecline={() => setPrivacyOpen(false)}
+      />
     </>
   );
 }

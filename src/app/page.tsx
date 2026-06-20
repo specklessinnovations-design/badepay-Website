@@ -303,9 +303,11 @@ export default function LandingPage() {
 
   const phoneStages: ("scan" | "confirm" | "success")[] = ["scan", "confirm", "success"];
 
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+
   const handleGetStartedClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    navigate("/register");
+    setPrivacyOpen(true);
   };
 
   return (

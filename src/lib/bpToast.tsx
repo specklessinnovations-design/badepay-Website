@@ -1,7 +1,7 @@
 import React from 'react';
 import { toast } from 'react-hot-toast';
 import { CheckCircle2, XCircle, X, Info } from 'lucide-react';
-import { LOGO_BASE64 } from '@/lib/assets';
+
 
 interface BPToastProps {
   message: string;
@@ -42,9 +42,9 @@ function BPToast({ message, type, t }: BPToastProps) {
       }}
     >
       <img
-        src={LOGO_BASE64}
+        src="/favicon.png"
         alt="BadePay"
-        style={{ height: '24px', width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+        style={{ height: '24px', width: '24px', objectFit: 'contain', borderRadius: '6px', flexShrink: 0 }}
       />
 
       <div

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, ReactNode, CSSProperties } from "react";
 import { Link, useLocation } from "wouter";
+import { PrivacyPolicyModal } from "@/components/ui/privacy-policy-modal";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────

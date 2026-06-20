@@ -110,7 +110,7 @@ function RegisterForm() {
   }, [step, resendTimer]);
 
   const handleUseDemoCode = () => {
-    setData(p => ({ ...p, otp: ['1','2','3','4','5','6'] }));
+    setData(p => ({ ...p, otp: ['1', '2', '3', '4', '5', '6'] }));
     setCopied(true);
     bpToast.success('Demo OTP filled!');
     setTimeout(() => setCopied(false), 2000);
@@ -243,7 +243,7 @@ function RegisterForm() {
     }
   };
 
-  const numpad = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  const numpad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
   const isLoading = loading || authLoading;
 
@@ -332,9 +332,9 @@ function RegisterForm() {
                   <div className="flex items-center gap-2 pl-4 pr-3 py-3.5 shrink-0"
                     style={{ borderRight: '1px solid var(--border)' }}>
                     <svg width="22" height="15" viewBox="0 0 22 15" className="rounded-sm">
-                      <rect width="7.33" height="15" fill="#008751"/>
-                      <rect x="7.33" width="7.34" height="15" fill="#ffffff"/>
-                      <rect x="14.67" width="7.33" height="15" fill="#008751"/>
+                      <rect width="7.33" height="15" fill="#008751" />
+                      <rect x="7.33" width="7.34" height="15" fill="#ffffff" />
+                      <rect x="14.67" width="7.33" height="15" fill="#008751" />
                     </svg>
                     <span className="text-sm font-bold text-[var(--text-primary)] select-none">+234</span>
                   </div>
@@ -406,7 +406,7 @@ function RegisterForm() {
                   onClick={() => { setResendTimer(42); bpToast.success('New code sent!'); }}
                   className="text-sm font-semibold transition-colors"
                   style={{ color: resendTimer > 0 ? 'var(--text-tertiary)' : 'var(--accent-text)' }}>
-                  {resendTimer > 0 ? `Resend in 0:${resendTimer.toString().padStart(2,'0')}` : 'Resend code'}
+                  {resendTimer > 0 ? `Resend in 0:${resendTimer.toString().padStart(2, '0')}` : 'Resend code'}
                 </button>
               </div>
             </div>
@@ -530,7 +530,7 @@ function RegisterForm() {
 
               {/* Step indicator */}
               <div className="flex gap-2 justify-center mb-8">
-                {[0,1].map(i => (
+                {[0, 1].map(i => (
                   <div key={i} className="h-1.5 rounded-full transition-all duration-300"
                     style={{
                       width: (pinStep === 'enter' ? i === 0 : i === 1) ? '2rem' : '0.75rem',
@@ -545,11 +545,10 @@ function RegisterForm() {
                   <button key={idx} type="button"
                     onClick={() => handleNumPad(key, pinStep === 'enter' ? 'pin' : 'confirmPin')}
                     disabled={key === ''}
-                    className={`h-16 rounded-2xl text-xl font-black transition-all duration-150 active:scale-95 ${
-                      key === '' ? 'cursor-default invisible'
+                    className={`h-16 rounded-2xl text-xl font-black transition-all duration-150 active:scale-95 ${key === '' ? 'cursor-default invisible'
                       : key === '⌫' ? 'text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
-                      : 'hover:bg-[var(--surface-secondary)]'
-                    }`}
+                        : 'hover:bg-[var(--surface-secondary)]'
+                      }`}
                     style={key !== '' && key !== '⌫' ? { background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' } : {}}>
                     {key}
                   </button>

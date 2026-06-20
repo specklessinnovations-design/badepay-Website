@@ -2,12 +2,13 @@ import React, { useState, Suspense } from 'react';
 import { Link } from 'wouter';
 import { useLocation, useSearch } from 'wouter';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Store, User, ShieldCheck, Zap, Loader2 } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowRight, Store, User, ShieldCheck, Zap, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getPostAuthPath } from '@/lib/authRouting';
 import { PremiumInput } from '@/components/ui/premium-input';
 import { PremiumButton } from '@/components/ui/premium-button';
 import { bpToast } from '@/lib/bpToast';
+import { validatePhoneNumber } from '@/utils/authHelpers';
 
 function LoginForm() {
   const [, navigate] = useLocation();
@@ -15,15 +16,15 @@ function LoginForm() {
   const accountType = new URLSearchParams(search).get('type') === 'merchant' ? 'merchant' : 'personal';
   const { login, isLoading, error } = useAuthStore();
 
-  const [formData, setFormData] = useState({ email: '', password: '', rememberDevice: false });
+  const [formData, setFormData] = useState({ phone: '', password: '', rememberDevice: false });
   const [showPassword, setShowPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [quickLoginLoading, setQuickLoginLoading] = useState<'personal' | 'merchant' | null>(null);
 
   const validate = () => {
     const errors: Record<string, string> = {};
-    if (!formData.email.trim()) errors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Enter a valid email address';
+    if (!formData.phone.trim()) errors.phone = 'Phone number is required';
+    else if (!validatePhoneNumber(formData.phone.trim())) errors.phone = 'Enter a valid Nigerian phone number';
     if (!formData.password) errors.password = 'Password is required';
     else if (formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
     setValidationErrors(errors);
@@ -34,7 +35,7 @@ function LoginForm() {
     e.preventDefault();
     if (!validate()) return;
     try {
-      await login(formData.email, formData.password, formData.rememberDevice);
+      await login(formData.phone, formData.password, formData.rememberDevice);
       bpToast.success('Welcome back!');
       navigate(getPostAuthPath(useAuthStore.getState().user));
     } catch (err) {
@@ -44,12 +45,12 @@ function LoginForm() {
 
   const handleQuickLogin = async (type: 'personal' | 'merchant') => {
     const creds = type === 'merchant'
-      ? { email: 'merchant@badepay.com', password: 'Merchant123' }
-      : { email: 'demo@badepay.com', password: 'Demo123' };
+      ? { phone: '+2348031111111', password: 'Merchant123' }
+      : { phone: '+2348030000000', password: 'Demo123' };
 
     setQuickLoginLoading(type);
     try {
-      await login(creds.email, creds.password, false);
+      await login(creds.phone, creds.password, false);
       bpToast.success(type === 'merchant' ? '🏪 Merchant demo loaded!' : '👋 Welcome to the demo!');
       navigate(getPostAuthPath(useAuthStore.getState().user));
     } catch (err) {
@@ -136,7 +137,7 @@ function LoginForm() {
               <span className="text-xs font-black" style={{ color: 'var(--text-primary)' }}>Personal</span>
             </div>
             <p className="text-[10px] font-mono text-left" style={{ color: 'var(--text-tertiary)' }}>
-              demo@badepay.com
+              +2348030000000
             </p>
           </button>
 
@@ -163,7 +164,7 @@ function LoginForm() {
               <span className="text-xs font-black" style={{ color: 'var(--accent-text)' }}>Merchant</span>
             </div>
             <p className="text-[10px] font-mono text-left" style={{ color: 'var(--text-tertiary)' }}>
-              merchant@badepay.com
+              +2348031111111
             </p>
           </button>
         </div>
@@ -184,16 +185,35 @@ function LoginForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <PremiumInput
-          label="Email address"
-          type="email"
-          placeholder="you@example.com"
-          icon={<Mail size={17} />}
-          value={formData.email}
-          onChange={e => update('email', e.target.value)}
-          error={validationErrors.email}
-          disabled={anyLoading}
-        />
+        <div className="w-full">
+          <label className="mb-2 block text-sm font-semibold tracking-tight text-[var(--text-primary)]">
+            Phone number
+          </label>
+          <div className="flex items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] transition-all duration-200 focus-within:border-[#6fe8d6]">
+            <div className="flex items-center gap-2 pl-4 pr-3 py-3.5 shrink-0"
+              style={{ borderRight: '1px solid var(--border)' }}>
+              <svg width="22" height="15" viewBox="0 0 22 15" className="rounded-sm">
+                <rect width="7.33" height="15" fill="#008751" />
+                <rect x="7.33" width="7.34" height="15" fill="#ffffff" />
+                <rect x="14.67" width="7.33" height="15" fill="#008751" />
+              </svg>
+              <span className="text-sm font-bold text-[var(--text-primary)] select-none">+234</span>
+            </div>
+            <input
+              type="tel"
+              placeholder="803 000 0000"
+              value={formData.phone.replace(/^\+234/, '')}
+              onChange={e => update('phone', '+234' + e.target.value.replace(/\D/g, '').slice(0, 11))}
+              className="flex-1 bg-transparent px-4 py-3.5 text-base text-[var(--text-primary)] focus:outline-none placeholder-[var(--text-tertiary)] tracking-wide font-medium"
+              disabled={anyLoading}
+            />
+          </div>
+          {validationErrors.phone && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-[#EF4444]">
+              {validationErrors.phone}
+            </p>
+          )}
+        </div>
 
         <PremiumInput
           label="Password"

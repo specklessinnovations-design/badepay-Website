@@ -56,7 +56,7 @@ export interface AuthState {
   lastLoginTime?: string;
 
   // Auth actions
-  login: (email: string, password: string, rememberDevice?: boolean) => Promise<void>;
+  login: (phone: string, password: string, rememberDevice?: boolean) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   verifyOtp: (otp: string) => Promise<void>;
@@ -101,10 +101,10 @@ export const useAuthStore = create<AuthState>()(
       /**
        * Login with email and password
        */
-      login: async (email: string, password: string, rememberDevice = false) => {
+      login: async (phone: string, password: string, rememberDevice = false) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await authService.login(email, password);
+          const response = await authService.login(phone, password);
 
           usePreferencesStore.getState().recordLogin(getDeviceLabel());
           authService.updateUserProfile(response.user.id, {

@@ -371,19 +371,19 @@ export async function register(data: {
 /**
  * Login user
  */
-export async function login(email: string, password: string): Promise<AuthResponse> {
+export async function login(phone: string, password: string): Promise<AuthResponse> {
   // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, 600));
 
   // Validate input
-  if (!email || !password) {
-    throw new Error('Email and password are required');
+  if (!phone || !password) {
+    throw new Error('Phone number and password are required');
   }
 
   // Find user
-  const user = findUserByEmail(email);
+  const user = findUserByPhone(phone);
   if (!user) {
-    throw new Error('Invalid email or password');
+    throw new Error('Invalid phone number or password');
   }
 
   if (user.isActive === false) {
@@ -399,7 +399,7 @@ export async function login(email: string, password: string): Promise<AuthRespon
 
   // Verify password
   if (user.password !== password) {
-    throw new Error('Invalid email or password');
+    throw new Error('Invalid phone number or password');
   }
 
   // Generate tokens

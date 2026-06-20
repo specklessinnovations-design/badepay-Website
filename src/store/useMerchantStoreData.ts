@@ -35,6 +35,7 @@ export interface Order {
   merchantSlug: string;
   customerName: string;
   customerPhone: string;
+  deliveryAddress: string;
   items: CartItem[];
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
@@ -106,6 +107,7 @@ const DEMO_ORDERS: Order[] = [
   {
     id: 'demo_ord_001', merchantSlug: DEMO_MERCHANT_SLUG,
     customerName: 'Fatima Bello', customerPhone: '+2348055001122',
+    deliveryAddress: '12 Alhaji Bashir Street, Victoria Island, Lagos',
     items: [{ product: DEMO_PRODUCTS[0], quantity: 1 }, { product: DEMO_PRODUCTS[2], quantity: 1 }],
     totalAmount: 27125, status: 'completed', paymentStatus: 'paid', paymentMethod: 'wallet',
     reference: 'ORD-ABC123', createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
@@ -113,6 +115,7 @@ const DEMO_ORDERS: Order[] = [
   {
     id: 'demo_ord_002', merchantSlug: DEMO_MERCHANT_SLUG,
     customerName: 'Chukwuemeka Eze', customerPhone: '+2348063334455',
+    deliveryAddress: '3A Aba Road, Port Harcourt, Rivers State',
     items: [{ product: DEMO_PRODUCTS[1], quantity: 1 }],
     totalAmount: 32000, status: 'confirmed', paymentStatus: 'paid', paymentMethod: 'bank',
     reference: 'ORD-DEF456', createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -120,6 +123,7 @@ const DEMO_ORDERS: Order[] = [
   {
     id: 'demo_ord_003', merchantSlug: DEMO_MERCHANT_SLUG,
     customerName: 'Ngozi Adesanya', customerPhone: '+2348071122334',
+    deliveryAddress: '86 Obafemi Awolowo Way, Ikeja, Lagos',
     items: [{ product: DEMO_PRODUCTS[3], quantity: 1 }, { product: DEMO_PRODUCTS[4], quantity: 2 }],
     totalAmount: 64600, status: 'pending', paymentStatus: 'unpaid', paymentMethod: 'wallet',
     reference: 'ORD-GHI789', createdAt: new Date(Date.now() - 3600000).toISOString(),
@@ -127,6 +131,7 @@ const DEMO_ORDERS: Order[] = [
   {
     id: 'demo_ord_004', merchantSlug: DEMO_MERCHANT_SLUG,
     customerName: 'Yetunde Adebayo', customerPhone: '+2348089876543',
+    deliveryAddress: '20 Festac Road, Amuwo Odofin, Lagos',
     items: [{ product: DEMO_PRODUCTS[5], quantity: 3 }],
     totalAmount: 12825, status: 'pending', paymentStatus: 'unpaid', paymentMethod: 'wallet',
     reference: 'ORD-JKL012', createdAt: new Date(Date.now() - 1800000).toISOString(),

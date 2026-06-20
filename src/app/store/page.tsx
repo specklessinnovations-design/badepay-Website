@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart, Search, Plus, Minus, X, CheckCircle2, ArrowLeft,
-  Store, Package, Star, Wallet, Banknote, Shield, ChevronRight, Loader2
+  Store, Package, Star, Wallet, Shield, ChevronRight, Loader2
 } from 'lucide-react';
 import { useMerchantStoreData, type Product, type CartItem } from '@/store/useMerchantStoreData';
 import { useMerchantStore } from '@/store/useMerchantStore';
@@ -67,7 +67,8 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
   const [search, setSearch] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'bank'>('wallet');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'wallet'>('wallet');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<string | null>(null);
@@ -110,6 +111,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
       merchantSlug: slug,
       customerName: customerName || 'Walk-in Customer',
       customerPhone,
+      deliveryAddress: deliveryAddress.trim(),
       items: cart,
       totalAmount: cartTotal,
       status: 'confirmed',
@@ -497,6 +499,14 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                       className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
                       style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
                   </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest mb-1.5 block"
+                      style={{ color: 'var(--text-tertiary)' }}>Delivery address</label>
+                    <textarea value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)}
+                      placeholder="Enter delivery address for this order"
+                      className="w-full rounded-xl px-3 py-2.5 text-sm outline-none min-h-[96px] resize-none"
+                      style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -512,8 +522,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                   Choose Payment Source
                 </h3>
                 {[
-                  { id: 'wallet' as const, icon: Wallet, label: 'PayFlow Wallet', desc: 'Pay from your BadePay balance', color: 'var(--accent-text)' },
-                  { id: 'bank' as const, icon: Banknote, label: 'Linked Bank', desc: 'Debit from your bank account', color: '#60a5fa' },
+                  { id: 'wallet' as const, icon: Wallet, label: 'BadePay Wallet', desc: 'Pay from your BadePay balance', color: 'var(--accent-text)' },
                 ].map(opt => (
                   <button key={opt.id} onClick={() => setPaymentMethod(opt.id)}
                     className="w-full flex items-center gap-3 rounded-2xl p-3.5 text-left transition-all"
@@ -610,7 +619,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                 else if (step === 'payment') setStep('pin');
                 else if (step === 'pin') handlePay();
               }}
-              disabled={(step === 'details' && !customerName.trim()) || (step === 'pin' && pin.length < 4) || loading}
+              disabled={(step === 'details' && (!customerName.trim() || !deliveryAddress.trim())) || (step === 'pin' && pin.length < 4) || loading}
               className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black transition-all active:scale-95 disabled:opacity-40"
               style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
               {loading

@@ -128,42 +128,38 @@ export const authService = {
 
   /**
    * Send OTP to phone number.
-   * Backend endpoint: POST /auth/send-otp
+   * Backend endpoint: POST /auth/otp/send (alias: /auth/send-otp)
    */
   sendOTP: async (phone: string): Promise<void> => {
-    await apiClient.post('/auth/send-otp', { phone });
+    await apiClient.post('/auth/otp/send', { phone });
   },
 
   /**
    * Verify OTP code.
-   * Backend endpoint: POST /auth/verify-otp
+   * Backend endpoint: POST /auth/otp/verify (alias: /auth/verify-otp)
    */
   verifyOTP: async (phone: string, otp: string): Promise<AuthResponse> => {
-    const resp = await apiClient.post('/auth/verify-otp', { phone, otp });
+    const resp = await apiClient.post('/auth/otp/verify', { phone, otp });
     const { token, refreshToken } = extractTokens(resp);
     if (token) apiClient.setTokens(token, refreshToken);
-    const rawUser = resp?.data?.user || resp?.user || resp?.data || {};
+    const rawUser = resp?.user || resp?.data?.user || {};
     return { user: mapBackendUser(rawUser), token, refreshToken };
   },
 
   /**
-   * Send password reset OTP.
-   * Backend endpoint: POST /auth/send-otp  (reuses OTP flow)
+   * Forgot password - sends reset code via SMS.
+   * Backend endpoint: POST /auth/forgot-password
    */
-  sendPasswordResetOTP: async (email: string): Promise<void> => {
-    await apiClient.post('/auth/send-otp', { email });
+  forgotPassword: async (phone: string): Promise<void> => {
+    await apiClient.post('/auth/forgot-password', { phone });
   },
 
   /**
-   * Reset password using OTP.
-   * Backend endpoint: POST /auth/change-password (authenticated) or custom reset flow
+   * Reset password using token.
+   * Backend endpoint: POST /auth/reset-password
    */
-  resetPassword: async (
-    email: string,
-    newPassword: string,
-    otp: string,
-  ): Promise<void> => {
-    await apiClient.post('/auth/reset-password', { email, newPassword, otp });
+  resetPassword: async (token: string, newPassword: string): Promise<void> => {
+    await apiClient.post('/auth/reset-password', { token, newPassword });
   },
 
   /**
@@ -214,7 +210,7 @@ export const authService = {
    * Update user profile.
    * Backend endpoint: PATCH /users/me
    */
-  updateUserProfile: async (userId: string, data: Partial<StoredUser>): Promise<StoredUser> => {
+  updateUserProfile: async (data: Partial<StoredUser>): Promise<StoredUser> => {
     const resp = await apiClient.patch('/users/me', data);
     const rawUser = resp?.data?.user || resp?.data || resp?.user || {};
     return mapBackendUser(rawUser);
@@ -231,7 +227,7 @@ export const authService = {
    * Set transaction PIN.
    * Backend endpoint: POST /auth/set-pin
    */
-  setTransactionPIN: async (_userId: string, pin: string): Promise<void> => {
+  setTransactionPIN: async (pin: string): Promise<void> => {
     await apiClient.post('/auth/set-pin', { pin });
   },
 
@@ -239,7 +235,7 @@ export const authService = {
    * Verify transaction PIN.
    * Backend endpoint: POST /auth/verify-pin
    */
-  verifyTransactionPIN: async (_userId: string, pin: string): Promise<boolean> => {
+  verifyTransactionPIN: async (pin: string): Promise<boolean> => {
     try {
       await apiClient.post('/auth/verify-pin', { pin });
       return true;
@@ -249,11 +245,98 @@ export const authService = {
   },
 
   /**
+   * Change password.
+   * Backend endpoint: POST /auth/change-password
+   */
+  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+    await apiClient.post('/auth/change-password', { currentPassword, newPassword });
+  },
+
+  /**
+   * Update profile.
+   * Backend endpoint: PATCH /auth/profile
+   */
+  updateProfile: async (data: { firstName?: string; lastName?: string; phone?: string }): Promise<StoredUser> => {
+    const resp = await apiClient.patch('/auth/profile', data);
+    const rawUser = resp?.data?.user || resp?.data || {};
+    return mapBackendUser(rawUser);
+  },
+
+  /**
+   * Get sessions.
+   * Backend endpoint: GET /auth/sessions
+   */
+  getSessions: async (): Promise<any[]> => {
+    const resp = await apiClient.get('/auth/sessions');
+    return resp?.data || resp?.sessions || [];
+  },
+
+  /**
+   * Revoke sessions.
+   * Backend endpoint: DELETE /auth/sessions (using POST as workaround for body)
+   */
+  revokeSessions: async (keepCurrentSession?: boolean): Promise<void> => {
+    const refreshToken = apiClient.getRefreshToken();
+    await apiClient.post('/auth/sessions/revoke', { keepCurrentSession, refreshToken });
+  },
+
+  /**
+   * Revoke specific session.
+   * Backend endpoint: DELETE /auth/sessions/:id
+   */
+  revokeSession: async (sessionId: string): Promise<void> => {
+    await apiClient.delete(`/auth/sessions/${sessionId}`);
+  },
+
+  // ── Two-Factor Authentication (TOTP) ─────────────────────────────────────
+
+  /**
+   * Get 2FA status.
+   * Backend endpoint: GET /auth/2fa/status
+   */
+  get2FAStatus: async (): Promise<{ twoFactorActive: boolean }> => {
+    const resp = await apiClient.get('/auth/2fa/status');
+    return resp?.data || { twoFactorActive: false };
+  },
+
+  /**
+   * Setup 2FA.
+   * Backend endpoint: POST /auth/2fa/setup
+   */
+  setup2FA: async (): Promise<{ secret: string; otpauthUrl: string; qrCodeDataUrl: string }> => {
+    const resp = await apiClient.post('/auth/2fa/setup');
+    return resp?.data || {};
+  },
+
+  /**
+   * Enable 2FA.
+   * Backend endpoint: POST /auth/2fa/enable
+   */
+  enable2FA: async (code: string): Promise<void> => {
+    await apiClient.post('/auth/2fa/enable', { code });
+  },
+
+  /**
+   * Verify 2FA code.
+   * Backend endpoint: POST /auth/2fa/verify
+   */
+  verify2FA: async (code: string): Promise<void> => {
+    await apiClient.post('/auth/2fa/verify', { code });
+  },
+
+  /**
+   * Disable 2FA.
+   * Backend endpoint: POST /auth/2fa/disable
+   */
+  disable2FA: async (code: string, password: string): Promise<void> => {
+    await apiClient.post('/auth/2fa/disable', { code, password });
+  },
+
+  /**
    * Complete merchant onboarding.
    * Backend endpoint: PATCH /auth/profile  (updates userType + merchant profile)
    */
   completeMerchantOnboarding: async (
-    _userId: string,
     data: Omit<MerchantProfile, 'merchantId' | 'qrSlug' | 'verified' | 'onboardingComplete' | 'payoutAccount'>,
   ): Promise<void> => {
     await apiClient.patch('/auth/profile', {
@@ -273,7 +356,7 @@ export const authService = {
    * Upgrade existing consumer account to merchant.
    * Backend endpoint: PATCH /auth/profile
    */
-  upgradeToMerchant: async (_userId: string): Promise<void> => {
+  upgradeToMerchant: async (): Promise<void> => {
     await apiClient.patch('/auth/profile', { userType: 'merchant' });
   },
 

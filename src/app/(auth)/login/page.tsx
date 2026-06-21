@@ -2,7 +2,7 @@ import React, { useState, Suspense } from 'react';
 import { Link } from 'wouter';
 import { useLocation, useSearch } from 'wouter';
 import { motion } from 'framer-motion';
-import { Lock, Eye, EyeOff, ArrowRight, Store, User, ShieldCheck, Zap, Loader2 } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowRight, Store, User, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getPostAuthPath } from '@/lib/authRouting';
 import { PremiumInput } from '@/components/ui/premium-input';
@@ -19,7 +19,6 @@ function LoginForm() {
   const [formData, setFormData] = useState({ phone: '', password: '', rememberDevice: false });
   const [showPassword, setShowPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [quickLoginLoading, setQuickLoginLoading] = useState<'personal' | 'merchant' | null>(null);
 
   const validate = () => {
     const errors: Record<string, string> = {};
@@ -43,29 +42,10 @@ function LoginForm() {
     }
   };
 
-  const handleQuickLogin = async (type: 'personal' | 'merchant') => {
-    const creds = type === 'merchant'
-      ? { phone: '+2348031111111', password: 'Merchant123' }
-      : { phone: '+2348030000000', password: 'Demo123' };
-
-    setQuickLoginLoading(type);
-    try {
-      await login(creds.phone, creds.password, false);
-      bpToast.success(type === 'merchant' ? '🏪 Merchant demo loaded!' : '👋 Welcome to the demo!');
-      navigate(getPostAuthPath(useAuthStore.getState().user));
-    } catch (err) {
-      bpToast.error('Demo login failed. Please try again.');
-    } finally {
-      setQuickLoginLoading(null);
-    }
-  };
-
   const update = (field: string, value: string | boolean) => {
     setFormData(p => ({ ...p, [field]: value }));
     if (validationErrors[field as string]) setValidationErrors(p => ({ ...p, [field]: '' }));
   };
-
-  const anyLoading = isLoading || quickLoginLoading !== null;
 
   return (
     <motion.div
@@ -100,90 +80,6 @@ function LoginForm() {
         ))}
       </div>
 
-      {/* ── Quick demo access ── */}
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="mb-6 rounded-2xl overflow-hidden"
-        style={{ border: '1px solid rgba(111,232,214,0.25)' }}
-      >
-        {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-2.5"
-          style={{ background: 'rgba(111,232,214,0.07)' }}>
-          <Zap size={12} style={{ color: 'var(--accent-text)' }} />
-          <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--accent-text)' }}>
-            Quick Demo Access
-          </span>
-        </div>
-
-        {/* Demo buttons */}
-        <div className="grid grid-cols-2 gap-px" style={{ background: 'var(--border)' }}>
-          {/* Personal demo */}
-          <button
-            type="button"
-            onClick={() => handleQuickLogin('personal')}
-            disabled={anyLoading}
-            className="flex flex-col items-start gap-2 p-3.5 transition-all active:scale-95 disabled:opacity-60"
-            style={{ background: 'var(--card)' }}
-          >
-            <div className="flex items-center gap-2 w-full">
-              <div className="h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(111,232,214,0.12)' }}>
-                {quickLoginLoading === 'personal'
-                  ? <Loader2 size={13} className="animate-spin" style={{ color: '#6fe8d6' }} />
-                  : <User size={13} style={{ color: '#6fe8d6' }} />}
-              </div>
-              <span className="text-xs font-black" style={{ color: 'var(--text-primary)' }}>Personal</span>
-            </div>
-            <p className="text-[10px] font-mono text-left" style={{ color: 'var(--text-tertiary)' }}>
-              +2348030000000
-            </p>
-          </button>
-
-          {/* Merchant demo */}
-          <button
-            type="button"
-            onClick={() => handleQuickLogin('merchant')}
-            disabled={anyLoading}
-            className="flex flex-col items-start gap-2 p-3.5 transition-all active:scale-95 disabled:opacity-60 relative"
-            style={{ background: 'var(--card)' }}
-          >
-            {/* Recommended badge */}
-            <div className="absolute top-2 right-2 rounded-full px-1.5 py-0.5 text-[9px] font-black"
-              style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
-              NEW
-            </div>
-            <div className="flex items-center gap-2 w-full">
-              <div className="h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(111,232,214,0.2)' }}>
-                {quickLoginLoading === 'merchant'
-                  ? <Loader2 size={13} className="animate-spin" style={{ color: '#6fe8d6' }} />
-                  : <Store size={13} style={{ color: '#6fe8d6' }} />}
-              </div>
-              <span className="text-xs font-black" style={{ color: 'var(--accent-text)' }}>Merchant</span>
-            </div>
-            <p className="text-[10px] font-mono text-left" style={{ color: 'var(--text-tertiary)' }}>
-              +2348031111111
-            </p>
-          </button>
-        </div>
-
-        {/* Hint */}
-        <div className="px-4 py-2" style={{ background: 'rgba(111,232,214,0.03)' }}>
-          <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
-            One click · No sign-up needed · Full merchant store pre-loaded
-          </p>
-        </div>
-      </motion.div>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-        <span className="text-xs font-bold" style={{ color: 'var(--text-tertiary)' }}>or sign in manually</span>
-        <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-      </div>
-
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="w-full">
           <label className="mb-2 block text-sm font-semibold tracking-tight text-[var(--text-primary)]">
@@ -205,7 +101,7 @@ function LoginForm() {
               value={formData.phone.replace(/^\+234/, '')}
               onChange={e => update('phone', '+234' + e.target.value.replace(/\D/g, '').slice(0, 11))}
               className="flex-1 bg-transparent px-4 py-3.5 text-base text-[var(--text-primary)] focus:outline-none placeholder-[var(--text-tertiary)] tracking-wide font-medium"
-              disabled={anyLoading}
+              disabled={isLoading}
             />
           </div>
           {validationErrors.phone && (
@@ -229,7 +125,7 @@ function LoginForm() {
           value={formData.password}
           onChange={e => update('password', e.target.value)}
           error={validationErrors.password}
-          disabled={anyLoading}
+          disabled={isLoading}
         />
 
         <div className="flex items-center justify-between pt-1">
@@ -240,7 +136,7 @@ function LoginForm() {
                 checked={formData.rememberDevice}
                 onChange={e => update('rememberDevice', e.target.checked)}
                 className="sr-only peer"
-                disabled={anyLoading}
+                disabled={isLoading}
               />
               <div className="h-5 w-5 rounded-md border-2 border-[var(--border)] bg-[var(--surface-secondary)] peer-checked:bg-[#6fe8d6] peer-checked:border-[#6fe8d6] transition-all flex items-center justify-center">
                 {formData.rememberDevice && (
@@ -260,7 +156,7 @@ function LoginForm() {
         </div>
 
         <div className="pt-2">
-          <PremiumButton type="submit" fullWidth size="lg" isLoading={isLoading} disabled={anyLoading}>
+          <PremiumButton type="submit" fullWidth size="lg" isLoading={isLoading} disabled={isLoading}>
             {!isLoading && <>Sign in <ArrowRight size={17} /></>}
           </PremiumButton>
         </div>

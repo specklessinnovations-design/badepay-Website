@@ -3,11 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/useToast';
 import { ShieldCheck, Server, AlertCircle, Save } from 'lucide-react';
-import {
-  getPlatformSettings,
-  savePlatformSettings,
-  type PlatformSettings,
-} from '@/services/platformDataService';
+import platformDataService, { type PlatformSettings } from '@/services/platformDataService';
 
 const A_CARD = {
   background: '#ffffff',
@@ -77,14 +73,14 @@ export default function AdminSettingsPage() {
   const { showSuccess } = useToast();
 
   useEffect(() => {
-    setSettings(getPlatformSettings());
+    setSettings(platformDataService.getPlatformSettings());
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settings) return;
     setIsLoading(true);
-    savePlatformSettings(settings);
+    await platformDataService.savePlatformSettings(settings);
     await new Promise((r) => setTimeout(r, 400));
     setIsLoading(false);
     showSuccess('Platform settings saved.');

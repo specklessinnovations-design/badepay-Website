@@ -1,8 +1,13 @@
 import type { StoredUser } from '@/services/authService';
 import type { Transaction } from '@/mock/transactions';
 import type { AdminUserRecord, AdminTxRecord, KYCSubmission, AnalyticsData } from '@/types/admin';
-import type { DisputeRecord } from '@/services/platformDataService';
-import { getAllDisputes, getAllTransactions, getAllUsers, getMerchantLedger } from '@/services/platformDataService';
+import platformDataService from '@/services/platformDataService';
+
+type DisputeRecord = {
+  id: string;
+  status: string;
+  [key: string]: any;
+};
 
 export type { AnalyticsData };
 
@@ -220,15 +225,16 @@ export function computeAnalytics(
   };
 }
 
-export function getOpenDisputeCount(): number {
-  return getAllDisputes().filter((d) => d.status === 'open' || d.status === 'under_review').length;
+export async function getOpenDisputeCount(): Promise<number> {
+  const disputes = await platformDataService.getAllDisputes();
+  return disputes.filter((d) => d.status === 'open' || d.status === 'under_review').length;
 }
 
-export function getPlatformSummary() {
-  const users = getAllUsers();
-  const transactions = getAllTransactions();
-  const disputes = getAllDisputes();
-  const merchant = getMerchantLedger();
+export async function getPlatformSummary() {
+  const users = await platformDataService.getAllUsers();
+  const transactions = await platformDataService.getAllTransactions();
+  const disputes = await platformDataService.getAllDisputes();
+  const merchant = await platformDataService.getMerchantLedger();
   return {
     users,
     transactions,

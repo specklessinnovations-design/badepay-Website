@@ -131,6 +131,54 @@ export const platformDataService = {
     const resp = await apiClient.patch(`/merchants/store/orders/${id}`, { status });
     return resp?.data || null;
   },
+
+  // ── Admin Functions ───────────────────────────────────────────────────────
+
+  /** GET /admin/disputes — get all disputes for admin */
+  getAllDisputes: async () => {
+    const resp = await apiClient.get('/admin/disputes');
+    return resp?.data || [];
+  },
+
+  /** GET /admin/transactions — get all transactions for admin */
+  getAllTransactions: async () => {
+    const resp = await apiClient.get('/admin/transactions');
+    return resp?.data || [];
+  },
+
+  /** GET /admin/users — get all users for admin */
+  getAllUsers: async () => {
+    const resp = await apiClient.get('/admin/users');
+    return resp?.data || [];
+  },
+
+  /** GET /admin/merchant-ledger — get merchant ledger for admin */
+  getMerchantLedger: async () => {
+    const resp = await apiClient.get('/admin/merchant-ledger');
+    return resp?.data || [];
+  },
+
+  // ── Platform Settings ─────────────────────────────────────────────────────
+
+  /** GET /admin/settings — get platform settings */
+  getPlatformSettings: () => ({
+    platformName: 'BadePay',
+    supportEmail: 'support@badepay.com',
+    supportPhone: '+234 800 123 4567',
+    corporateAddress: '123 Lagos Island, Lagos, Nigeria',
+    maxDailyTransferLimit: 500000,
+    kycThreshold: 100000,
+    autoApproveBvn: false,
+    maintenanceMode: false,
+  }),
+
+  /** POST /admin/settings — save platform settings */
+  savePlatformSettings: async (settings: any) => {
+    const resp = await apiClient.post('/admin/settings', settings);
+    return resp?.data || null;
+  },
 };
+
+export type PlatformSettings = ReturnType<typeof platformDataService.getPlatformSettings>;
 
 export default platformDataService;

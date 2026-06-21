@@ -6,6 +6,7 @@ import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2, Check, ArrowLeft } from 'l
 import { PremiumInput } from '@/components/ui/premium-input';
 import { PremiumButton } from '@/components/ui/premium-button';
 import { bpToast } from '@/lib/bpToast';
+import authService from '@/services/authService';
 
 function ResetPasswordContent() {
   const [, navigate] = useLocation();
@@ -44,15 +45,12 @@ function ResetPasswordContent() {
     if (!validate()) return;
     setIsLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 900));
-      if (formData.otp !== '123456') {
-        setErrors(p => ({ ...p, otp: 'Invalid code. Use demo code 123456.' }));
-        return;
-      }
+      await authService.resetPassword(formData.otp, formData.password);
       setIsSuccess(true);
       bpToast.success('Password reset successfully!');
       setTimeout(() => navigate('/login'), 2500);
-    } catch {
+    } catch (err: any) {
+      setErrors(p => ({ ...p, otp: err?.message || 'Invalid code. Please try again.' }));
       bpToast.error('Failed to reset password. Please try again.');
     } finally {
       setIsLoading(false);
@@ -98,20 +96,8 @@ function ResetPasswordContent() {
 
       <div className="mb-8">
         <h1 className="text-3xl font-black tracking-tight text-[var(--text-primary)] mb-2">Create new password</h1>
-        <p className="text-sm text-[var(--text-secondary)]">Enter the 6-digit code from your email and set a new password.</p>
+        <p className="text-sm text-[var(--text-secondary)]">Enter the 6-digit code from your SMS and set a new password.</p>
       </div>
-
-      {/* Demo hint */}
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="mb-6 rounded-2xl p-3.5"
-        style={{ background: 'rgba(111,232,214,0.06)', border: '1px solid rgba(111,232,214,0.2)' }}
-      >
-        <p className="text-xs font-bold text-[var(--accent-text)] mb-0.5">Demo mode</p>
-        <p className="text-xs text-[var(--text-tertiary)]">Use OTP code <span className="font-bold font-mono text-[var(--text-primary)]">123456</span> to reset password</p>
-      </motion.div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* OTP */}

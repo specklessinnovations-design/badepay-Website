@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { fileDispute } from '@/services/platformDataService';
+import platformDataService from '@/services/platformDataService';
 import toast from 'react-hot-toast';
 
 const FAQ = [
@@ -34,6 +34,7 @@ export default function SupportPage() {
   const [subject, setSubject] = useState('');
   const [issueType, setIssueType] = useState<(typeof ISSUE_TYPES)[number]['id']>('other');
   const [amount, setAmount] = useState('');
+  const [transactionId, setTransactionId] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,9 +45,8 @@ export default function SupportPage() {
     }
 
     const parsedAmount = parseFloat(amount) || 0;
-    fileDispute({
-      userId: user.id,
-      userName: `${user.firstName} ${user.lastName}`.trim(),
+    platformDataService.raiseDispute({
+      transactionId: transactionId.trim(),
       amount: parsedAmount,
       issueType,
       description: `${subject.trim()}: ${message.trim()}`,
@@ -56,6 +56,7 @@ export default function SupportPage() {
     setSubject('');
     setMessage('');
     setAmount('');
+    setTransactionId('');
     setIssueType('other');
   };
 
@@ -75,6 +76,13 @@ export default function SupportPage() {
         <p className="text-sm text-[var(--text-secondary)]">
           Disputes appear in the admin portal for review by our support team.
         </p>
+        <input
+          type="text"
+          value={transactionId}
+          onChange={(e) => setTransactionId(e.target.value)}
+          placeholder="Transaction ID"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-[var(--text-primary)] focus:border-[#6fe8d6] focus:outline-none"
+        />
         <select
           value={issueType}
           onChange={(e) => setIssueType(e.target.value as (typeof ISSUE_TYPES)[number]['id'])}

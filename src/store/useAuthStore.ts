@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import * as authService from '@/services/authService';
+import authService from '@/services/authService';
 import { toPublicUser } from '@/lib/authMappers';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import type { MerchantProfile } from '@/types/merchant';
@@ -88,9 +87,7 @@ export interface RegisterData {
   userType: UserType;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+export const useAuthStore = create<AuthState>()((set, get) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
@@ -107,7 +104,7 @@ export const useAuthStore = create<AuthState>()(
           const response = await authService.login(phone, password);
 
           usePreferencesStore.getState().recordLogin(getDeviceLabel());
-          authService.updateUserProfile(response.user.id, {
+          authService.updateUserProfile({
             lastLogin: new Date().toISOString(),
           }).catch(() => {});
 
@@ -164,8 +161,6 @@ export const useAuthStore = create<AuthState>()(
 
       /**
        * Verify OTP after registration
-       * ⚡ DEMO MODE — no backend. Any 6-digit code is accepted.
-       * When backend is ready, replace this with: authService.verifyOTP(currentUser.email, otp)
        */
       verifyOtp: async (otp: string) => {
         set({ isLoading: true, error: null });
@@ -173,7 +168,7 @@ export const useAuthStore = create<AuthState>()(
           const currentUser = get().user;
           if (!currentUser) throw new Error('No user found for OTP verification');
 
-          const response = await authService.verifyOTP(currentUser.email, otp);
+          const response = await authService.verifyOTP(currentUser.phone, otp);
 
           usePreferencesStore.getState().recordLogin(getDeviceLabel());
 
@@ -196,10 +191,10 @@ export const useAuthStore = create<AuthState>()(
       /**
        * Send password reset OTP
        */
-      sendPasswordResetOTP: async (email: string) => {
+      sendPasswordResetOTP: async (phone: string) => {
         set({ isLoading: true, error: null });
         try {
-          await authService.sendPasswordResetOTP(email);
+          await authService.forgotPassword(phone);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to send reset OTP';
           set({ error: errorMessage });
@@ -210,12 +205,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       /**
-       * Reset password with OTP
+       * Reset password with token
        */
-      resetPassword: async (email: string, newPassword: string, otp: string) => {
+      resetPassword: async (token: string, newPassword: string) => {
         set({ isLoading: true, error: null });
         try {
-          await authService.resetPassword(email, newPassword, otp);
+          await authService.resetPassword(token, newPassword);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
           set({ error: errorMessage });
@@ -235,7 +230,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('User not authenticated');
           }
 
-          return await authService.verifyTransactionPIN(currentUser.id, pin);
+          return await authService.verifyTransactionPIN(pin);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'PIN verification failed';
           set({ error: errorMessage });
@@ -254,7 +249,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('User not authenticated');
           }
 
-          await authService.setTransactionPIN(currentUser.id, pin);
+          await authService.setTransactionPIN(pin);
 
           // Update local user state
           set((state) => ({
@@ -307,7 +302,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('User not authenticated');
           }
 
-          const updated = await authService.updateUserProfile(currentUser.id, {
+          const updated = await authService.updateUserProfile({
             kycLevel: level,
             kycStatus: 'approved',
           });
@@ -335,7 +330,7 @@ export const useAuthStore = create<AuthState>()(
             throw new Error('User not authenticated');
           }
 
-          const updated = await authService.updateUserProfile(currentUser.id, data);
+          const updated = await authService.updateUserProfile(data);
 
           set({
             user: toPublicUser(updated),
@@ -360,7 +355,7 @@ export const useAuthStore = create<AuthState>()(
             updates.accountName = `${updates.firstName ?? currentUser.firstName} ${updates.lastName ?? currentUser.lastName}`;
           }
 
-          const updated = await authService.updateUserProfile(currentUser.id, updates);
+          const updated = await authService.updateUserProfile(updates);
           set({ user: toPublicUser(updated) });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Profile update failed';
@@ -392,7 +387,7 @@ export const useAuthStore = create<AuthState>()(
             onboardingComplete: true,
           };
 
-          const updated = await authService.updateUserProfile(currentUser.id, {
+          const updated = await authService.updateUserProfile({
             userType: 'merchant',
             accountName: tradingName,
             merchantProfile,
@@ -414,7 +409,7 @@ export const useAuthStore = create<AuthState>()(
           const currentUser = get().user;
           if (!currentUser) throw new Error('User not authenticated');
 
-          const updated = await authService.updateUserProfile(currentUser.id, {
+          const updated = await authService.updateUserProfile({
             userType: 'merchant',
           });
 
@@ -428,12 +423,16 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      syncUserFromStorage: () => {
+      syncUserFromStorage: async () => {
         const currentUser = get().user;
         if (!currentUser?.id) return;
-        const stored = authService.getUserById(currentUser.id);
-        if (stored) {
-          set({ user: toPublicUser(stored) });
+        try {
+          const stored = await authService.getProfile();
+          if (stored) {
+            set({ user: toPublicUser(stored) });
+          }
+        } catch {
+          // Ignore sync errors
         }
       },
 
@@ -463,7 +462,7 @@ export const useAuthStore = create<AuthState>()(
       enableBiometric: () => {
         const currentUser = get().user;
         if (!currentUser) return;
-        authService.updateUserProfile(currentUser.id, { biometricEnabled: true }).then((updated) => {
+        authService.updateUserProfile({ biometricEnabled: true }).then((updated) => {
           set({ user: toPublicUser(updated) });
         });
       },
@@ -474,7 +473,7 @@ export const useAuthStore = create<AuthState>()(
       disableBiometric: () => {
         const currentUser = get().user;
         if (!currentUser) return;
-        authService.updateUserProfile(currentUser.id, { biometricEnabled: false }).then((updated) => {
+        authService.updateUserProfile({ biometricEnabled: false }).then((updated) => {
           set({ user: toPublicUser(updated) });
         });
       },
@@ -538,19 +537,7 @@ export const useAuthStore = create<AuthState>()(
           error: null,
         });
       },
-    }),
-    {
-      name: 'badepay_auth',
-      partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-        sessionToken: state.sessionToken,
-        refreshToken: state.refreshToken,
-        deviceVerified: state.deviceVerified,
-        lastLoginTime: state.lastLoginTime,
-      }),
-    }
-  )
+    })
 );
 
 function getDeviceLabel(): string {

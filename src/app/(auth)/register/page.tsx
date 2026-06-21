@@ -4,9 +4,10 @@ import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail, Lock, Phone, User, Eye, EyeOff, ArrowRight, ArrowLeft,
-  Check, AlertCircle, Copy, Users, Store, CheckCircle2, Zap, ShieldCheck,
+  Check, AlertCircle, Users, Store, ShieldCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
+import authService from '@/services/authService';
 import { PremiumInput } from '@/components/ui/premium-input';
 import { PremiumButton } from '@/components/ui/premium-button';
 import { bpToast } from '@/lib/bpToast';
@@ -78,7 +79,6 @@ function RegisterForm() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
   const [resendTimer, setResendTimer] = useState(42);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
@@ -109,14 +109,6 @@ function RegisterForm() {
     return undefined;
   }, [step, resendTimer]);
 
-  const handleUseDemoCode = () => {
-    setData(p => ({ ...p, otp: ['1', '2', '3', '4', '5', '6'] }));
-    setCopied(true);
-    bpToast.success('Demo OTP filled!');
-    setTimeout(() => setCopied(false), 2000);
-    otpInputs.current[5]?.focus();
-  };
-
   const handleOtpChange = (index: number, value: string) => {
     const num = value.replace(/\D/g, '').slice(-1);
     const newOtp = [...data.otp];
@@ -143,20 +135,6 @@ function RegisterForm() {
     otpInputs.current[Math.min(digits.length - 1, 5)]?.focus();
   };
 
-  const checkPhoneExists = (phone: string) => {
-    try {
-      const users = JSON.parse(localStorage.getItem('badepay_users') || '[]');
-      return users.some((u: any) => u.phone === phone);
-    } catch { return false; }
-  };
-
-  const checkEmailExists = (email: string) => {
-    try {
-      const users = JSON.parse(localStorage.getItem('badepay_users') || '[]');
-      return users.some((u: any) => u.email.toLowerCase() === email.toLowerCase());
-    } catch { return false; }
-  };
-
   const pwReqs = [
     { label: '6+ characters', ok: data.password.length >= 6 },
     { label: 'Passwords match', ok: data.password.length > 0 && data.password === data.confirmPassword },
@@ -170,7 +148,6 @@ function RegisterForm() {
         if (!data.phone.trim()) { setError('Phone number is required'); return; }
         const raw = data.phone.replace('+234', '');
         if (raw.length !== 10 && raw.length !== 11) { setError('Enter a valid Nigerian phone number'); return; }
-        if (checkPhoneExists(data.phone)) { setError('This number is already registered'); return; }
         setResendTimer(42);
         if (!privacyAccepted) {
           setShowPrivacy(true);
@@ -182,15 +159,17 @@ function RegisterForm() {
           setLoading(false);
           return;
         }
+        // Send OTP via backend
+        await authService.sendOTP(data.phone);
       } else if (step === 1) {
         const code = data.otp.join('');
         if (code.length !== 6) { setError('Enter all 6 digits'); return; }
-        if (code !== '123456') { setError('Invalid code. Use demo code 123456.'); return; }
+        // Verify OTP via backend
+        await authService.verifyOTP(data.phone, code);
       } else if (step === 2) {
         if (!data.firstName.trim()) { setError('First name is required'); return; }
         if (!data.lastName.trim()) { setError('Last name is required'); return; }
         if (!data.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) { setError('Enter a valid email address'); return; }
-        if (checkEmailExists(data.email)) { setError('Email already registered'); return; }
         if (data.password.length < 6) { setError('Password needs at least 6 characters'); return; }
         if (data.password !== data.confirmPassword) { setError('Passwords don\'t match'); return; }
       } else if (step === 3) {
@@ -203,7 +182,6 @@ function RegisterForm() {
             userType: data.role === 'merchant' ? 'merchant' : 'consumer',
           });
           await setPin(data.pin);
-          await verifyOtp('123456');
           bpToast.success(`Welcome to BadePay, ${data.firstName}! 🎉`);
           navigate(data.role === 'merchant' ? '/merchant' : '/dashboard');
         } catch (err: any) {
@@ -214,8 +192,8 @@ function RegisterForm() {
       }
       await new Promise(r => setTimeout(r, 400));
       setStep(s => s + 1);
-    } catch {
-      setError('Something went wrong. Try again.');
+    } catch (err: any) {
+      setError(err?.message || 'Something went wrong. Try again.');
     } finally {
       setLoading(false);
     }
@@ -361,28 +339,6 @@ function RegisterForm() {
                 Code sent to <span className="font-semibold text-[var(--text-primary)]">{data.phone}</span>
               </p>
 
-              {/* Demo banner */}
-              <div className="mb-6 rounded-2xl p-4" style={{ background: 'rgba(111,232,214,0.06)', border: '1px solid rgba(111,232,214,0.2)' }}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Zap size={13} style={{ color: 'var(--accent-text)' }} />
-                    <span className="text-xs font-bold" style={{ color: 'var(--accent-text)' }}>Demo — use this code</span>
-                  </div>
-                  <button type="button" onClick={handleUseDemoCode}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition-all"
-                    style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
-                    {copied ? <Check size={11} /> : <Copy size={11} />}
-                    {copied ? 'Filled!' : 'Fill'}
-                  </button>
-                </div>
-                <div className="flex gap-1.5 justify-center">
-                  {'123456'.split('').map((d, i) => (
-                    <div key={i} className="w-9 h-9 flex items-center justify-center rounded-xl text-base font-black font-mono accent-icon-wrap"
-                      style={{ color: 'var(--accent-text)' }}>{d}</div>
-                  ))}
-                </div>
-              </div>
-
               <div className="flex justify-between gap-2 mb-5" onPaste={handleOtpPaste}>
                 {data.otp.map((digit, i) => (
                   <input key={i}
@@ -403,7 +359,15 @@ function RegisterForm() {
 
               <div className="text-center">
                 <button type="button" disabled={resendTimer > 0}
-                  onClick={() => { setResendTimer(42); bpToast.success('New code sent!'); }}
+                  onClick={async () => {
+                    setResendTimer(42);
+                    try {
+                      await authService.sendOTP(data.phone);
+                      bpToast.success('New code sent!');
+                    } catch {
+                      bpToast.error('Failed to resend code');
+                    }
+                  }}
                   className="text-sm font-semibold transition-colors"
                   style={{ color: resendTimer > 0 ? 'var(--text-tertiary)' : 'var(--accent-text)' }}>
                   {resendTimer > 0 ? `Resend in 0:${resendTimer.toString().padStart(2, '0')}` : 'Resend code'}

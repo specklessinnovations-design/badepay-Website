@@ -2,13 +2,12 @@ import React, { useState, Suspense } from 'react';
 import { Link } from 'wouter';
 import { useLocation, useSearch } from 'wouter';
 import { motion } from 'framer-motion';
-import { Lock, Eye, EyeOff, ArrowRight, Store, User, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Store, User, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getPostAuthPath } from '@/lib/authRouting';
 import { PremiumInput } from '@/components/ui/premium-input';
 import { PremiumButton } from '@/components/ui/premium-button';
 import { bpToast } from '@/lib/bpToast';
-import { validatePhoneNumber } from '@/utils/authHelpers';
 
 function LoginForm() {
   const [, navigate] = useLocation();
@@ -16,14 +15,17 @@ function LoginForm() {
   const accountType = new URLSearchParams(search).get('type') === 'merchant' ? 'merchant' : 'personal';
   const { login, isLoading, error } = useAuthStore();
 
-  const [formData, setFormData] = useState({ phone: '', password: '', rememberDevice: false });
+  const [formData, setFormData] = useState({ email: '', password: '', rememberDevice: false });
   const [showPassword, setShowPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
     const errors: Record<string, string> = {};
-    if (!formData.phone.trim()) errors.phone = 'Phone number is required';
-    else if (!validatePhoneNumber(formData.phone.trim())) errors.phone = 'Enter a valid Nigerian phone number';
+    if (!formData.email.trim()) {
+      errors.email = 'Email address is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errors.email = 'Enter a valid email address';
+    }
     if (!formData.password) errors.password = 'Password is required';
     else if (formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
     setValidationErrors(errors);
@@ -34,7 +36,7 @@ function LoginForm() {
     e.preventDefault();
     if (!validate()) return;
     try {
-      await login(formData.phone, formData.password, formData.rememberDevice);
+      await login(formData.email.trim().toLowerCase(), formData.password, formData.rememberDevice);
       bpToast.success('Welcome back!');
       navigate(getPostAuthPath(useAuthStore.getState().user));
     } catch (err) {
@@ -51,7 +53,7 @@ function LoginForm() {
     <motion.div
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut" as const }}
+      transition={{ duration: 0.5, ease: 'easeOut' as const }}
       className="w-full"
     >
       <div className="mb-7">
@@ -81,35 +83,17 @@ function LoginForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="w-full">
-          <label className="mb-2 block text-sm font-semibold tracking-tight text-[var(--text-primary)]">
-            Phone number
-          </label>
-          <div className="flex items-center rounded-2xl border border-[var(--border)] bg-[var(--surface-secondary)] transition-all duration-200 focus-within:border-[#6fe8d6]">
-            <div className="flex items-center gap-2 pl-4 pr-3 py-3.5 shrink-0"
-              style={{ borderRight: '1px solid var(--border)' }}>
-              <svg width="22" height="15" viewBox="0 0 22 15" className="rounded-sm">
-                <rect width="7.33" height="15" fill="#008751" />
-                <rect x="7.33" width="7.34" height="15" fill="#ffffff" />
-                <rect x="14.67" width="7.33" height="15" fill="#008751" />
-              </svg>
-              <span className="text-sm font-bold text-[var(--text-primary)] select-none">+234</span>
-            </div>
-            <input
-              type="tel"
-              placeholder="803 000 0000"
-              value={formData.phone.replace(/^\+234/, '')}
-              onChange={e => update('phone', '+234' + e.target.value.replace(/\D/g, '').slice(0, 11))}
-              className="flex-1 bg-transparent px-4 py-3.5 text-base text-[var(--text-primary)] focus:outline-none placeholder-[var(--text-tertiary)] tracking-wide font-medium"
-              disabled={isLoading}
-            />
-          </div>
-          {validationErrors.phone && (
-            <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-[#EF4444]">
-              {validationErrors.phone}
-            </p>
-          )}
-        </div>
+        <PremiumInput
+          label="Email address"
+          type="email"
+          placeholder="you@example.com"
+          icon={<Mail size={17} />}
+          value={formData.email}
+          onChange={e => update('email', e.target.value)}
+          error={validationErrors.email}
+          disabled={isLoading}
+          autoFocus
+        />
 
         <PremiumInput
           label="Password"

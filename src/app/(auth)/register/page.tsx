@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+'use client';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { Link } from 'wouter';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Mail, Lock, Phone, User, Eye, EyeOff, ArrowRight, ArrowLeft,
+  Mail, Lock, User, Eye, EyeOff, ArrowRight, ArrowLeft,
   Check, AlertCircle, Users, Store, ShieldCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -15,21 +16,13 @@ import { getPostAuthPath } from '@/lib/authRouting';
 import { PrivacyPolicyModal } from '@/components/ui/privacy-policy-modal';
 import { ConsentModal } from '@/components/ui/consent-modal';
 
-const STEPS = ['Phone', 'Verify', 'Profile', 'Secure PIN'];
-
-function generateAccountNumber() {
-  const prefixes = ['810', '901', '812', '703', '803'];
-  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-  const remaining = Array.from({ length: 10 - prefix.length }, () => Math.floor(Math.random() * 10)).join('');
-  return prefix + remaining;
-}
+const STEPS = ['Email', 'Verify', 'Profile', 'Secure PIN'];
 
 interface SignupData {
-  phone: string;
+  email: string;
   otp: string[];
   firstName: string;
   lastName: string;
-  email: string;
   password: string;
   confirmPassword: string;
   pin: string;
@@ -89,8 +82,8 @@ function RegisterForm() {
   const [pinStep, setPinStep] = useState<'enter' | 'confirm'>('enter');
 
   const [data, setData] = useState<SignupData>({
-    phone: '', otp: ['', '', '', '', '', ''],
-    firstName: '', lastName: '', email: '',
+    email: '', otp: ['', '', '', '', '', ''],
+    firstName: '', lastName: '',
     password: '', confirmPassword: '', pin: '', confirmPin: '',
     role: 'customer',
   });
@@ -145,10 +138,10 @@ function RegisterForm() {
     setLoading(true);
     try {
       if (step === 0) {
-        if (!data.phone.trim()) { setError('Phone number is required'); return; }
-        const raw = data.phone.replace('+234', '');
-        if (raw.length !== 10 && raw.length !== 11) { setError('Enter a valid Nigerian phone number'); return; }
-        setResendTimer(42);
+        if (!data.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+          setError('Enter a valid email address');
+          return;
+        }
         if (!privacyAccepted) {
           setShowPrivacy(true);
           setLoading(false);
@@ -159,26 +152,26 @@ function RegisterForm() {
           setLoading(false);
           return;
         }
-        // Send OTP via backend
-        await authService.sendOTP(data.phone);
+        setResendTimer(42);
+        // Send OTP to email via backend
+        await authService.sendOTP(data.email);
       } else if (step === 1) {
         const code = data.otp.join('');
         if (code.length !== 6) { setError('Enter all 6 digits'); return; }
-        // Verify OTP via backend
-        await authService.verifyOTP(data.phone, code);
+        // Verify OTP via backend (email-based)
+        await authService.verifyOTP(data.email, code);
       } else if (step === 2) {
         if (!data.firstName.trim()) { setError('First name is required'); return; }
         if (!data.lastName.trim()) { setError('Last name is required'); return; }
-        if (!data.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) { setError('Enter a valid email address'); return; }
         if (data.password.length < 6) { setError('Password needs at least 6 characters'); return; }
-        if (data.password !== data.confirmPassword) { setError('Passwords don\'t match'); return; }
+        if (data.password !== data.confirmPassword) { setError("Passwords don't match"); return; }
       } else if (step === 3) {
         if (!data.pin || data.pin.length !== 4) { setError('PIN must be exactly 4 digits'); return; }
-        if (data.pin !== data.confirmPin) { setError('PINs don\'t match'); return; }
+        if (data.pin !== data.confirmPin) { setError("PINs don't match"); return; }
         try {
           await register({
             firstName: data.firstName, lastName: data.lastName, email: data.email,
-            phone: data.phone, password: data.password,
+            password: data.password,
             userType: data.role === 'merchant' ? 'merchant' : 'consumer',
           });
           await setPin(data.pin);
@@ -203,8 +196,7 @@ function RegisterForm() {
     setError('');
     const current = field === 'pin' ? data.pin : data.confirmPin;
     if (key === '⌫') {
-      const next = current.slice(0, -1);
-      setData(p => ({ ...p, [field]: next }));
+      setData(p => ({ ...p, [field]: current.slice(0, -1) }));
     } else if (current.length < 4) {
       const next = current + key;
       setData(p => ({ ...p, [field]: next }));
@@ -213,8 +205,12 @@ function RegisterForm() {
           setTimeout(() => setPinStep('confirm'), 300);
         } else {
           if (data.pin !== next) {
-            setError('PINs don\'t match — try again');
-            setTimeout(() => { setData(p => ({ ...p, confirmPin: '' })); setPinStep('enter'); setData(p => ({ ...p, pin: '' })); setError(''); }, 2000);
+            setError("PINs don't match — try again");
+            setTimeout(() => {
+              setData(p => ({ ...p, confirmPin: '', pin: '' }));
+              setPinStep('enter');
+              setError('');
+            }, 2000);
           }
         }
       }
@@ -222,7 +218,6 @@ function RegisterForm() {
   };
 
   const numpad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
-
   const isLoading = loading || authLoading;
 
   const handlePrivacyAccept = async () => {
@@ -243,8 +238,12 @@ function RegisterForm() {
     await new Promise(r => setTimeout(r, 120));
     setLoading(true);
     try {
+      await authService.sendOTP(data.email);
+      setResendTimer(42);
       await new Promise(r => setTimeout(r, 400));
       setStep(s => s + 1);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to send OTP');
     } finally {
       setLoading(false);
     }
@@ -256,9 +255,9 @@ function RegisterForm() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" as const }} className="w-full">
+    <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }} className="w-full">
       <PrivacyPolicyModal open={showPrivacy} onAccept={handlePrivacyAccept} onDecline={handlePrivacyDecline} />
-      <ConsentModal open={showConsent} onAccept={handleConsentAccept} onDecline={handleConsentDecline} phoneNumber={data.phone} />
+      <ConsentModal open={showConsent} onAccept={handleConsentAccept} onDecline={handleConsentDecline} emailAddress={data.email} />
 
       {/* Back link */}
       <div className="mb-6 flex items-center justify-between">
@@ -296,47 +295,29 @@ function RegisterForm() {
       <AnimatePresence mode="wait">
         <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.22 }}>
 
-          {/* ─── Step 0: Phone ─── */}
+          {/* ─── Step 0: Email ─── */}
           {step === 0 && (
             <div>
-              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Your phone number</h1>
-              <p className="text-sm text-[var(--text-secondary)] mb-7">We'll send a verification code to this number.</p>
-              <div>
-                <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Mobile Number</label>
-                <div className="flex items-center rounded-2xl transition-all duration-200"
-                  style={{ background: 'var(--surface-secondary)', border: '2px solid var(--border)', outline: 'none' }}
-                  onFocus={e => e.currentTarget.style.borderColor = '#6fe8d6'}
-                  onBlur={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-                  <div className="flex items-center gap-2 pl-4 pr-3 py-3.5 shrink-0"
-                    style={{ borderRight: '1px solid var(--border)' }}>
-                    <svg width="22" height="15" viewBox="0 0 22 15" className="rounded-sm">
-                      <rect width="7.33" height="15" fill="#008751" />
-                      <rect x="7.33" width="7.34" height="15" fill="#ffffff" />
-                      <rect x="14.67" width="7.33" height="15" fill="#008751" />
-                    </svg>
-                    <span className="text-sm font-bold text-[var(--text-primary)] select-none">+234</span>
-                  </div>
-                  <input type="tel"
-                    value={data.phone.replace('+234', '')}
-                    onChange={e => {
-                      const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
-                      setData(p => ({ ...p, phone: '+234' + digits }));
-                      setError('');
-                    }}
-                    placeholder="803 000 0000"
-                    className="flex-1 bg-transparent px-4 py-3.5 text-base text-[var(--text-primary)] focus:outline-none placeholder-[var(--text-tertiary)] tracking-wide font-medium"
-                  />
-                </div>
-              </div>
+              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Your email address</h1>
+              <p className="text-sm text-[var(--text-secondary)] mb-7">We'll send a verification code to this email.</p>
+              <PremiumInput
+                label="Email address"
+                type="email"
+                placeholder="you@example.com"
+                icon={<Mail size={15} />}
+                value={data.email}
+                onChange={e => { setData(p => ({ ...p, email: e.target.value })); setError(''); }}
+                autoFocus
+              />
             </div>
           )}
 
           {/* ─── Step 1: OTP ─── */}
           {step === 1 && (
             <div>
-              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Verify your number</h1>
+              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Verify your email</h1>
               <p className="text-sm text-[var(--text-secondary)] mb-6">
-                Code sent to <span className="font-semibold text-[var(--text-primary)]">{data.phone}</span>
+                Code sent to <span className="font-semibold text-[var(--text-primary)]">{data.email}</span>
               </p>
 
               <div className="flex justify-between gap-2 mb-5" onPaste={handleOtpPaste}>
@@ -362,8 +343,8 @@ function RegisterForm() {
                   onClick={async () => {
                     setResendTimer(42);
                     try {
-                      await authService.sendOTP(data.phone);
-                      bpToast.success('New code sent!');
+                      await authService.sendOTP(data.email);
+                      bpToast.success('New code sent to your email!');
                     } catch {
                       bpToast.error('Failed to resend code');
                     }
@@ -421,9 +402,6 @@ function RegisterForm() {
                   <PremiumInput label="Last name" placeholder="Adeyemi" icon={<User size={15} />}
                     value={data.lastName} onChange={e => setData(p => ({ ...p, lastName: e.target.value }))} />
                 </div>
-
-                <PremiumInput label="Email address" type="email" placeholder="you@example.com" icon={<Mail size={15} />}
-                  value={data.email} onChange={e => setData(p => ({ ...p, email: e.target.value }))} />
 
                 <PremiumInput label="Password" type={showPassword ? 'text' : 'password'} placeholder="Create a strong password"
                   icon={<Lock size={15} />}

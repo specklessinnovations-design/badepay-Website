@@ -1,7 +1,7 @@
 /**
  * BadePay Auth Service
  * Connects to the real BadePay backend REST API for all authentication operations.
- * Replaces the previous localStorage-only mock implementation.
+ * Auth is now email-based (OTP delivered via Resend email).
  */
 
 import apiClient from '@/lib/apiClient';
@@ -12,7 +12,7 @@ import type { MerchantProfile } from '@/types/merchant';
 export interface StoredUser {
   id: string;
   email: string;
-  phone: string;
+  phone?: string; // Optional — kept for KYC/profile display
   firstName: string;
   lastName: string;
   password?: string; // never returned by backend; kept for type compat
@@ -49,7 +49,7 @@ function mapBackendUser(raw: any): StoredUser {
   return {
     id: raw.id || raw._id || '',
     email: raw.email || '',
-    phone: raw.phone || '',
+    phone: raw.phone || undefined,
     firstName: raw.firstName || '',
     lastName: raw.lastName || '',
     userType: raw.userType || 'consumer',
@@ -91,11 +91,11 @@ function extractTokens(resp: any): { token: string; refreshToken: string } {
 
 export const authService = {
   /**
-   * Login with phone + password.
+   * Login with email + password.
    * Backend endpoint: POST /auth/login
    */
-  login: async (phone: string, password: string): Promise<AuthResponse> => {
-    const resp = await apiClient.post('/auth/login', { phone, password });
+  login: async (email: string, password: string): Promise<AuthResponse> => {
+    const resp = await apiClient.post('/auth/login', { email, password });
     const { token, refreshToken } = extractTokens(resp);
     if (token) apiClient.setTokens(token, refreshToken);
     const rawUser = resp?.data?.user || resp?.user || resp?.data || {};
@@ -110,7 +110,7 @@ export const authService = {
     firstName: string;
     lastName: string;
     email: string;
-    phone: string;
+    phone?: string;
     password: string;
     userType: 'consumer' | 'merchant';
     businessName?: string;
@@ -127,19 +127,20 @@ export const authService = {
   },
 
   /**
-   * Send OTP to phone number.
-   * Backend endpoint: POST /auth/otp/send (alias: /auth/send-otp)
+   * Send OTP to email address.
+   * Backend endpoint: POST /auth/otp/send
    */
-  sendOTP: async (phone: string): Promise<void> => {
-    await apiClient.post('/auth/otp/send', { phone });
+  sendOTP: async (email: string): Promise<{ pinId?: string }> => {
+    const resp = await apiClient.post('/auth/otp/send', { email });
+    return { pinId: resp?.data?.pinId || resp?.pinId };
   },
 
   /**
-   * Verify OTP code.
-   * Backend endpoint: POST /auth/otp/verify (alias: /auth/verify-otp)
+   * Verify OTP code sent to email.
+   * Backend endpoint: POST /auth/otp/verify
    */
-  verifyOTP: async (phone: string, otp: string): Promise<AuthResponse> => {
-    const resp = await apiClient.post('/auth/otp/verify', { phone, otp });
+  verifyOTP: async (email: string, otp: string): Promise<AuthResponse> => {
+    const resp = await apiClient.post('/auth/otp/verify', { email, otp });
     const { token, refreshToken } = extractTokens(resp);
     if (token) apiClient.setTokens(token, refreshToken);
     const rawUser = resp?.user || resp?.data?.user || {};
@@ -147,11 +148,12 @@ export const authService = {
   },
 
   /**
-   * Forgot password - sends reset code via SMS.
+   * Forgot password — sends reset OTP to email.
    * Backend endpoint: POST /auth/forgot-password
    */
-  forgotPassword: async (phone: string): Promise<void> => {
-    await apiClient.post('/auth/forgot-password', { phone });
+  forgotPassword: async (email: string): Promise<{ pinId?: string }> => {
+    const resp = await apiClient.post('/auth/forgot-password', { email });
+    return { pinId: resp?.data?.pinId || resp?.pinId };
   },
 
   /**
@@ -196,7 +198,6 @@ export const authService = {
   getProfile: async (): Promise<StoredUser> => {
     const resp = await apiClient.get('/users/me');
     const rawUser = resp?.data?.user || resp?.data || resp?.user || {};
-    // Fetch wallet balance separately and merge
     try {
       const walletResp = await apiClient.get('/wallet/balance');
       rawUser.balance = walletResp?.data?.balance ?? rawUser.balance ?? 0;
@@ -253,7 +254,7 @@ export const authService = {
   },
 
   /**
-   * Update profile.
+   * Update profile (name / phone).
    * Backend endpoint: PATCH /auth/profile
    */
   updateProfile: async (data: { firstName?: string; lastName?: string; phone?: string }): Promise<StoredUser> => {
@@ -273,7 +274,6 @@ export const authService = {
 
   /**
    * Revoke sessions.
-   * Backend endpoint: DELETE /auth/sessions (using POST as workaround for body)
    */
   revokeSessions: async (keepCurrentSession?: boolean): Promise<void> => {
     const refreshToken = apiClient.getRefreshToken();
@@ -282,7 +282,6 @@ export const authService = {
 
   /**
    * Revoke specific session.
-   * Backend endpoint: DELETE /auth/sessions/:id
    */
   revokeSession: async (sessionId: string): Promise<void> => {
     await apiClient.delete(`/auth/sessions/${sessionId}`);
@@ -290,51 +289,30 @@ export const authService = {
 
   // ── Two-Factor Authentication (TOTP) ─────────────────────────────────────
 
-  /**
-   * Get 2FA status.
-   * Backend endpoint: GET /auth/2fa/status
-   */
   get2FAStatus: async (): Promise<{ twoFactorActive: boolean }> => {
     const resp = await apiClient.get('/auth/2fa/status');
     return resp?.data || { twoFactorActive: false };
   },
 
-  /**
-   * Setup 2FA.
-   * Backend endpoint: POST /auth/2fa/setup
-   */
   setup2FA: async (): Promise<{ secret: string; otpauthUrl: string; qrCodeDataUrl: string }> => {
     const resp = await apiClient.post('/auth/2fa/setup');
     return resp?.data || {};
   },
 
-  /**
-   * Enable 2FA.
-   * Backend endpoint: POST /auth/2fa/enable
-   */
   enable2FA: async (code: string): Promise<void> => {
     await apiClient.post('/auth/2fa/enable', { code });
   },
 
-  /**
-   * Verify 2FA code.
-   * Backend endpoint: POST /auth/2fa/verify
-   */
   verify2FA: async (code: string): Promise<void> => {
     await apiClient.post('/auth/2fa/verify', { code });
   },
 
-  /**
-   * Disable 2FA.
-   * Backend endpoint: POST /auth/2fa/disable
-   */
   disable2FA: async (code: string, password: string): Promise<void> => {
     await apiClient.post('/auth/2fa/disable', { code, password });
   },
 
   /**
    * Complete merchant onboarding.
-   * Backend endpoint: PATCH /auth/profile  (updates userType + merchant profile)
    */
   completeMerchantOnboarding: async (
     data: Omit<MerchantProfile, 'merchantId' | 'qrSlug' | 'verified' | 'onboardingComplete' | 'payoutAccount'>,
@@ -354,7 +332,6 @@ export const authService = {
 
   /**
    * Upgrade existing consumer account to merchant.
-   * Backend endpoint: PATCH /auth/profile
    */
   upgradeToMerchant: async (): Promise<void> => {
     await apiClient.patch('/auth/profile', { userType: 'merchant' });
@@ -371,15 +348,23 @@ export default authService;
 
 // ── Additional compatibility methods ──────────────────────────────────────────
 
-/**
- * Get user by ID — fetches from backend profile endpoint.
- * Used by syncUserFromStorage in useAuthStore.
- */
 export async function getUserById(_id: string) {
   try {
     const resp = await apiClient.get('/users/me');
     const rawUser = resp?.data?.user || resp?.data || resp?.user || {};
-    return mapBackendUser(rawUser);
+    return {
+      id: rawUser.id || '',
+      email: rawUser.email || '',
+      phone: rawUser.phone || undefined,
+      firstName: rawUser.firstName || '',
+      lastName: rawUser.lastName || '',
+      userType: rawUser.userType || 'consumer',
+      createdAt: rawUser.createdAt || new Date().toISOString(),
+      balance: Number(rawUser.balance ?? rawUser.wallet?.balance ?? 0),
+      kycLevel: (rawUser.kycLevel ?? 0) as 0 | 1 | 2 | 3,
+      kycStatus: rawUser.kycStatus || 'pending',
+      isActive: rawUser.isActive !== false,
+    };
   } catch {
     return null;
   }

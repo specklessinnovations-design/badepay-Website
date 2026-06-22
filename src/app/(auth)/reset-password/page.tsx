@@ -96,7 +96,7 @@ function ResetPasswordContent() {
 
       <div className="mb-8">
         <h1 className="text-3xl font-black tracking-tight text-[var(--text-primary)] mb-2">Create new password</h1>
-        <p className="text-sm text-[var(--text-secondary)]">Enter the 6-digit code from your SMS and set a new password.</p>
+        <p className="text-sm text-[var(--text-secondary)]">Enter the 6-digit code sent to your email and set a new password.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">

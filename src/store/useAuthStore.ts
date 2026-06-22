@@ -15,7 +15,7 @@ export type UserType = 'consumer' | 'merchant';
 export interface User {
   id: string;
   email: string;
-  phone: string;
+  phone?: string; // Optional — kept for KYC/profile
   firstName: string;
   lastName: string;
   userType: UserType;
@@ -55,7 +55,7 @@ export interface AuthState {
   lastLoginTime?: string;
 
   // Auth actions
-  login: (phone: string, password: string, rememberDevice?: boolean) => Promise<void>;
+  login: (email: string, password: string, rememberDevice?: boolean) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   verifyOtp: (otp: string) => Promise<void>;
@@ -79,8 +79,8 @@ export interface AuthState {
 }
 
 export interface RegisterData {
-  phone: string;
   email: string;
+  phone?: string; // Optional — kept for KYC/profile
   firstName: string;
   lastName: string;
   password: string;
@@ -98,10 +98,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       /**
        * Login with email and password
        */
-      login: async (phone: string, password: string, rememberDevice = false) => {
+      login: async (email: string, password: string, rememberDevice = false) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await authService.login(phone, password);
+          const response = await authService.login(email, password);
 
           usePreferencesStore.getState().recordLogin(getDeviceLabel());
           authService.updateUserProfile({
@@ -139,7 +139,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             firstName: data.firstName,
             lastName: data.lastName,
             email: data.email,
-            phone: data.phone,
+            phone: data.phone, // optional
             password: data.password,
             userType: data.userType,
           });
@@ -168,7 +168,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           const currentUser = get().user;
           if (!currentUser) throw new Error('No user found for OTP verification');
 
-          const response = await authService.verifyOTP(currentUser.phone, otp);
+          const response = await authService.verifyOTP(currentUser.email, otp);
 
           usePreferencesStore.getState().recordLogin(getDeviceLabel());
 
@@ -191,10 +191,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       /**
        * Send password reset OTP
        */
-      sendPasswordResetOTP: async (phone: string) => {
+      sendPasswordResetOTP: async (email: string) => {
         set({ isLoading: true, error: null });
         try {
-          await authService.forgotPassword(phone);
+          await authService.forgotPassword(email);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to send reset OTP';
           set({ error: errorMessage });

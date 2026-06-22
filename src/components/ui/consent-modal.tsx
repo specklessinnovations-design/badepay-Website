@@ -6,10 +6,11 @@ interface ConsentModalProps {
   open: boolean;
   onAccept: () => void;
   onDecline: () => void;
-  phoneNumber?: string;
+  emailAddress?: string;
+  phoneNumber?: string; // kept for backward compat
 }
 
-export function ConsentModal({ open, onAccept, onDecline, phoneNumber }: ConsentModalProps) {
+export function ConsentModal({ open, onAccept, onDecline, emailAddress, phoneNumber }: ConsentModalProps) {
   return (
     <AnimatePresence>
       {open && (
@@ -67,7 +68,7 @@ export function ConsentModal({ open, onAccept, onDecline, phoneNumber }: Consent
                 </div>
 
                 <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                  We'll send a verification code to <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{phoneNumber}</span>. By continuing, you agree to our terms.
+                  We'll send a verification code to <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{emailAddress || phoneNumber}</span>. By continuing, you agree to our terms.
                 </p>
               </div>
 
@@ -83,10 +84,10 @@ export function ConsentModal({ open, onAccept, onDecline, phoneNumber }: Consent
                     </div>
                     <div>
                       <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                        SMS Verification
+                        Email Verification
                       </p>
                       <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                        We'll send a 6-digit code to verify your phone number. Standard SMS rates may apply.
+                        We'll send a 6-digit OTP to verify your email address. No SMS charges apply.
                       </p>
                     </div>
                   </div>

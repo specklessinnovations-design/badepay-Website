@@ -10,6 +10,8 @@ import authService from '@/services/authService';
 
 function ResetPasswordContent() {
   const [, navigate] = useLocation();
+  const emailFromQuery = new URLSearchParams(window.location.search).get('email')?.trim().toLowerCase() || '';
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,6 +27,7 @@ function ResetPasswordContent() {
 
   const validate = () => {
     const e: Record<string, string> = {};
+    if (!emailFromQuery) e.email = 'Missing email address — start from forgot password';
     if (!formData.otp.trim()) e.otp = 'Verification code is required';
     else if (!/^\d{6}$/.test(formData.otp)) e.otp = 'Must be exactly 6 digits';
     if (!formData.password) e.password = 'New password is required';
@@ -45,7 +48,7 @@ function ResetPasswordContent() {
     if (!validate()) return;
     setIsLoading(true);
     try {
-      await authService.resetPassword(formData.otp, formData.password);
+      await authService.resetPassword(emailFromQuery, formData.otp, formData.password);
       setIsSuccess(true);
       bpToast.success('Password reset successfully!');
       setTimeout(() => navigate('/login'), 2500);
@@ -56,6 +59,24 @@ function ResetPasswordContent() {
       setIsLoading(false);
     }
   };
+
+  if (!emailFromQuery) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full text-center"
+      >
+        <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Email required</h1>
+        <p className="text-sm text-[var(--text-secondary)] mb-6">
+          Start from forgot password so we know which account to reset.
+        </p>
+        <PremiumButton onClick={() => navigate('/forgot-password')} fullWidth size="lg">
+          Go to forgot password <ArrowRight size={17} />
+        </PremiumButton>
+      </motion.div>
+    );
+  }
 
   if (isSuccess) {
     return (
@@ -96,11 +117,13 @@ function ResetPasswordContent() {
 
       <div className="mb-8">
         <h1 className="text-3xl font-black tracking-tight text-[var(--text-primary)] mb-2">Create new password</h1>
-        <p className="text-sm text-[var(--text-secondary)]">Enter the 6-digit code sent to your email and set a new password.</p>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Enter the 6-digit code sent to{' '}
+          <span className="font-semibold text-[var(--text-primary)]">{emailFromQuery}</span>
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* OTP */}
         <div>
           <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2">Verification code</label>
           <input

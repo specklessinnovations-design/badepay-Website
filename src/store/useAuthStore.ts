@@ -139,16 +139,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             firstName: data.firstName,
             lastName: data.lastName,
             email: data.email,
-            phone: data.phone, // optional
+            phone: data.phone,
             password: data.password,
             userType: data.userType,
           });
 
-          // Store user temporarily (not authenticated until OTP verified)
           set({
             user: toPublicUser(response.user),
-            isAuthenticated: false,
-            sessionToken: 'temp_' + Math.random().toString(36).substr(2, 20),
+            isAuthenticated: true,
+            sessionToken: response.token,
+            refreshToken: response.refreshToken,
           });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Registration failed';
@@ -207,10 +207,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       /**
        * Reset password with token
        */
-      resetPassword: async (token: string, newPassword: string) => {
+      resetPassword: async (email: string, newPassword: string, otp: string) => {
         set({ isLoading: true, error: null });
         try {
-          await authService.resetPassword(token, newPassword);
+          await authService.resetPassword(email, otp, newPassword);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
           set({ error: errorMessage });

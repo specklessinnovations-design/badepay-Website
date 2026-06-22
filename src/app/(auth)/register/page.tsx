@@ -16,7 +16,7 @@ import { getPostAuthPath } from '@/lib/authRouting';
 import { PrivacyPolicyModal } from '@/components/ui/privacy-policy-modal';
 import { ConsentModal } from '@/components/ui/consent-modal';
 
-const STEPS = ['Email', 'Verify', 'Profile', 'Secure PIN'];
+const STEPS = ['Email', 'Profile', 'Verify', 'Secure PIN'];
 
 interface SignupData {
   email: string;
@@ -95,7 +95,7 @@ function RegisterForm() {
   }, []);
 
   useEffect(() => {
-    if (step === 1 && resendTimer > 0) {
+    if (step === 2 && resendTimer > 0) {
       const interval = setInterval(() => setResendTimer(t => t - 1), 1000);
       return () => clearInterval(interval);
     }
@@ -152,33 +152,34 @@ function RegisterForm() {
           setLoading(false);
           return;
         }
-        setResendTimer(42);
-        // Send OTP to email via backend
-        await authService.sendOTP(data.email);
       } else if (step === 1) {
-        const code = data.otp.join('');
-        if (code.length !== 6) { setError('Enter all 6 digits'); return; }
-        // Verify OTP via backend (email-based)
-        await authService.verifyOTP(data.email, code);
-      } else if (step === 2) {
         if (!data.firstName.trim()) { setError('First name is required'); return; }
         if (!data.lastName.trim()) { setError('Last name is required'); return; }
         if (data.password.length < 6) { setError('Password needs at least 6 characters'); return; }
         if (data.password !== data.confirmPassword) { setError("Passwords don't match"); return; }
+
+        await register({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email.trim().toLowerCase(),
+          password: data.password,
+          userType: data.role === 'merchant' ? 'merchant' : 'consumer',
+        });
+        setResendTimer(42);
+        bpToast.success('Account created! Check your email for a verification code.');
+      } else if (step === 2) {
+        const code = data.otp.join('');
+        if (code.length !== 6) { setError('Enter all 6 digits'); return; }
+        await verifyOtp(code);
       } else if (step === 3) {
         if (!data.pin || data.pin.length !== 4) { setError('PIN must be exactly 4 digits'); return; }
         if (data.pin !== data.confirmPin) { setError("PINs don't match"); return; }
         try {
-          await register({
-            firstName: data.firstName, lastName: data.lastName, email: data.email,
-            password: data.password,
-            userType: data.role === 'merchant' ? 'merchant' : 'consumer',
-          });
           await setPin(data.pin);
           bpToast.success(`Welcome to BadePay, ${data.firstName}! 🎉`);
           navigate(data.role === 'merchant' ? '/merchant' : '/dashboard');
         } catch (err: any) {
-          setError(err?.message || 'Registration failed');
+          setError(err?.message || 'Failed to set PIN');
           return;
         }
         return;
@@ -236,17 +237,8 @@ function RegisterForm() {
     setConsentAccepted(true);
     setShowConsent(false);
     await new Promise(r => setTimeout(r, 120));
-    setLoading(true);
-    try {
-      await authService.sendOTP(data.email);
-      setResendTimer(42);
-      await new Promise(r => setTimeout(r, 400));
-      setStep(s => s + 1);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to send OTP');
-    } finally {
-      setLoading(false);
-    }
+    await new Promise(r => setTimeout(r, 400));
+    setStep(s => s + 1);
   };
 
   const handleConsentDecline = () => {
@@ -261,7 +253,7 @@ function RegisterForm() {
 
       {/* Back link */}
       <div className="mb-6 flex items-center justify-between">
-        {step > 0 ? (
+        {step > 0 && step !== 2 ? (
           <button onClick={() => { setError(''); if (step === 3) { setPinStep('enter'); setData(p => ({ ...p, pin: '', confirmPin: '' })); } setStep(s => s - 1); }}
             className="flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-80" style={{ color: 'var(--text-secondary)' }}>
             <ArrowLeft size={15} /> Back
@@ -312,53 +304,8 @@ function RegisterForm() {
             </div>
           )}
 
-          {/* ─── Step 1: OTP ─── */}
+          {/* ─── Step 1: Profile ─── */}
           {step === 1 && (
-            <div>
-              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Verify your email</h1>
-              <p className="text-sm text-[var(--text-secondary)] mb-6">
-                Code sent to <span className="font-semibold text-[var(--text-primary)]">{data.email}</span>
-              </p>
-
-              <div className="flex justify-between gap-2 mb-5" onPaste={handleOtpPaste}>
-                {data.otp.map((digit, i) => (
-                  <input key={i}
-                    ref={el => { otpInputs.current[i] = el; }}
-                    type="text" inputMode="numeric" maxLength={1} value={digit}
-                    onChange={e => handleOtpChange(i, e.target.value)}
-                    onKeyDown={e => handleOtpKeyDown(i, e)}
-                    className="w-12 h-11 flex-shrink-0 text-center text-lg font-black rounded-xl focus:outline-none font-mono transition-all duration-200"
-                    style={{
-                      background: digit ? 'rgba(111,232,214,0.08)' : 'var(--surface-secondary)',
-                      border: `2px solid ${digit ? 'var(--accent-text)' : 'var(--border)'}`,
-                      color: 'var(--text-primary)',
-                    }}
-                    placeholder="·"
-                  />
-                ))}
-              </div>
-
-              <div className="text-center">
-                <button type="button" disabled={resendTimer > 0}
-                  onClick={async () => {
-                    setResendTimer(42);
-                    try {
-                      await authService.sendOTP(data.email);
-                      bpToast.success('New code sent to your email!');
-                    } catch {
-                      bpToast.error('Failed to resend code');
-                    }
-                  }}
-                  className="text-sm font-semibold transition-colors"
-                  style={{ color: resendTimer > 0 ? 'var(--text-tertiary)' : 'var(--accent-text)' }}>
-                  {resendTimer > 0 ? `Resend in 0:${resendTimer.toString().padStart(2, '0')}` : 'Resend code'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ─── Step 2: Profile ─── */}
-          {step === 2 && (
             <div>
               <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Create your profile</h1>
               <p className="text-sm text-[var(--text-secondary)] mb-6">Use details matching your official ID.</p>
@@ -442,6 +389,52 @@ function RegisterForm() {
             </div>
           )}
 
+          {/* ─── Step 2: OTP ─── */}
+          {step === 2 && (
+            <div>
+              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Verify your email</h1>
+              <p className="text-sm text-[var(--text-secondary)] mb-6">
+                We sent a welcome email and 6-digit code to{' '}
+                <span className="font-semibold text-[var(--text-primary)]">{data.email}</span>
+              </p>
+
+              <div className="flex justify-between gap-2 mb-5" onPaste={handleOtpPaste}>
+                {data.otp.map((digit, i) => (
+                  <input key={i}
+                    ref={el => { otpInputs.current[i] = el; }}
+                    type="text" inputMode="numeric" maxLength={1} value={digit}
+                    onChange={e => handleOtpChange(i, e.target.value)}
+                    onKeyDown={e => handleOtpKeyDown(i, e)}
+                    className="w-12 h-11 flex-shrink-0 text-center text-lg font-black rounded-xl focus:outline-none font-mono transition-all duration-200"
+                    style={{
+                      background: digit ? 'rgba(111,232,214,0.08)' : 'var(--surface-secondary)',
+                      border: `2px solid ${digit ? 'var(--accent-text)' : 'var(--border)'}`,
+                      color: 'var(--text-primary)',
+                    }}
+                    placeholder="·"
+                  />
+                ))}
+              </div>
+
+              <div className="text-center">
+                <button type="button" disabled={resendTimer > 0}
+                  onClick={async () => {
+                    setResendTimer(42);
+                    try {
+                      await authService.resendOTP(data.email);
+                      bpToast.success('New code sent to your email!');
+                    } catch {
+                      bpToast.error('Failed to resend code');
+                    }
+                  }}
+                  className="text-sm font-semibold transition-colors"
+                  style={{ color: resendTimer > 0 ? 'var(--text-tertiary)' : 'var(--accent-text)' }}>
+                  {resendTimer > 0 ? `Resend in 0:${resendTimer.toString().padStart(2, '0')}` : 'Resend code'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ─── Step 3: PIN ─── */}
           {step === 3 && (
             <div>
@@ -506,7 +499,7 @@ function RegisterForm() {
       {step < 3 && (
         <div className="mt-8">
           <PremiumButton type="button" fullWidth size="lg" onClick={handleNext} isLoading={isLoading} disabled={isLoading}>
-            {!isLoading && <>{step === 2 ? 'Create profile' : 'Continue'} <ArrowRight size={17} /></>}
+            {!isLoading && <>{step === 1 ? 'Create account' : step === 2 ? 'Verify email' : 'Continue'} <ArrowRight size={17} /></>}
           </PremiumButton>
         </div>
       )}
@@ -533,13 +526,6 @@ function RegisterForm() {
         <ShieldCheck size={13} className="text-[var(--text-tertiary)]" />
         <p className="text-xs text-[var(--text-tertiary)]">Bank-grade encryption · Your data is safe</p>
       </motion.div>
-
-      {/* Privacy Policy Modal */}
-      <PrivacyPolicyModal
-        open={showPrivacy}
-        onAccept={handlePrivacyAccept}
-        onDecline={handlePrivacyDecline}
-      />
     </motion.div>
   );
 }

@@ -1,23 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'wouter';
 import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Copy, Check, Zap, RotateCcw, ShieldCheck } from 'lucide-react';
+import { ArrowRight, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { PremiumButton } from '@/components/ui/premium-button';
 import { bpToast } from '@/lib/bpToast';
-import * as authService from '@/services/authService';
-
-const DEMO_OTP = '123456';
+import { getPostAuthPath } from '@/lib/authRouting';
+import authService from '@/services/authService';
 
 export default function VerifyOTPPage() {
   const [, navigate] = useLocation();
-  const { isLoading, user, verifyOtp } = useAuthStore();
+  const { isLoading, user, verifyOtp, logout } = useAuthStore();
+  const emailFromQuery = new URLSearchParams(window.location.search).get('email')?.trim().toLowerCase() || '';
+  const displayEmail = user?.email || emailFromQuery;
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timeLeft, setTimeLeft] = useState(300);
   const [canResend, setCanResend] = useState(false);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -64,23 +65,18 @@ export default function VerifyOTPPage() {
     inputRefs.current[Math.min(digits.length, 5)]?.focus();
   };
 
-  const fillDemo = () => {
-    setOtp(DEMO_OTP.split(''));
-    setError('');
-    setCopied(true);
-    navigator.clipboard.writeText(DEMO_OTP).catch(() => {});
-    bpToast.success('Demo code filled!');
-    setTimeout(() => setCopied(false), 2500);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = otp.join('');
     if (code.length !== 6) { setError('Enter all 6 digits'); return; }
+    if (!displayEmail) {
+      setError('Email address not found. Please register again.');
+      return;
+    }
     try {
       await verifyOtp(code);
       bpToast.success('Email verified!');
-      navigate('/dashboard');
+      navigate(getPostAuthPath(useAuthStore.getState().user));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Invalid code';
       setError(msg);
@@ -90,10 +86,13 @@ export default function VerifyOTPPage() {
   };
 
   const handleResend = async () => {
+    if (!displayEmail) {
+      bpToast.error('Email address not found');
+      return;
+    }
     setIsResending(true);
     try {
-      if (!user?.email) throw new Error('Email not found');
-      await authService.resendOTP(user.email);
+      await authService.resendOTP(displayEmail);
       setTimeLeft(300);
       setCanResend(false);
       setOtp(['', '', '', '', '', '']);
@@ -109,8 +108,7 @@ export default function VerifyOTPPage() {
   const handleRestart = async () => {
     setIsRestarting(true);
     try {
-      if (!user?.email) throw new Error('Email not found');
-      await authService.deleteUser(user.email);
+      logout();
       bpToast.success('Starting fresh…');
       navigate('/register');
     } catch (err) {
@@ -121,51 +119,43 @@ export default function VerifyOTPPage() {
 
   const isAllFilled = otp.every(d => d !== '');
 
+  if (!displayEmail) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full text-center">
+        <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">No email to verify</h1>
+        <p className="text-sm text-[var(--text-secondary)] mb-6">
+          Create an account first — we&apos;ll send a verification code to your inbox.
+        </p>
+        <PremiumButton onClick={() => navigate('/register')} fullWidth size="lg">
+          Create account <ArrowRight size={17} />
+        </PremiumButton>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" as const }} className="w-full">
 
-      {/* Icon */}
       <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
         className="mb-6 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto accent-icon-wrap">
         <ShieldCheck size={28} style={{ color: 'var(--accent-text)' }} />
       </motion.div>
 
-      {/* Header */}
       <div className="mb-6 text-center">
         <h1 className="text-2xl font-black tracking-tight text-[var(--text-primary)] mb-2">Verify your email</h1>
         <p className="text-sm text-[var(--text-secondary)]">
           We sent a 6-digit code to{' '}
-          <span className="font-semibold text-[var(--text-primary)]">{user?.email || 'your email'}</span>
+          <span className="font-semibold text-[var(--text-primary)]">{displayEmail}</span>
         </p>
       </div>
 
-      {/* Demo banner */}
-      <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}
-        className="mb-6 rounded-2xl p-4"
-        style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)' }}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Zap size={14} style={{ color: 'var(--accent-text)' }} />
-            <span className="text-xs font-bold" style={{ color: 'var(--accent-text)' }}>Demo Mode</span>
-          </div>
-          <button type="button" onClick={fillDemo}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95"
-            style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
-            {copied ? <Check size={12} /> : <Copy size={12} />}
-            {copied ? 'Filled!' : 'Use code'}
-          </button>
-        </div>
-        <div className="flex gap-1.5 justify-center">
-          {DEMO_OTP.split('').map((d, i) => (
-            <div key={i} className="w-9 h-10 flex items-center justify-center rounded-xl text-lg font-black font-mono accent-icon-wrap"
-              style={{ border: '1px solid var(--accent-border)', color: 'var(--accent-text)' }}>
-              {d}
-            </div>
-          ))}
-        </div>
-      </motion.div>
+      <div className="mb-6 rounded-2xl p-4 text-left"
+        style={{ background: 'rgba(111,232,214,0.06)', border: '1px solid rgba(111,232,214,0.15)' }}>
+        <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+          Check your inbox and spam folder. Codes expire after a few minutes — use resend if needed.
+        </p>
+      </div>
 
-      {/* OTP inputs */}
       <form onSubmit={handleSubmit}>
         <div className="mb-6">
           <label className="block text-sm font-semibold text-[var(--text-primary)] mb-3">Enter verification code</label>
@@ -199,7 +189,6 @@ export default function VerifyOTPPage() {
           </AnimatePresence>
         </div>
 
-        {/* Timer */}
         <div className="mb-6 text-center">
           {timeLeft > 0 ? (
             <p className="text-sm text-[var(--text-secondary)]">
@@ -216,7 +205,6 @@ export default function VerifyOTPPage() {
         </PremiumButton>
       </form>
 
-      {/* Resend */}
       <div className="mt-6 space-y-3 text-center">
         {canResend ? (
           <>
@@ -234,10 +222,17 @@ export default function VerifyOTPPage() {
           </>
         ) : (
           <p className="text-sm text-[var(--text-tertiary)]">
-            Didn't receive it? Check your spam folder
+            Didn&apos;t receive it? Check your spam folder
           </p>
         )}
       </div>
+
+      <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
+        Already verified?{' '}
+        <Link href="/login" className="font-bold transition-colors" style={{ color: 'var(--accent-text)' }}>
+          Sign in
+        </Link>
+      </p>
     </motion.div>
   );
 }

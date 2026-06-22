@@ -71,6 +71,10 @@ function mapBackendUser(raw: any): StoredUser {
   };
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 function extractTokens(resp: any): { token: string; refreshToken: string } {
   const token =
     resp?.accessToken ||
@@ -87,6 +91,10 @@ function extractTokens(resp: any): { token: string; refreshToken: string } {
   return { token, refreshToken };
 }
 
+function extractUser(resp: any): any {
+  return resp?.data?.user || resp?.user || resp?.data || {};
+}
+
 // ─── Auth Service ─────────────────────────────────────────────────────────────
 
 export const authService = {
@@ -95,11 +103,10 @@ export const authService = {
    * Backend endpoint: POST /auth/login
    */
   login: async (email: string, password: string): Promise<AuthResponse> => {
-    const resp = await apiClient.post('/auth/login', { email, password });
+    const resp = await apiClient.post('/auth/login', { email: normalizeEmail(email), password });
     const { token, refreshToken } = extractTokens(resp);
     if (token) apiClient.setTokens(token, refreshToken);
-    const rawUser = resp?.data?.user || resp?.user || resp?.data || {};
-    return { user: mapBackendUser(rawUser), token, refreshToken };
+    return { user: mapBackendUser(extractUser(resp)), token, refreshToken };
   },
 
   /**
@@ -118,12 +125,19 @@ export const authService = {
     businessType?: string;
     category?: string;
     address?: string;
-  }): Promise<AuthResponse> => {
-    const resp = await apiClient.post('/auth/register', data);
+  }): Promise<AuthResponse & { pinId?: string }> => {
+    const resp = await apiClient.post('/auth/register', {
+      ...data,
+      email: normalizeEmail(data.email),
+    });
     const { token, refreshToken } = extractTokens(resp);
     if (token) apiClient.setTokens(token, refreshToken);
-    const rawUser = resp?.data?.user || resp?.user || resp?.data || {};
-    return { user: mapBackendUser(rawUser), token, refreshToken };
+    return {
+      user: mapBackendUser(extractUser(resp)),
+      token,
+      refreshToken,
+      pinId: resp?.data?.pinId,
+    };
   },
 
   /**
@@ -131,7 +145,13 @@ export const authService = {
    * Backend endpoint: POST /auth/otp/send
    */
   sendOTP: async (email: string): Promise<{ pinId?: string }> => {
-    const resp = await apiClient.post('/auth/otp/send', { email });
+    const resp = await apiClient.post('/auth/otp/send', { email: normalizeEmail(email) });
+    return { pinId: resp?.data?.pinId || resp?.pinId };
+  },
+
+  /** Alias for sendOTP — used by resend buttons */
+  resendOTP: async (email: string): Promise<{ pinId?: string }> => {
+    const resp = await apiClient.post('/auth/otp/send', { email: normalizeEmail(email) });
     return { pinId: resp?.data?.pinId || resp?.pinId };
   },
 
@@ -140,11 +160,10 @@ export const authService = {
    * Backend endpoint: POST /auth/otp/verify
    */
   verifyOTP: async (email: string, otp: string): Promise<AuthResponse> => {
-    const resp = await apiClient.post('/auth/otp/verify', { email, otp });
+    const resp = await apiClient.post('/auth/otp/verify', { email: normalizeEmail(email), otp });
     const { token, refreshToken } = extractTokens(resp);
     if (token) apiClient.setTokens(token, refreshToken);
-    const rawUser = resp?.user || resp?.data?.user || {};
-    return { user: mapBackendUser(rawUser), token, refreshToken };
+    return { user: mapBackendUser(extractUser(resp)), token, refreshToken };
   },
 
   /**
@@ -152,16 +171,20 @@ export const authService = {
    * Backend endpoint: POST /auth/forgot-password
    */
   forgotPassword: async (email: string): Promise<{ pinId?: string }> => {
-    const resp = await apiClient.post('/auth/forgot-password', { email });
+    const resp = await apiClient.post('/auth/forgot-password', { email: normalizeEmail(email) });
     return { pinId: resp?.data?.pinId || resp?.pinId };
   },
 
   /**
-   * Reset password using token.
+   * Reset password using email + OTP from Resend.
    * Backend endpoint: POST /auth/reset-password
    */
-  resetPassword: async (token: string, newPassword: string): Promise<void> => {
-    await apiClient.post('/auth/reset-password', { token, newPassword });
+  resetPassword: async (email: string, otp: string, newPassword: string): Promise<void> => {
+    await apiClient.post('/auth/reset-password', {
+      email: normalizeEmail(email),
+      otp,
+      newPassword,
+    });
   },
 
   /**

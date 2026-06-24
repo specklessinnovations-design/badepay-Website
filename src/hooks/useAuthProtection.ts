@@ -52,113 +52,55 @@ export function useAuthProtection() {
 
   
   const [pathname, navigate] = useLocation();
-
   const { isAuthenticated, user, checkSessionValidity, authSetupComplete } = useAuthStore();
 
-
-
   useEffect(() => {
-
     if (isAuthenticated && !checkSessionValidity()) {
-
       useAuthStore.setState({
-
         user: null,
-
         isAuthenticated: false,
-
         sessionToken: undefined,
-
         refreshToken: undefined,
-
       });
-
       navigate('/login');
-
       return;
-
     }
-
-
 
     if (isAuthenticated && authSetupComplete && PUBLIC_AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
-
       navigate(getPostAuthPath(user));
-
       return;
-
     }
-
-
 
     if (!isAuthenticated && PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
-
       navigate('/login');
-
       return;
-
     }
-
-
 
     if (isAuthenticated && user) {
-
-      if (user.userType === 'merchant' && CONSUMER_ROUTES.some((route) => pathname.startsWith(route))) {
-
-        navigate(getPostAuthPath(user));
-
-        return;
-
-      }
-
-
-
-      if (user.userType === 'consumer' && MERCHANT_ROUTES.some((route) => pathname.startsWith(route))) {
-
+      // Only restrict merchant routes to non-merchants who DON'T have a merchant profile
+      if (!user.merchantProfile && MERCHANT_ROUTES.some((route) => pathname.startsWith(route))) {
         navigate('/dashboard');
-
         return;
-
       }
 
-
-
       if (
-
         user.userType === 'merchant' &&
-
         !isMerchantOnboardingComplete(user) &&
-
         pathname.startsWith('/merchant') &&
-
         !pathname.startsWith(MERCHANT_ONBOARDING_PATH)
-
       ) {
-
         navigate(MERCHANT_ONBOARDING_PATH);
-
         return;
-
       }
-
-
 
       if (
-
         user.userType === 'merchant' &&
-
         isMerchantOnboardingComplete(user) &&
-
         pathname.startsWith(MERCHANT_ONBOARDING_PATH)
-
       ) {
-
         navigate('/merchant');
-
       }
-
     }
-
   }, [isAuthenticated, user, pathname, navigate, checkSessionValidity, authSetupComplete]);
 
 }
@@ -211,17 +153,14 @@ export function useRequireMerchant(options?: { allowOnboarding?: boolean }) {
 
     }
 
-
-
-    if (user?.userType !== 'merchant') {
+    // Only restrict merchant routes to users who DON'T have a merchant profile at all
+    if (!user?.merchantProfile && user?.userType !== 'merchant') {
 
       navigate('/dashboard');
 
       return;
 
     }
-
-
 
     if (!options?.allowOnboarding && !onOnboarding && !isMerchantOnboardingComplete(user)) {
 
@@ -242,9 +181,7 @@ export function useRequireMerchant(options?: { allowOnboarding?: boolean }) {
 export function useRequireConsumer() {
 
   const [, navigate] = useLocation();
-  const { isAuthenticated, user } = useAuthStore();
-
-
+  const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
 
@@ -256,18 +193,13 @@ export function useRequireConsumer() {
 
     }
 
+    // Don't restrict consumer routes - allow any authenticated user to access them
 
-
-    if (user?.userType !== 'consumer') {
-
-      navigate('/merchant');
-
-    }
-
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, navigate]);
 
 
 
+  const { user } = useAuthStore();
   return { isAuthenticated, user };
 
 }

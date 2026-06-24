@@ -225,7 +225,7 @@ export default function ProfilePage() {
           <div onClick={() => navigate('/profile/edit')} className="cursor-pointer">
             <NavRow href="#" icon={Store} label="Become a merchant" sub="Complete your profile first" badge="Locked" />
           </div>
-        ) : user.userType === 'merchant' ? (
+        ) : user.merchantProfile ? (
           <NavRow href="/merchant" icon={Store} label="Merchant dashboard" sub="Manage your business" badge="Open" />
         ) : (
           <button type="button" onClick={handleBecomeMerchant} className="w-full text-left">

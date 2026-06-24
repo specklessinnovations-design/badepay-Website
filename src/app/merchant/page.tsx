@@ -30,13 +30,32 @@ export default function MerchantDashboard() {
   };
 
   const handleGoToPersonal = () => {
-    window.location.href = '/dashboard';
+    navigate('/dashboard');
   };
 
   useEffect(() => {
-    fetchPayments();
-    fetchSettlements();
-  }, [fetchPayments, fetchSettlements]);
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          fetchPayments(),
+          fetchSettlements(),
+        ]);
+        if (user?.id) {
+          await Promise.all([
+            useMerchantStoreData.getState().fetchStore(user.id),
+            useMerchantStoreData.getState().fetchProducts(user.id),
+          ]);
+        }
+        if (user?.merchantProfile?.qrSlug) {
+          await useMerchantStoreData.getState().fetchOrders(user.merchantProfile.qrSlug);
+        }
+      } catch {
+        // Silently handle fetch errors - data will be empty
+      }
+    };
+
+    loadData();
+  }, [fetchPayments, fetchSettlements, user?.id, user?.merchantProfile?.qrSlug]);
 
   const merchantId = user?.id || '';
   const merchantSlug = user?.merchantProfile?.qrSlug || '';

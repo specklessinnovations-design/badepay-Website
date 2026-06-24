@@ -1,30 +1,26 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import { Search, Store, Star, MapPin, ChevronRight, Package, ArrowLeft } from 'lucide-react';
 import { useMerchantStoreData } from '@/store/useMerchantStoreData';
-import * as authService from '@/services/authService';
 
 export default function StoresListPage() {
-  const { stores } = useMerchantStoreData();
+  const { stores, publicStores, fetchPublicStores } = useMerchantStoreData();
   const [search, setSearch] = useState('');
 
-  // Find all merchants with published stores
-  const publishedMerchants = useMemo(() => {
-    const allUsers = authService.listUsers();
-    return allUsers.filter(u => 
-      u.userType === 'merchant' && 
-      u.merchantProfile?.onboardingComplete &&
-      stores[u.id]?.isPublished
-    );
-  }, [stores]);
+  useEffect(() => {
+    fetchPublicStores();
+  }, [fetchPublicStores]);
 
-  const filteredMerchants = publishedMerchants.filter(m => {
-    const store = stores[m.id];
-    const nameMatch = store.name.toLowerCase().includes(search.toLowerCase());
-    const catMatch = store.category.toLowerCase().includes(search.toLowerCase());
-    return nameMatch || catMatch;
-  });
+  const filteredStores = useMemo(() => {
+    return publicStores.filter(item => {
+      const store = item.store;
+      if (!store) return false;
+      const nameMatch = store.name.toLowerCase().includes(search.toLowerCase());
+      const catMatch = store.category?.toLowerCase().includes(search.toLowerCase()) || false;
+      return nameMatch || catMatch;
+    });
+  }, [publicStores, search]);
 
   const fadeUp = (delay = 0) => ({
     initial: { opacity: 0, y: 16 },
@@ -60,17 +56,18 @@ export default function StoresListPage() {
 
       {/* Stores list */}
       <div className="space-y-4">
-        {filteredMerchants.length === 0 ? (
+        {filteredStores.length === 0 ? (
           <div className="text-center py-12 surface-card">
             <Package size={40} className="mx-auto mb-4 opacity-20" style={{ color: 'var(--text-tertiary)' }} />
             <p className="font-black text-[var(--text-primary)]">No stores found</p>
             <p className="text-sm font-bold mt-1" style={{ color: 'var(--text-secondary)' }}>Try searching for something else</p>
           </div>
         ) : (
-          filteredMerchants.map((m, i) => {
-            const store = stores[m.id];
+          filteredStores.map((item, i) => {
+            const store = item.store;
+            const user = item.user;
             return (
-              <motion.div key={m.id} {...fadeUp(i * 0.05)}>
+              <motion.div key={store.id} {...fadeUp(i * 0.05)}>
                 <Link href={`/store/${store.slug}`} 
                   className="surface-card block overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group">
                   <div className="relative h-32 overflow-hidden">

@@ -68,6 +68,22 @@ export function PersonalSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 py-4 space-y-5">
+        {/* Switch to Merchant if applicable */}
+        {user?.merchantProfile && (
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-black uppercase tracking-[0.15em] px-3 pb-2" style={{ color: 'var(--text-tertiary)' }}>Switch to</p>
+            <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.05, duration: 0.35, ease: [0.16,1,0.3,1] }}>
+              <Link href="/merchant"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 hover:bg-[var(--surface-secondary)]"
+                style={{ color: 'var(--text-secondary)' }}>
+                <Store size={18} style={{ color: 'var(--text-tertiary)' }} />
+                <span>Merchant Dashboard</span>
+              </Link>
+            </motion.div>
+          </div>
+        )}
+
         <div className="space-y-0.5">
           <p className="text-[10px] font-black uppercase tracking-[0.15em] px-3 pb-2" style={{ color: 'var(--text-tertiary)' }}>Main</p>
           {MAIN_TABS.map(({ href, label, icon: Icon }, i) => {

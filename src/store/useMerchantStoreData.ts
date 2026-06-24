@@ -10,11 +10,13 @@ interface MerchantStoreDataState {
   stores: Record<string, StoreInfo>;
   products: Record<string, Product[]>;
   orders: Order[];
+  publicStores: { user: any; store: StoreInfo }[];
   isLoading: boolean;
 
   fetchStore: (merchantId: string) => Promise<void>;
   fetchProducts: (merchantId: string) => Promise<void>;
   fetchOrders: (merchantSlug: string) => Promise<void>;
+  fetchPublicStores: () => Promise<void>;
 
   upsertStore: (merchantId: string, info: Partial<StoreInfo>) => Promise<void>;
   addProduct: (merchantId: string, product: Omit<Product, 'id' | 'createdAt' | 'storeId'>) => Promise<void>;
@@ -33,6 +35,7 @@ export const useMerchantStoreData = create<MerchantStoreDataState>()((set, get) 
   stores: {},
   products: {},
   orders: [],
+  publicStores: [],
   isLoading: false,
 
   fetchStore: async (merchantId: string) => {
@@ -71,6 +74,35 @@ export const useMerchantStoreData = create<MerchantStoreDataState>()((set, get) 
         orders: orders.filter((o) => o.merchantSlug === merchantSlug),
         isLoading: false,
       }));
+    } catch {
+      set({ isLoading: false });
+    }
+  },
+
+  fetchPublicStores: async () => {
+    set({ isLoading: true });
+    try {
+      const data = await merchantService.getPublicStores();
+      let storesData = [];
+      // Backend returns: { stores: [...] } directly
+      if (data?.stores) {
+        storesData = data.stores;
+      } else if (data?.data?.stores) {
+        storesData = data.data.stores;
+      }
+      // Transform to match expected format: { user: {...}, store: {...} }
+      const formattedStores = storesData.map((store: any) => ({
+        user: store.merchant || {},
+        store: store,
+      }));
+      // Also populate the `stores` map for quick lookup
+      const storesMap: Record<string, StoreInfo> = {};
+      storesData.forEach((item: any) => {
+        if (item.id) {
+          storesMap[item.id] = item;
+        }
+      });
+      set({ publicStores: formattedStores, stores: { ...storesMap }, isLoading: false });
     } catch {
       set({ isLoading: false });
     }

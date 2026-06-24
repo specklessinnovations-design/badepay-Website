@@ -66,8 +66,77 @@ export interface MerchantSettlement {
 
 export const merchantService = {
   /**
+   * Get all stores (marketplace)
+   * Backend: GET /stores
+   */
+  getPublicStores: async (params?: { search?: string; category?: string; limit?: number; offset?: number }): Promise<any> => {
+    try {
+      const queryString = params ? new URLSearchParams(params as any).toString() : '';
+      const path = queryString ? `/stores?${queryString}` : '/stores';
+      const resp = await apiClient.get(path);
+      return resp?.data || {};
+    } catch {
+      return {};
+    }
+  },
+
+  /**
+   * Get all products (marketplace)
+   * Backend: GET /stores/products
+   */
+  getAllProducts: async (params?: { search?: string; category?: string; minPrice?: number; maxPrice?: number; limit?: number; offset?: number }): Promise<any> => {
+    try {
+      const queryString = params ? new URLSearchParams(params as any).toString() : '';
+      const path = queryString ? `/stores/products?${queryString}` : '/stores/products';
+      const resp = await apiClient.get(path);
+      return resp?.data || {};
+    } catch {
+      return {};
+    }
+  },
+
+  /**
+   * Get public store by slug
+   * Backend: GET /stores/:slug
+   */
+  getPublicStore: async (slug: string): Promise<any> => {
+    try {
+      const resp = await apiClient.get(`/stores/${slug}`);
+      return resp?.data || {};
+    } catch {
+      return {};
+    }
+  },
+
+  /**
+   * Get public store products
+   * Backend: GET /stores/:slug/products
+   */
+  getPublicStoreProducts: async (slug: string): Promise<any> => {
+    try {
+      const resp = await apiClient.get(`/stores/${slug}/products`);
+      return resp?.data || {};
+    } catch {
+      return {};
+    }
+  },
+
+  /**
+   * Place order at store
+   * Backend: POST /stores/:slug/orders
+   */
+  placeStoreOrder: async (slug: string, data: any): Promise<any> => {
+    try {
+      const resp = await apiClient.post(`/stores/${slug}/orders`, data);
+      return resp?.data || {};
+    } catch {
+      return {};
+    }
+  },
+
+  /**
    * Get my store info.
-   * Backend: GET /api/v1/merchants/store
+   * Backend: GET /merchants/store
    */
   getMyStore: async (): Promise<StoreInfo | null> => {
     try {

@@ -1,7 +1,8 @@
 import type { User } from '@/store/useAuthStore';
 
 export function isMerchantOnboardingComplete(user: User | null | undefined): boolean {
-  if (!user || user.userType !== 'merchant') return false;
+  if (!user) return false;
+  // Check if user has a merchant profile with business name
   return !!user.merchantProfile?.businessName;
 }
 

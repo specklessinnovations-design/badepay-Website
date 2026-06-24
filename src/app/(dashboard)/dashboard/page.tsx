@@ -110,6 +110,29 @@ export default function DashboardHome() {
   return (
     <div className="space-y-5 lg:space-y-6">
 
+      {/* Switch to Merchant if applicable */}
+      {user?.merchantProfile && (
+        <motion.div {...fadeUp(0)}>
+          <Link href="/merchant"
+            className="flex items-center justify-between p-4 rounded-2xl transition-all duration-300 hover:-translate-y-0.5"
+            style={{
+              border: '1px solid var(--accent-border)',
+              background: 'linear-gradient(to right, var(--accent-bg), transparent)',
+            }}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl accent-icon-wrap">
+                <Store size={20} style={{ color: 'var(--accent-text)' }} />
+              </div>
+              <div>
+                <p className="font-black text-sm" style={{ color: 'var(--text-primary)' }}>Switch to Merchant Dashboard</p>
+                <p className="mt-0.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>Manage your business</p>
+              </div>
+            </div>
+            <ChevronRight size={20} className="shrink-0" style={{ color: 'var(--accent-text)' }} />
+          </Link>
+        </motion.div>
+      )}
+
       {/* ── Greeting row ── */}
       <motion.div {...fadeUp(0)} className="flex items-center justify-between pt-1 lg:pt-0">
         <div>
@@ -130,7 +153,7 @@ export default function DashboardHome() {
           <div className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold"
             style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent-text)' }}>
             <ShieldCheck size={13} style={{ color: 'var(--accent-text)' }} />
-            Tier {user.kycLevel}
+            Tier {user.kycLevel || 1}
           </div>
         </div>
       </motion.div>

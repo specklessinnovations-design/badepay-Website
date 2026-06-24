@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import authService from '@/services/authService';
+import apiClient from '@/lib/apiClient';
 import { toPublicUser } from '@/lib/authMappers';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import type { MerchantProfile } from '@/types/merchant';
@@ -419,17 +420,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         }
       },
 
-      syncUserFromStorage: async () => {
+      syncUserFromStorage: () => {
         const currentUser = get().user;
         if (!currentUser?.id) return;
-        try {
-          const stored = await authService.getProfile();
-          if (stored) {
-            set({ user: toPublicUser(stored) });
-          }
-        } catch {
-          // Ignore sync errors
-        }
+        authService.getProfile()
+          .then((stored) => {
+            if (stored) {
+              set({ 
+                user: toPublicUser(stored),
+                lastLoginTime: get().lastLoginTime || new Date().toISOString(),
+              });
+            }
+          })
+          .catch(() => {
+            // Ignore sync errors
+          });
       },
 
       /**
@@ -439,8 +444,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         set((state) => {
           if (!state.user) return state;
 
-          authService.updateUserBalance(state.user.id, amount).catch((err) => {
-            console.error('Failed to update balance:', err);
+          authService.updateUserBalance(state.user.id, amount).catch(() => {
+            // Ignore balance update errors
           });
 
           return {
@@ -507,13 +512,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
        */
       checkSessionValidity: () => {
         const state = get();
-        if (!state.isAuthenticated || !state.lastLoginTime) return false;
+        // Check if we have an access token first
+        const hasAccessToken = !!apiClient.getAccessToken();
+        if (!hasAccessToken) return false;
 
-        const lastLogin = new Date(state.lastLoginTime).getTime();
-        const now = new Date().getTime();
-        const sessionDuration = 24 * 60 * 60 * 1000; // 24 hours
+        if (!state.isAuthenticated) return false;
 
-        return now - lastLogin < sessionDuration;
+        // If we have lastLoginTime, check it's within 24 hours
+        if (state.lastLoginTime) {
+          const lastLogin = new Date(state.lastLoginTime).getTime();
+          const now = new Date().getTime();
+          const sessionDuration = 24 * 60 * 60 * 1000; // 24 hours
+          return now - lastLogin < sessionDuration;
+        }
+
+        // If no lastLoginTime but we have token and isAuthenticated, consider valid
+        return true;
       },
 
       /**
@@ -527,8 +541,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
        * Logout
        */
       logout: () => {
-        authService.logout().catch((err) => {
-          console.error('Logout error:', err);
+        authService.logout().catch(() => {
+          // Ignore logout errors
         });
 
         set({

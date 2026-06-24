@@ -101,15 +101,18 @@ export function AdminSidebar({ mobileOpen, setMobileOpen }: AdminSidebarProps) {
                       key={item.label}
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
-                      className={`flex items-center justify-between px-4 py-2.5 rounded-xl transition-all icon-hover-effect ${
+                      className={`group relative flex items-center justify-between px-3.5 py-2.5 rounded-lg transition-all ${
                         isActive
-                          ? 'bg-[var(--ad-accent-soft)] text-[var(--ad-accent)] border-l-2 border-[var(--ad-accent)]'
-                          : 'hover:bg-[var(--ad-card)]/5 hover:text-[var(--ad-fg-strong)]'
+                          ? 'bg-[var(--ad-accent-soft)] text-[var(--ad-accent)] shadow-[inset_0_0_0_1px_var(--ad-accent-ring)]'
+                          : 'text-[color:var(--ad-muted)] hover:bg-white/[0.04] hover:text-[var(--ad-fg-strong)]'
                       }`}
                     >
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-[var(--ad-accent)] shadow-[0_0_12px_var(--ad-accent)]" />
+                      )}
                       <div className="flex items-center gap-3">
-                        <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                        <span className={`text-sm ${isActive ? 'font-black' : 'font-black'}`}>{item.label}</span>
+                        <Icon size={17} strokeWidth={isActive ? 2.25 : 1.75} />
+                        <span className={`text-[13px] tracking-tight ${isActive ? 'font-semibold' : 'font-medium'}`}>{item.label}</span>
                       </div>
                       {item.badge ? (
                         <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">

@@ -21,7 +21,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
       className="sticky top-0 z-30 flex h-16 items-center justify-between px-4 md:px-8 backdrop-blur-xl"
       style={{
         background: 'var(--ad-card)',
-        borderBottom: '1px solid #e5e5e5',
+        borderBottom: '1px solid var(--ad-border)',
         boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 24px rgba(0,0,0,0.5)',
       }}
     >
@@ -49,7 +49,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           className="hidden w-64 items-center rounded-xl px-3.5 py-2.5 transition-all md:flex"
           style={{
             background: 'var(--ad-bg-elev)',
-            border: '1px solid #e5e5e5',
+            border: '1px solid var(--ad-border)',
           }}
         >
           <Search size={15} style={{ color: 'var(--ad-muted)' }} />
@@ -63,7 +63,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
 
         <div
           className="flex items-center gap-3 pl-4 md:gap-4 md:pl-6"
-          style={{ borderLeft: '1px solid #e5e5e5' }}
+          style={{ borderLeft: '1px solid var(--ad-border)' }}
         >
           <button
             className="relative rounded-xl p-2 transition-colors"

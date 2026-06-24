@@ -44,6 +44,7 @@ import DashboardLayout from "@/app/(dashboard)/layout";
 import AdminLoginPage from "@/app/admin/login/page";
 import AdminDashboardPage from "@/app/admin/dashboard/page";
 import AdminUsersPage from "@/app/admin/users/page";
+import AdminMerchantsPage from "@/app/admin/merchants/page";
 import AdminTransactionsPage from "@/app/admin/transactions/page";
 import AdminKycPage from "@/app/admin/kyc/page";
 import AdminDisputesPage from "@/app/admin/disputes/page";
@@ -165,6 +166,9 @@ function Router() {
       </Route>
       <Route path="/admin/users">
         <AdminLayout><AdminUsersPage /></AdminLayout>
+      </Route>
+      <Route path="/admin/merchants">
+        <AdminLayout><AdminMerchantsPage /></AdminLayout>
       </Route>
       <Route path="/admin/transactions">
         <AdminLayout><AdminTransactionsPage /></AdminLayout>

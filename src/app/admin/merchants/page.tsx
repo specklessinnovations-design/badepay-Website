@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/useToast';
 import { Store, Check, X, Search, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import adminApiClient from '@/lib/adminApiClient';
 
 export default function AdminMerchantsPage() {
   const { users, toggleStatus } = useAdminUsersStore();
@@ -43,14 +44,7 @@ export default function AdminMerchantsPage() {
 
   const handleApprove = async (merchantId: string) => {
     try {
-      // Call backend to approve merchant
-      await fetch(`/api/v1/admin/merchants/${merchantId}/verify`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('badepay_admin_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      await adminApiClient.verifyMerchant(merchantId);
       showSuccess('Merchant approved successfully');
       // Refresh data
       useAdminUsersStore.getState().refresh();

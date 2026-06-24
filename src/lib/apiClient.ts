@@ -4,10 +4,11 @@
  * Handles JWT auth tokens, automatic token refresh, and standardised error handling.
  */
 
+const isProduction = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'production';
+
 const BASE_URL: string =
-  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) ||
-  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_PRODUCTION_API_URL) ||
-  'http://localhost:3000/api/v1';
+  (typeof import.meta !== 'undefined' && (isProduction ? (import.meta as any).env?.VITE_PRODUCTION_API_URL : (import.meta as any).env?.VITE_API_URL)) ||
+  (isProduction ? 'https://badepay-backend.vercel.app/api/v1' : 'http://localhost:3000/api/v1');
 
 const ACCESS_KEY = "bade_pay_token";
 const REFRESH_KEY = "bade_pay_refresh";

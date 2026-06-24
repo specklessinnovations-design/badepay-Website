@@ -6,7 +6,7 @@ import { ShieldCheck, Server, AlertCircle, Save } from 'lucide-react';
 import platformDataService, { type PlatformSettings } from '@/services/platformDataService';
 
 const A_CARD = {
-  background: '#ffffff',
+  background: 'var(--ad-card)',
   border: '1px solid #e5e5e5',
   borderRadius: '1rem',
   boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
@@ -17,7 +17,7 @@ const A_INPUT = {
   background: 'rgba(111,232,214,0.05)',
   border: '1px solid rgba(111,232,214,0.12)',
   borderRadius: '0.75rem',
-  color: '#000000',
+  color: 'var(--ad-fg-strong)',
   padding: '0.75rem 1rem',
   width: '100%',
   fontSize: '0.875rem',
@@ -27,7 +27,7 @@ const A_INPUT = {
 
 const A_LABEL = {
   display: 'block',
-  color: '#666666',
+  color: 'var(--ad-muted)',
   fontSize: '0.7rem',
   fontWeight: 700,
   textTransform: 'uppercase' as const,
@@ -91,13 +91,13 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-4xl space-y-8">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#999999' }}>
+        <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
           System Configuration
         </p>
-        <h2 className="text-3xl font-black tracking-tight" style={{ color: '#000000' }}>
+        <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
           Platform Settings
         </h2>
-        <p className="mt-1 text-sm font-medium" style={{ color: '#666666' }}>
+        <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
           Applies to web and mobile clients from a single configuration store.
         </p>
       </div>
@@ -115,7 +115,7 @@ export default function AdminSettingsPage() {
             >
               <Server size={20} />
             </div>
-            <h3 className="text-lg font-black" style={{ color: '#000000' }}>
+            <h3 className="text-lg font-black" style={{ color: 'var(--ad-fg-strong)' }}>
               General Information
             </h3>
           </div>
@@ -156,7 +156,7 @@ export default function AdminSettingsPage() {
             >
               <ShieldCheck size={20} />
             </div>
-            <h3 className="text-lg font-black" style={{ color: '#000000' }}>
+            <h3 className="text-lg font-black" style={{ color: 'var(--ad-fg-strong)' }}>
               Security &amp; Limits
             </h3>
           </div>
@@ -184,10 +184,10 @@ export default function AdminSettingsPage() {
               }}
             >
               <div>
-                <p className="font-black" style={{ color: '#000000' }}>
+                <p className="font-black" style={{ color: 'var(--ad-fg-strong)' }}>
                   Auto-Approve BVN Users
                 </p>
-                <p className="mt-0.5 text-sm font-medium" style={{ color: '#666666' }}>
+                <p className="mt-0.5 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
                   Automatically verify KYC for users with a matching BVN identity.
                 </p>
               </div>
@@ -198,7 +198,7 @@ export default function AdminSettingsPage() {
                   checked={settings.autoApproveBvn}
                   onChange={(e) => setSettings({ ...settings, autoApproveBvn: e.target.checked })}
                 />
-                <div className="peer h-7 w-14 rounded-full bg-gray-700 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-600 after:bg-white after:transition-all after:content-[''] peer-checked:bg-[#6fe8d6] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
+                <div className="peer h-7 w-14 rounded-full bg-gray-700 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-600 after:bg-[var(--ad-card)] after:transition-all after:content-[''] peer-checked:bg-[#6fe8d6] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
               </label>
             </div>
 
@@ -221,7 +221,7 @@ export default function AdminSettingsPage() {
                   <p className="font-black" style={{ color: '#f87171' }}>
                     Maintenance Mode
                   </p>
-                  <p className="mt-0.5 text-sm font-medium" style={{ color: '#666666' }}>
+                  <p className="mt-0.5 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
                     Block new consumer and merchant logins platform-wide.
                   </p>
                 </div>
@@ -233,7 +233,7 @@ export default function AdminSettingsPage() {
                   checked={settings.maintenanceMode}
                   onChange={(e) => setSettings({ ...settings, maintenanceMode: e.target.checked })}
                 />
-                <div className="peer h-7 w-14 rounded-full bg-gray-700 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-600 after:bg-white after:transition-all after:content-[''] peer-checked:bg-red-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
+                <div className="peer h-7 w-14 rounded-full bg-gray-700 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-600 after:bg-[var(--ad-card)] after:transition-all after:content-[''] peer-checked:bg-red-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
               </label>
             </div>
           </div>

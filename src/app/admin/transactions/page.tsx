@@ -32,11 +32,11 @@ export default function AdminTransactionsPage() {
         header: 'Routing',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <p className="font-bold text-sm" style={{ color: '#000000' }}>
+            <p className="font-bold text-sm" style={{ color: 'var(--ad-fg-strong)' }}>
               {row.original.senderName}
             </p>
-            <ArrowRight size={12} style={{ color: '#999999' }} />
-            <p className="text-xs font-bold" style={{ color: '#666666' }}>
+            <ArrowRight size={12} style={{ color: 'var(--ad-muted-soft)' }} />
+            <p className="text-xs font-bold" style={{ color: 'var(--ad-muted)' }}>
               {row.original.recipientName}
             </p>
           </div>
@@ -59,7 +59,7 @@ export default function AdminTransactionsPage() {
             className="capitalize rounded-lg px-3 py-1 text-xs font-black"
             style={{
               background: 'rgba(111,232,214,0.06)',
-              color: '#666666',
+              color: 'var(--ad-muted)',
               border: '1px solid rgba(111,232,214,0.1)',
             }}
           >
@@ -96,13 +96,13 @@ export default function AdminTransactionsPage() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#999999' }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
             Platform Ledger
           </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: '#000000' }}>
+          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
             Transactions
           </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: '#666666' }}>
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
             {transactions.length} platform transaction{transactions.length === 1 ? '' : 's'}
           </p>
         </div>

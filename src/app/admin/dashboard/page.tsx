@@ -8,7 +8,7 @@ import { useAdminDisputesStore } from '@/store/useAdminDisputesStore';
 import { useAdminTransactionsStore } from '@/store/useAdminTransactionsStore';
 
 const A_CARD = {
-  background: '#ffffff',
+  background: 'var(--ad-card)',
   border: '1px solid #e5e5e5',
   borderRadius: '1rem',
   boxShadow: '0 4px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(111,232,214,0.06)',
@@ -30,13 +30,13 @@ export default function AdminDashboardPage() {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-1">
-        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#666666' }}>
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--ad-muted)' }}>
           BadePay · Admin Console
         </p>
-        <h2 className="text-3xl font-black tracking-tight" style={{ color: '#000000' }}>
+        <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
           Platform Dashboard
         </h2>
-        <p className="text-sm font-medium" style={{ color: '#666666' }}>
+        <p className="text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
           Live registry — {users.length} accounts across web and mobile clients
         </p>
       </div>
@@ -83,11 +83,11 @@ export default function AdminDashboardPage() {
             >
               <User size={20} />
             </div>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#666666' }}>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--ad-muted)' }}>
               Personal accounts
             </p>
           </div>
-          <p className="text-3xl font-black" style={{ color: '#000000' }}>
+          <p className="text-3xl font-black" style={{ color: 'var(--ad-fg-strong)' }}>
             {personalCount}
           </p>
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'rgba(111,232,214,0.1)' }}>
@@ -106,11 +106,11 @@ export default function AdminDashboardPage() {
             >
               <Store size={20} />
             </div>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#666666' }}>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--ad-muted)' }}>
               Merchant accounts
             </p>
           </div>
-          <p className="text-3xl font-black" style={{ color: '#000000' }}>
+          <p className="text-3xl font-black" style={{ color: 'var(--ad-fg-strong)' }}>
             {merchantCount}
           </p>
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'rgba(111,232,214,0.1)' }}>
@@ -129,14 +129,14 @@ export default function AdminDashboardPage() {
             >
               <AlertCircle size={20} />
             </div>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#666666' }}>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--ad-muted)' }}>
               Open disputes
             </p>
           </div>
-          <p className="text-3xl font-black" style={{ color: openDisputes > 0 ? '#f87171' : '#000000' }}>
+          <p className="text-3xl font-black" style={{ color: openDisputes > 0 ? '#f87171' : 'var(--ad-fg-strong)' }}>
             {openDisputes}
           </p>
-          <p className="mt-2 text-xs font-medium" style={{ color: '#666666' }}>
+          <p className="mt-2 text-xs font-medium" style={{ color: 'var(--ad-muted)' }}>
             {disputes.length} total raised
           </p>
         </div>
@@ -147,7 +147,7 @@ export default function AdminDashboardPage() {
         <div className="rounded-2xl p-6" style={A_CARD}>
           <div className="mb-4 flex items-center gap-2">
             <TrendingUp size={16} style={{ color: '#6fe8d6' }} />
-            <h3 className="text-sm font-black" style={{ color: '#000000' }}>
+            <h3 className="text-sm font-black" style={{ color: 'var(--ad-fg-strong)' }}>
               Revenue Summary
             </h3>
           </div>
@@ -158,7 +158,7 @@ export default function AdminDashboardPage() {
               { label: 'Active Today', value: kpiSummary.activeToday.toLocaleString() + ' users', color: '#a78bfa' },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between">
-                <span className="text-xs font-bold" style={{ color: '#666666' }}>{row.label}</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--ad-muted)' }}>{row.label}</span>
                 <span className="text-sm font-black" style={{ color: row.color }}>{row.value}</span>
               </div>
             ))}
@@ -168,7 +168,7 @@ export default function AdminDashboardPage() {
         <div className="rounded-2xl p-6" style={A_CARD}>
           <div className="mb-4 flex items-center gap-2">
             <Zap size={16} style={{ color: '#6fe8d6' }} />
-            <h3 className="text-sm font-black" style={{ color: '#000000' }}>
+            <h3 className="text-sm font-black" style={{ color: 'var(--ad-fg-strong)' }}>
               Platform Status
             </h3>
           </div>
@@ -179,7 +179,7 @@ export default function AdminDashboardPage() {
               { label: 'Pending Transactions', value: `${pendingTx} awaiting`, ok: pendingTx === 0 },
             ].map((row) => (
               <div key={row.label} className="flex items-center justify-between">
-                <span className="text-xs font-bold" style={{ color: '#666666' }}>{row.label}</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--ad-muted)' }}>{row.label}</span>
                 <span
                   className="rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase"
                   style={{
@@ -203,7 +203,7 @@ export default function AdminDashboardPage() {
           border: '1px solid rgba(111,232,214,0.1)',
         }}
       >
-        <p className="text-xs font-bold" style={{ color: '#666666' }}>
+        <p className="text-xs font-bold" style={{ color: 'var(--ad-muted)' }}>
           <span style={{ color: '#6fe8d6' }}>Data note:</span> All signups — web and mobile — write to the same
           account registry. Admin reads directly from that registry plus platform transactions, disputes, and merchant
           payments. When a live API is connected, this layer swaps to API calls without changing the admin UI.
@@ -230,7 +230,7 @@ function StatCard({
     <div
       className="rounded-2xl p-5 transition-all duration-200"
       style={{
-        background: '#ffffff',
+        background: 'var(--ad-card)',
         border: '1px solid #e5e5e5',
         boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
       }}
@@ -241,13 +241,13 @@ function StatCard({
       >
         <Icon size={22} />
       </div>
-      <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#666666' }}>
+      <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--ad-muted)' }}>
         {label}
       </p>
-      <h3 className="mt-1 text-2xl font-black" style={{ color: '#000000' }}>
+      <h3 className="mt-1 text-2xl font-black" style={{ color: 'var(--ad-fg-strong)' }}>
         {value}
       </h3>
-      <p className="mt-1 text-[10px] font-medium" style={{ color: '#666666' }}>
+      <p className="mt-1 text-[10px] font-medium" style={{ color: 'var(--ad-muted)' }}>
         {sub}
       </p>
     </div>

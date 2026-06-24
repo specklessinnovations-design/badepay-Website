@@ -34,7 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!isAuthenticated) return null;
 
   return (
-    <div className="admin-shell flex min-h-screen font-sans relative" style={{ background: '#f5f5f5' }}>
+    <div className="admin-shell flex min-h-screen font-sans relative" style={{ background: 'var(--ad-bg-elev)' }}>
       <AdminSidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminTopbar onMenuClick={() => setMobileSidebarOpen(true)} />

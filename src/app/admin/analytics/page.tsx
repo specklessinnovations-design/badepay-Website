@@ -6,7 +6,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { DollarSign, Users, Activity, CreditCard } from 'lucide-react';
 
 const A_CARD = {
-  background: '#ffffff',
+  background: 'var(--ad-card)',
   border: '1px solid #e5e5e5',
   borderRadius: '1rem',
   boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
@@ -20,13 +20,13 @@ export default function AdminAnalyticsPage() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#999999' }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
             Growth Metrics
           </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: '#000000' }}>
+          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
             Platform Analytics
           </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: '#666666' }}>
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
             Real-time metrics, revenue tracking, and growth funnels.
           </p>
         </div>
@@ -71,10 +71,10 @@ export default function AdminAnalyticsPage() {
             >
               <kpi.icon size={22} />
             </div>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#999999' }}>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--ad-muted-soft)' }}>
               {kpi.label}
             </p>
-            <h3 className="mt-1 text-2xl font-black" style={{ color: '#000000' }}>
+            <h3 className="mt-1 text-2xl font-black" style={{ color: 'var(--ad-fg-strong)' }}>
               {kpi.value}
             </h3>
           </div>
@@ -84,7 +84,7 @@ export default function AdminAnalyticsPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-2xl p-6" style={A_CARD}>
-          <h3 className="mb-6 text-base font-black" style={{ color: '#000000' }}>
+          <h3 className="mb-6 text-base font-black" style={{ color: 'var(--ad-fg-strong)' }}>
             Daily Revenue Trend
           </h3>
           <div className="h-72 w-full">
@@ -95,12 +95,12 @@ export default function AdminAnalyticsPage() {
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#999999', fontWeight: 'bold' }}
+                  tick={{ fontSize: 11, fill: 'var(--ad-muted-soft)', fontWeight: 'bold' }}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#999999', fontWeight: 'bold' }}
+                  tick={{ fontSize: 11, fill: 'var(--ad-muted-soft)', fontWeight: 'bold' }}
                   tickFormatter={(val) => `₦${val / 1000}k`}
                 />
                 <Tooltip
@@ -108,12 +108,12 @@ export default function AdminAnalyticsPage() {
                   contentStyle={{
                     borderRadius: '12px',
                     border: '1px solid rgba(111,232,214,0.2)',
-                    background: '#ffffff',
-                    color: '#000000',
+                    background: 'var(--ad-card)',
+                    color: 'var(--ad-fg-strong)',
                     fontWeight: 'bold',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                   }}
-                  labelStyle={{ color: '#666666' }}
+                  labelStyle={{ color: 'var(--ad-muted)' }}
                 />
                 <Line
                   type="monotone"
@@ -129,7 +129,7 @@ export default function AdminAnalyticsPage() {
         </div>
 
         <div className="rounded-2xl p-6" style={A_CARD}>
-          <h3 className="mb-6 text-base font-black" style={{ color: '#000000' }}>
+          <h3 className="mb-6 text-base font-black" style={{ color: 'var(--ad-fg-strong)' }}>
             Monthly Volume Growth
           </h3>
           <div className="h-72 w-full">
@@ -140,12 +140,12 @@ export default function AdminAnalyticsPage() {
                   dataKey="month"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#999999', fontWeight: 'bold' }}
+                  tick={{ fontSize: 11, fill: 'var(--ad-muted-soft)', fontWeight: 'bold' }}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#999999', fontWeight: 'bold' }}
+                  tick={{ fontSize: 11, fill: 'var(--ad-muted-soft)', fontWeight: 'bold' }}
                   tickFormatter={(val) => `₦${val / 1000000}m`}
                 />
                 <Tooltip
@@ -153,12 +153,12 @@ export default function AdminAnalyticsPage() {
                   contentStyle={{
                     borderRadius: '12px',
                     border: '1px solid rgba(111,232,214,0.2)',
-                    background: '#ffffff',
-                    color: '#000000',
+                    background: 'var(--ad-card)',
+                    color: 'var(--ad-fg-strong)',
                     fontWeight: 'bold',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                   }}
-                  labelStyle={{ color: '#666666' }}
+                  labelStyle={{ color: 'var(--ad-muted)' }}
                   cursor={{ fill: 'rgba(111,232,214,0.04)' }}
                 />
                 <Bar dataKey="volume" fill="#6fe8d6" radius={[6, 6, 0, 0]} fillOpacity={0.85} />

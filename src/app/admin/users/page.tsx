@@ -39,10 +39,10 @@ export default function AdminUsersPage() {
                 {row.original.fullName.charAt(0).toUpperCase()}
               </div>
               <div>
-                <p className="font-bold text-sm" style={{ color: '#000000' }}>
+                <p className="font-bold text-sm" style={{ color: 'var(--ad-fg-strong)' }}>
                   {row.original.fullName}
                 </p>
-                <p className="text-xs font-medium mt-0.5" style={{ color: '#666666' }}>
+                <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--ad-muted)' }}>
                   {row.original.email}
                 </p>
               </div>
@@ -90,7 +90,7 @@ export default function AdminUsersPage() {
           const styles: Record<string, { bg: string; color: string }> = {
             verified: { bg: 'rgba(52,211,153,0.12)', color: '#34d399' },
             pending: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24' },
-            unverified: { bg: 'rgba(111,232,214,0.06)', color: '#999999' },
+            unverified: { bg: 'rgba(111,232,214,0.06)', color: 'var(--ad-muted-soft)' },
           };
           const s = styles[status] ?? styles.unverified;
           return (
@@ -145,13 +145,13 @@ export default function AdminUsersPage() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#999999' }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
             User Registry
           </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: '#000000' }}>
+          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
             User Management
           </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: '#666666' }}>
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
             {users.length} registered account{users.length === 1 ? '' : 's'} · live from platform registry
           </p>
         </div>

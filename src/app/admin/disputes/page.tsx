@@ -30,7 +30,7 @@ export default function AdminDisputesPage() {
         accessorKey: 'userName',
         header: 'Reporter',
         cell: ({ row }) => (
-          <span className="font-bold text-sm" style={{ color: '#000000' }}>
+          <span className="font-bold text-sm" style={{ color: 'var(--ad-fg-strong)' }}>
             {row.original.userName}
           </span>
         ),
@@ -52,7 +52,7 @@ export default function AdminDisputesPage() {
             className="capitalize rounded-lg px-3 py-1.5 text-xs font-black"
             style={{
               background: 'rgba(111,232,214,0.06)',
-              color: '#666666',
+              color: 'var(--ad-muted)',
               border: '1px solid rgba(111,232,214,0.1)',
             }}
           >
@@ -68,7 +68,7 @@ export default function AdminDisputesPage() {
           const map: Record<string, { bg: string; color: string }> = {
             high: { bg: 'rgba(248,113,113,0.15)', color: '#f87171' },
             medium: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24' },
-            low: { bg: 'rgba(111,232,214,0.07)', color: '#999999' },
+            low: { bg: 'rgba(111,232,214,0.07)', color: 'var(--ad-muted-soft)' },
           };
           const s = map[priority] ?? map.low;
           return (
@@ -113,13 +113,13 @@ export default function AdminDisputesPage() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#999999' }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
             Resolution Center
           </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: '#000000' }}>
+          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
             Disputes
           </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: '#666666' }}>
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
             Review and resolve customer chargebacks and transfer failures.
           </p>
         </div>

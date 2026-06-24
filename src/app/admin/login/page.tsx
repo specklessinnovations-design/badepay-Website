@@ -31,7 +31,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--ad-card)' }}>
+    <div className="admin-shell flex min-h-screen">
       <div className="hidden lg:flex flex-1 flex-col justify-between p-12 text-[var(--ad-fg-strong)] relative overflow-hidden">
         <div className="pointer-events-none absolute -left-20 -top-20 h-96 w-96 rounded-full opacity-20"
           style={{ background: 'radial-gradient(circle,rgba(111,232,214,0.3) 0%,transparent 65%)' }} />

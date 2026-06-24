@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SplashScreen } from "@/components/ui/splash-screen";
 import { CookieConsentBanner } from "@/components/ui/cookie-consent-banner";
+import AuthBootstrap from "@/components/auth/AuthBootstrap";
 
 // Pages
 import LandingPage from "@/app/page";
@@ -36,6 +37,8 @@ import ProfileDevicesPage from "@/app/(dashboard)/profile/devices/page";
 import ProfileNotificationsPage from "@/app/(dashboard)/profile/notifications/page";
 import ProfileSupportPage from "@/app/(dashboard)/profile/support/page";
 import ProfileStatementsPage from "@/app/(dashboard)/profile/statements/page";
+import ChangePinPage from "@/app/(dashboard)/profile/change-pin/page";
+import ChangePasswordPage from "@/app/(dashboard)/profile/change-password/page";
 import DashboardLayout from "@/app/(dashboard)/layout";
 
 import AdminLoginPage from "@/app/admin/login/page";
@@ -143,6 +146,12 @@ function Router() {
       <Route path="/profile/statements">
         <DashboardLayout><ProfileStatementsPage /></DashboardLayout>
       </Route>
+      <Route path="/profile/change-pin">
+        <DashboardLayout><ChangePinPage /></DashboardLayout>
+      </Route>
+      <Route path="/profile/change-password">
+        <DashboardLayout><ChangePasswordPage /></DashboardLayout>
+      </Route>
       <Route path="/profile">
         <DashboardLayout><ProfilePage /></DashboardLayout>
       </Route>
@@ -223,6 +232,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <WouterRouter base={import.meta.env.BASE_URL?.replace(/\/$/, "") || ""}>
+          <AuthBootstrap />
           <SplashScreen />
           <Router />
           <CookieConsentBanner />

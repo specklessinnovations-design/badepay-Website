@@ -3,11 +3,6 @@ import authService from '@/services/authService';
 import { toPublicUser } from '@/lib/authMappers';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import type { MerchantProfile } from '@/types/merchant';
-import {
-  buildTradingSlug,
-  generateMerchantId,
-} from '@/types/merchant';
-import { formatAccountForDisplay } from '@/lib/authRouting';
 
 export type KYCLevel = 0 | 1 | 2 | 3;
 export type UserType = 'consumer' | 'merchant';
@@ -34,6 +29,8 @@ export interface User {
   lastLogin?: string;
   balance: number;
   transactionPin?: string;
+  hasPinSet?: boolean;
+  pinRequirement?: 'always' | 'above_20k';
   biometricEnabled?: boolean;
   deviceId?: string;
   merchantProfile?: MerchantProfile;
@@ -49,6 +46,8 @@ export interface AuthState {
   error: string | null;
   sessionToken?: string;
   refreshToken?: string;
+  /** False during multi-step registration until PIN is set */
+  authSetupComplete: boolean;
   deviceVerified: boolean;
   deviceId?: string;
   suspiciousLoginAttempts: number;
@@ -74,6 +73,7 @@ export interface AuthState {
   enableBiometric: () => void;
   disableBiometric: () => void;
   refreshSession: () => Promise<void>;
+  initializeSession: () => Promise<void>;
   checkSessionValidity: () => boolean;
   clearError: () => void;
 }
@@ -92,6 +92,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      authSetupComplete: true,
       deviceVerified: false,
       suspiciousLoginAttempts: 0,
 
@@ -111,6 +112,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           set({
             user: toPublicUser(response.user),
             isAuthenticated: true,
+            authSetupComplete: true,
             sessionToken: response.token,
             refreshToken: response.refreshToken,
             deviceVerified: rememberDevice,
@@ -147,6 +149,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           set({
             user: toPublicUser(response.user),
             isAuthenticated: true,
+            authSetupComplete: false,
             sessionToken: response.token,
             refreshToken: response.refreshToken,
           });
@@ -259,6 +262,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                   transactionPin: pin,
                 }
               : null,
+            authSetupComplete: true,
           }));
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to set PIN';
@@ -372,27 +376,19 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           const currentUser = get().user;
           if (!currentUser) throw new Error('User not authenticated');
 
-          const tradingName = data.tradingName || data.businessName;
-          const qrSlug = buildTradingSlug(tradingName, data.businessName);
-          const merchantId = generateMerchantId();
-          const payoutAcct = `BadePay · ${formatAccountForDisplay(currentUser.accountNumber)}`;
-
-          const merchantProfile: MerchantProfile = {
-            ...data,
-            tradingName,
-            payoutAccount: payoutAcct,
-            verified: true,
-            merchantId,
-            qrSlug,
-            onboardingComplete: true,
-          };
-
-          const updated = await authService.updateUserProfile({
-            userType: 'merchant',
-            accountName: tradingName,
-            merchantProfile,
+          await authService.completeMerchantOnboarding({
+            businessName: data.businessName,
+            tradingName: data.tradingName || data.businessName,
+            businessType: data.businessType,
+            category: data.category,
+            address: data.address,
+            rcNumber: data.rcNumber,
+            taxId: data.taxId,
+            supportPhone: data.supportPhone,
+            payoutPreference: data.payoutPreference,
           });
 
+          const updated = await authService.getProfile();
           set({ user: toPublicUser(updated) });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Onboarding failed';
@@ -483,11 +479,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
        */
       refreshSession: async () => {
         try {
-          // Simulate API call
-          await new Promise((resolve) => setTimeout(resolve, 300));
-
+          const tokens = await authService.refreshToken();
           set({
-            sessionToken: 'token_' + Math.random().toString(36).substr(2, 40),
+            sessionToken: tokens.token,
+            refreshToken: tokens.refreshToken,
             lastLoginTime: new Date().toISOString(),
           });
         } catch (error) {
@@ -495,6 +490,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           set({ error: errorMessage });
           throw error;
         }
+      },
+
+      initializeSession: async () => {
+        const profile = await authService.getProfile();
+        set({
+          user: toPublicUser(profile),
+          isAuthenticated: true,
+          authSetupComplete: true,
+          lastLoginTime: new Date().toISOString(),
+        });
       },
 
       /**
@@ -529,6 +534,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         set({
           user: null,
           isAuthenticated: false,
+          authSetupComplete: true,
           sessionToken: undefined,
           refreshToken: undefined,
           deviceVerified: false,

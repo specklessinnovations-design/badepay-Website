@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowDownLeft, ArrowUpRight, Landmark, Plus } from 'lucide-react';
-import { Transaction } from '@/mock/transactions';
+import { Transaction } from '@/store/useTransactionStore';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { formatDate } from '@/utils/formatDate';
 import { Badge } from '@/components/ui/badge';

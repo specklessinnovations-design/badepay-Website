@@ -23,6 +23,8 @@ export interface StoredUser {
   accountName?: string;
   balance: number;
   transactionPin?: string;
+  hasPinSet?: boolean;
+  pinRequirement?: 'always' | 'above_20k';
   kycLevel: 0 | 1 | 2 | 3;
   kycStatus?: 'pending' | 'approved' | 'rejected';
   biometricEnabled?: boolean;
@@ -67,7 +69,11 @@ function mapBackendUser(raw: any): StoredUser {
     avatar: raw.avatar || undefined,
     lastLogin: raw.lastLogin || undefined,
     kycSubmittedAt: raw.kycSubmittedAt || undefined,
-    merchantProfile: raw.merchantProfile || undefined,
+    hasPinSet: raw.hasPinSet ?? !!raw.transactionPin,
+    pinRequirement: raw.pinRequirement || 'always',
+    merchantProfile: raw.merchantProfile
+      ? { ...raw.merchantProfile, onboardingComplete: true }
+      : undefined,
   };
 }
 
@@ -335,22 +341,23 @@ export const authService = {
   },
 
   /**
-   * Complete merchant onboarding.
+   * Complete merchant onboarding for an existing consumer account.
+   * Backend endpoint: POST /auth/merchant/onboard
    */
-  completeMerchantOnboarding: async (
-    data: Omit<MerchantProfile, 'merchantId' | 'qrSlug' | 'verified' | 'onboardingComplete' | 'payoutAccount'>,
-  ): Promise<void> => {
-    await apiClient.patch('/auth/profile', {
-      userType: 'merchant',
-      businessName: data.businessName,
-      tradingName: data.tradingName,
-      businessType: data.businessType,
-      category: data.category,
-      address: data.address,
-      supportPhone: data.supportPhone,
-      rcNumber: data.rcNumber,
-      taxId: data.taxId,
-    });
+  completeMerchantOnboarding: async (data: {
+    businessName: string;
+    tradingName: string;
+    businessType: string;
+    category: string;
+    address: string;
+    rcNumber?: string;
+    taxId?: string;
+    supportPhone?: string;
+    payoutPreference?: string;
+  }): Promise<StoredUser> => {
+    const resp = await apiClient.post('/auth/merchant/onboard', data);
+    const rawUser = resp?.data?.user || resp?.data || {};
+    return mapBackendUser(rawUser);
   },
 
   /**
@@ -358,6 +365,58 @@ export const authService = {
    */
   upgradeToMerchant: async (): Promise<void> => {
     await apiClient.patch('/auth/profile', { userType: 'merchant' });
+  },
+
+  /**
+   * Generate personal QR code for customers
+   * Backend endpoint: GET /qr/personal
+   */
+  generatePersonalQrCode: async (): Promise<{ qrSlug: string; displayName: string; payload: string }> => {
+    const resp = await apiClient.get('/qr/personal');
+    return resp?.data?.data || resp?.data || {};
+  },
+
+  /**
+   * Generate QR code for merchant
+   * Backend endpoint: GET /qr/generate
+   */
+  generateQrCode: async (): Promise<{ qrSlug: string; tradingName: string; payload: string }> => {
+    const resp = await apiClient.get('/qr/generate');
+    return resp?.data?.data || resp?.data || {};
+  },
+
+  /**
+   * Generate a dynamic QR code with pre-filled amount
+   * Backend endpoint: POST /qr/dynamic
+   */
+  generateDynamicQrCode: async (payload: { amount: number; reference?: string }): Promise<any> => {
+    const resp = await apiClient.post('/qr/dynamic', payload);
+    return resp?.data || resp;
+  },
+
+  /**
+   * Scan a QR code to resolve merchant or user
+   * Backend endpoint: POST /qr/scan
+   */
+  scanQrCode: async (code: string): Promise<any> => {
+    const resp = await apiClient.post('/qr/scan', { code });
+    return resp?.data || resp;
+  },
+
+  /**
+   * Initiate a QR payment
+   * Backend endpoint: POST /qr/pay
+   */
+  payQrCode: async (payload: {
+    merchantSlug: string;
+    amount: number;
+    pin: string;
+    recipientType: 'merchant' | 'personal';
+    dynamicReference?: string;
+    idempotencyKey?: string;
+  }): Promise<any> => {
+    const resp = await apiClient.post('/qr/pay', payload);
+    return resp?.data || resp;
   },
 
   // ── Legacy compatibility stubs ──────────────────────────────────────────────
@@ -394,4 +453,5 @@ export async function getUserById(_id: string) {
 }
 
 // Attach to authService for compatibility
+(authService as any).getUserById = getUserById;
 (authService as any).getUserById = getUserById;

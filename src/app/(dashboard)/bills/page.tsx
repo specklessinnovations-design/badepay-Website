@@ -3,11 +3,11 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { Zap, Smartphone, Wifi, Tv, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useWalletStore } from '@/store/useWalletStore';
 import { formatNGN } from '@/utils/formatting';
 import toast from 'react-hot-toast';
 import { AIRTIME_PROVIDERS, DATA_PROVIDERS, ELECTRICITY_PROVIDERS, CABLE_TV_PROVIDERS, BETTING_PROVIDERS } from '@/data/providers';
 import { TransactionPinModal } from '@/components/auth/TransactionPinModal';
+import billsService from '@/services/billsService';
 
 type BillType = 'airtime' | 'data' | 'electricity' | 'cable' | 'betting';
 
@@ -46,7 +46,6 @@ function BillsContent() {
   const [showPinModal, setShowPinModal] = useState(false);
   const balance = useAuthStore((s) => s.user?.balance ?? 0);
   const userPhone = useAuthStore((s) => s.user?.phone ?? '');
-  const payBill = useWalletStore((s) => s.payBill);
 
   useEffect(() => {
     if (typeParam && PROVIDERS[typeParam]) {
@@ -87,20 +86,30 @@ function BillsContent() {
     setShowPinModal(true);
   };
 
-  const handlePay = async () => {
+  const handlePay = async (pin: string) => {
     const value = parseFloat(amount);
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    const label = `${provider} ${category}`;
-    const ok = payBill(label, value, 'bills', `${category} · ${reference}`);
-    setLoading(false);
-
-    if (ok) {
-      toast.success(`${label} paid successfully`);
+    try {
+      let result;
+      if (category === 'airtime') {
+        result = await billsService.purchaseAirtime({ provider, accountRef: reference, amount: value, pin });
+      } else if (category === 'data') {
+        result = await billsService.purchaseData({ provider, accountRef: reference, amount: value, pin });
+      } else if (category === 'electricity') {
+        result = await billsService.payElectricity({ provider, accountRef: reference, amount: value, pin });
+      } else if (category === 'cable') {
+        result = await billsService.payCable({ provider, accountRef: reference, amount: value, pin });
+      } else if (category === 'betting') {
+        result = await billsService.payCable({ provider, accountRef: reference, amount: value, pin });
+      }
+      
+      toast.success(`${provider} ${category} paid successfully`);
       setAmount('');
       if (category !== 'airtime' && category !== 'data') setReference('');
-    } else {
-      toast.error('Payment failed');
+    } catch (err: any) {
+      toast.error(err?.message || 'Payment failed');
+    } finally {
+      setLoading(false);
     }
   };
 

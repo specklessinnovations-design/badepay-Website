@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useRequireMerchant } from '@/hooks/useAuthProtection';
 import { ThemeContext } from '@/contexts/ThemeContext';
 import { AppShell } from '@/components/ui/app-shell';
-import { BarChart3, CreditCard, QrCode, DollarSign, LogOut, Menu, X, Moon, Sun, Store, ShoppingBag, Package } from 'lucide-react';
+import { BarChart3, CreditCard, QrCode, DollarSign, LogOut, Menu, X, Moon, Sun, Store, ShoppingBag, Package, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const NAV = [
@@ -62,6 +62,15 @@ function SidebarNav({ pathname, onNavClick }: { pathname: string; onNavClick?: (
 function SidebarBottom({ user, businessName, initials, theme, toggleTheme, onLogout, onNavClick }: any) {
   return (
     <div className="p-3 space-y-1" style={{ borderTop: '1px solid var(--glass-border-light)' }}>
+      <Link href="/dashboard" onClick={onNavClick}
+        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors"
+        style={{ color: 'var(--text-secondary)' }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-secondary)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+        <User size={16} style={{ color: 'var(--text-tertiary)' }} />
+        <span>Personal Account</span>
+      </Link>
+
       <button onClick={() => { toggleTheme(); onNavClick?.(); }}
         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors"
         style={{ color: 'var(--text-secondary)' }}

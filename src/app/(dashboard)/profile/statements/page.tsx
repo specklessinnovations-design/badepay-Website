@@ -1,6 +1,6 @@
 
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTransactionStore } from '@/store/useTransactionStore';
 import { exportTransactionsCsv, exportTransactionsPdf } from '@/lib/exportStatements';
@@ -10,6 +10,11 @@ import toast from 'react-hot-toast';
 export default function StatementsPage() {
   const { user } = useAuthStore();
   const transactions = useTransactionStore((s) => s.transactions);
+  const fetchTransactions = useTransactionStore((s) => s.fetchTransactions);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
   if (!user) return null;
 

@@ -1,7 +1,7 @@
-// FRONTEND-ONLY MODE: Admin auth store uses mock data only — no API calls.
+// Admin auth store connected to BadePay backend API
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import apiClient from '@/lib/apiClient';
+import adminService from '@/services/adminService';
 
 interface AdminUser {
   name: string;
@@ -17,19 +17,6 @@ interface AdminAuthState {
   hasPermission: (action: string) => boolean;
 }
 
-const MOCK_ADMINS: { email: string; password: string; user: AdminUser }[] = [
-  {
-    email: 'super@badepay.app',
-    password: 'admin123',
-    user: { name: 'Super Admin', email: 'super@badepay.app', role: 'super_admin' },
-  },
-  {
-    email: 'admin@badepay.app',
-    password: 'admin123',
-    user: { name: 'Regular Admin', email: 'admin@badepay.app', role: 'admin' },
-  },
-];
-
 export const useAdminAuthStore = create<AdminAuthState>()(
   persist(
     (set, get) => ({
@@ -37,34 +24,28 @@ export const useAdminAuthStore = create<AdminAuthState>()(
       admin: null,
 
       login: async (email: string, password: string) => {
-        // Try backend admin password login if available
         try {
-          const resp = await apiClient.post('/auth/admin-login', { email, password });
-          const payload = resp?.data || resp;
-          const tokens = payload?.tokens || payload?.data?.tokens;
-          const admin = payload?.admin || payload?.data?.admin;
-          if (tokens) {
-            const access = tokens.accessToken || tokens.access;
-            const refresh = tokens.refreshToken || tokens.refresh;
-            apiClient.setTokens(access, refresh);
-          }
+          const admin = await adminService.login(email, password);
           if (admin) {
-            set({ isAuthenticated: true, admin });
+            set({
+              isAuthenticated: true,
+              admin: {
+                name: admin.name || 'Admin',
+                email: admin.email || email,
+                role: admin.role === 'superadmin' ? 'super_admin' : 'admin',
+              },
+            });
             return true;
           }
-        } catch (e) {
-          // Backend endpoint missing or failed — fallback to local demo credentials
+          return false;
+        } catch (error) {
+          console.error('Admin login failed:', error);
+          return false;
         }
-
-        const match = MOCK_ADMINS.find((a) => a.email === email && a.password === password);
-        if (match) {
-          set({ isAuthenticated: true, admin: match.user });
-          return true;
-        }
-        return false;
       },
 
       logout: async () => {
+        await adminService.logout().catch(() => {});
         set({ isAuthenticated: false, admin: null });
       },
 

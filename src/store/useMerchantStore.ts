@@ -1,94 +1,54 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import * as authService from '@/services/authService';
-import type { StoredUser } from '@/services/authService';
-
-export interface MerchantPayment {
-  id: string;
-  customerName: string;
-  amount: number;
-  date: string;
-  status: 'success' | 'pending' | 'failed';
-  reference: string;
-}
-
-export interface MerchantSettlement {
-  id: string;
-  amount: number;
-  date: string;
-  status: 'completed' | 'pending' | 'processing';
-  reference: string;
-}
+import merchantService, { type MerchantPayment, type MerchantSettlement } from '@/services/merchantService';
 
 interface MerchantState {
   payments: MerchantPayment[];
   settlements: MerchantSettlement[];
+  isLoading: boolean;
+  fetchPayments: () => Promise<void>;
+  fetchSettlements: () => Promise<void>;
   recordPayment: (merchantUserId: string, customerName: string, amount: number) => boolean;
 }
 
-export const useMerchantStore = create<MerchantState>()(
-  persist(
-    (set) => ({
-      payments: [],
-      settlements: [],
+export const useMerchantStore = create<MerchantState>()((set, get) => ({
+  payments: [],
+  settlements: [],
+  isLoading: false,
 
-      recordPayment: (merchantUserId, customerName, amount) => {
-        if (amount <= 0) return false;
-
-        const payment: MerchantPayment = {
-          id: `mp_${Date.now()}`,
-          customerName,
-          amount,
-          date: new Date().toISOString(),
-          status: 'success',
-          reference: `REF-${Date.now().toString(36).toUpperCase()}`,
-        };
-
-        set((state) => ({ payments: [payment, ...state.payments] }));
-
-        authService.updateUserBalance(merchantUserId, amount).catch(() => {});
-
-        const merchant = authService.getUserById(merchantUserId);
-        if (merchant?.merchantProfile?.payoutPreference === 'daily') {
-          const settlement: MerchantSettlement = {
-            id: `ms_${Date.now()}`,
-            amount,
-            date: new Date().toISOString(),
-            status: 'pending',
-            reference: payment.reference,
-          };
-          set((state) => ({ settlements: [settlement, ...state.settlements] }));
-        }
-
-        return true;
-      },
-    }),
-    {
-      name: 'badepay_merchant',
-      partialize: (state) => ({ payments: state.payments, settlements: state.settlements }),
+  fetchPayments: async () => {
+    set({ isLoading: true });
+    try {
+      const payments = await merchantService.getPayments();
+      set({ payments, isLoading: false });
+    } catch {
+      set({ isLoading: false });
     }
-  )
-);
+  },
 
-export function findMerchantByScanTarget(nameOrSlug: string): StoredUser | null {
-  const users = authService.listUsers();
-  const normalized = nameOrSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-  for (const user of users) {
-    if (user.userType !== 'merchant' || !user.merchantProfile?.onboardingComplete) continue;
-    const profile = user.merchantProfile;
-    const slug = profile.qrSlug.toLowerCase();
-    const trading = profile.tradingName.toLowerCase();
-    const business = profile.businessName.toLowerCase();
-    if (
-      slug === normalized ||
-      trading.replace(/[^a-z0-9]/g, '') === normalized ||
-      business.replace(/[^a-z0-9]/g, '') === normalized ||
-      trading === nameOrSlug.toLowerCase() ||
-      business === nameOrSlug.toLowerCase()
-    ) {
-      return user;
+  fetchSettlements: async () => {
+    set({ isLoading: true });
+    try {
+      const settlements = await merchantService.getSettlements();
+      set({ settlements, isLoading: false });
+    } catch {
+      set({ isLoading: false });
     }
-  }
-  return null;
-}
+  },
+
+  recordPayment: (merchantUserId, customerName, amount) => {
+    if (amount <= 0) return false;
+
+    const payment: MerchantPayment = {
+      id: `mp_${Date.now()}`,
+      amount,
+      customerName,
+      status: 'success',
+      reference: `REF-${Date.now().toString(36).toUpperCase()}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    set((state) => ({ payments: [payment, ...state.payments] }));
+
+    return true;
+  },
+}));

@@ -89,14 +89,9 @@ export default function AdminLoginPage() {
           </form>
 
           <div className="mt-8 pt-8 border-t border-black/10 text-center">
-            <p className="text-xs font-bold text-black/40 uppercase tracking-widest mb-4 flex items-center justify-center gap-2">
+            <p className="text-xs font-bold text-black/40 uppercase tracking-widest flex items-center justify-center gap-2">
               <ShieldCheck size={14} /> Unauthorized Access Monitored
             </p>
-            <div className="bg-white p-4 rounded-xl border border-black/10 text-left break-words">
-              <p className="text-xs text-black/60 font-bold uppercase tracking-wider mb-2">Demo Credentials:</p>
-              <p className="text-sm font-bold text-black mb-1 break-all">Super Admin: super@badepay.app / admin123</p>
-              <p className="text-sm font-bold text-black break-all">Regular Admin: admin@badepay.app / admin123</p>
-            </div>
           </div>
         </div>
       </div>

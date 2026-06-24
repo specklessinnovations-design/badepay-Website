@@ -1,37 +1,131 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { Copy, Check, Share2, QrCode, Store, Zap } from 'lucide-react';
+import { Copy, Check, Share2, QrCode, Store, Zap, Plus, X, Loader2, ArrowLeft, Download, Printer, ArrowUpRight, Sparkles, ChevronRight, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/useAuthStore';
 import { buildMerchantQrPayload } from '@/types/merchant';
+import { merchantService } from '@/services/merchantService';
+import { useMerchantStore } from '@/store/useMerchantStore';
 import toast from 'react-hot-toast';
+import QRCode from 'qrcode';
 
 export default function MerchantQrPage() {
   const profile = useAuthStore((s) => s.user?.merchantProfile);
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedPayload, setCopiedPayload] = useState(false);
+  const payments = useMerchantStore((s) => s.payments);
+  const [copied, setCopied] = useState(false);
+  const [tab, setTab] = useState<'static' | 'dynamic'>('static');
+  const [showNewQR, setShowNewQR] = useState(false);
+  const [showFullscreenQR, setShowFullscreenQR] = useState(false);
+  const [newAmount, setNewAmount] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [loadingDynamicQr, setLoadingDynamicQr] = useState(false);
+  const [dynamicQrPayload, setDynamicQrPayload] = useState<string | null>(null);
+  const [loadingQr, setLoadingQr] = useState(true);
+  const [qrPayload, setQrPayload] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [dynamicQrDataUrl, setDynamicQrDataUrl] = useState<string>('');
 
-  const qrPayload = useMemo(() => {
-    if (!profile?.onboardingComplete) return '';
-    return buildMerchantQrPayload(profile);
+  const businessName = profile?.tradingName || profile?.businessName || 'My Business';
+  const tradingSlug = profile?.qrSlug || (profile?.tradingName || businessName).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const shareUrl = `badepay.ng/pay/${tradingSlug}`;
+
+  // Real stats from payments
+  const collections = payments.filter(p => p.status === 'success');
+  const totalScans = collections.length;
+  const totalCollected = collections.reduce((s, p) => s + p.amount, 0);
+  const avgTicket = collections.length > 0 ? Math.round(totalCollected / collections.length) : 0;
+
+  // Fetch static QR from backend
+  useEffect(() => {
+    async function fetchQr() {
+      try {
+        const data = await merchantService.generateQrCode();
+        const payload = data?.qrCode || (profile ? buildMerchantQrPayload(profile) : '');
+        setQrPayload(payload);
+      } catch {
+        if (profile) {
+          setQrPayload(buildMerchantQrPayload(profile));
+        }
+      } finally {
+        setLoadingQr(false);
+      }
+    }
+    if (profile?.onboardingComplete) {
+      fetchQr();
+    }
   }, [profile]);
 
-  const qrUrl = profile?.qrSlug ? `https://badepay.ng/m/${profile.qrSlug}` : '';
+  // Generate QR code image from payload
+  useEffect(() => {
+    if (!qrPayload) return;
 
-  const copyLink = () => {
-    if (!qrUrl) return;
-    navigator.clipboard.writeText(qrUrl);
-    setCopiedLink(true);
-    toast.success('Payment link copied!');
-    setTimeout(() => setCopiedLink(false), 2000);
+    QRCode.toDataURL(qrPayload, {
+      width: 256,
+      margin: 2,
+      color: {
+        dark: '#0a0a0a',
+        light: '#ffffff',
+      },
+    })
+      .then((url) => {
+        setQrDataUrl(url);
+      })
+      .catch((err) => {
+        console.error('QR Code generation error:', err);
+      });
+  }, [qrPayload]);
+
+  // Generate dynamic QR code image from payload
+  useEffect(() => {
+    if (!dynamicQrPayload) return;
+
+    QRCode.toDataURL(dynamicQrPayload, {
+      width: 256,
+      margin: 2,
+      color: {
+        dark: '#0a0a0a',
+        light: '#ffffff',
+      },
+    })
+      .then((url) => {
+        setDynamicQrDataUrl(url);
+      })
+      .catch((err) => {
+        console.error('Dynamic QR Code generation error:', err);
+      });
+  }, [dynamicQrPayload]);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(`https://${shareUrl}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
   };
 
-  const copyPayload = () => {
-    if (!qrPayload) return;
-    navigator.clipboard.writeText(qrPayload);
-    setCopiedPayload(true);
-    toast.success('QR payload copied!');
-    setTimeout(() => setCopiedPayload(false), 2000);
+  const handleGenerateDynamicQr = async () => {
+    if (!newAmount || Number(newAmount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    setLoadingDynamicQr(true);
+    try {
+      const data = await merchantService.generateDynamicQrCode(Number(newAmount));
+      const payload = data?.qrCode || '';
+      if (payload) {
+        setDynamicQrPayload(payload);
+        setShowNewQR(false);
+        setShowFullscreenQR(true);
+        toast.success('Dynamic QR code generated!');
+        setNewLabel('');
+        setNewAmount('');
+      } else {
+        toast.error('Failed to generate QR code');
+      }
+    } catch {
+      toast.error('Failed to generate QR code');
+    } finally {
+      setLoadingDynamicQr(false);
+    }
   };
 
   if (!profile?.onboardingComplete) {
@@ -56,93 +150,277 @@ export default function MerchantQrPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-lg mx-auto">
+    <div className="space-y-6 max-w-lg mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <Link href="/merchant" className="h-9 w-9 rounded-full flex items-center justify-center" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
+          <ArrowLeft size={16} style={{ color: 'var(--text-secondary)' }} />
+        </Link>
+        <div className="flex flex-col items-center">
+          <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>QR Codes</div>
+          <div className="text-[10px] font-medium" style={{ color: 'var(--accent-text)' }}>Merchant Terminal</div>
+        </div>
+        <button onClick={() => setShowNewQR(true)} className="h-9 w-9 rounded-full flex items-center justify-center" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
+          <Plus size={16} />
+        </button>
+      </div>
 
-      {/* ── QR hero card ── */}
-      <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.45, ease: "easeOut" as const }}
-        className="relative overflow-hidden rounded-3xl p-8 text-center"
-        style={{ background: 'linear-gradient(135deg, #081a18 0%, #0d2e2a 60%, #081a18 100%)', border: '1px solid rgba(111,232,214,0.2)' }}>
-        {/* Ambient glow */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-64 w-64 rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(111,232,214,0.12) 0%, transparent 70%)' }} />
+      {/* Primary QR card */}
+      <div className="rounded-3xl p-5 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #081a18 0%, #0d2e2a 60%, #081a18 100%)', border: '1px solid rgba(111,232,214,0.2)' }}>
+        <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full pointer-events-none" style={{ background: 'rgba(111,232,214,0.1)', filter: 'blur(48px)' }} />
+        <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full pointer-events-none" style={{ background: 'rgba(111,232,214,0.05)', filter: 'blur(32px)' }} />
+
+        {/* Business name + badge */}
+        <div className="relative z-10 flex items-center justify-between mb-4">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'rgba(111,232,214,0.6)' }}>Primary QR</div>
+            <div className="text-sm font-semibold mt-0.5 truncate max-w-[200px]" style={{ color: '#ffffff' }}>{businessName}</div>
+          </div>
+          <span className="text-[10px] px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
+            ● Active
+          </span>
         </div>
 
-        <div className="relative z-10">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <Store size={13} style={{ color: 'rgba(111,232,214,0.6)' }} />
-            <p className="text-xs font-black uppercase tracking-widest" style={{ color: 'rgba(111,232,214,0.6)' }}>
-              Scan to pay
-            </p>
-          </div>
-          <p className="text-lg font-black mb-6" style={{ color: '#ffffff' }}>{profile.tradingName}</p>
-
-          {/* QR code */}
-          <div className="mx-auto rounded-2xl p-4 shadow-[0_0_40px_rgba(111,232,214,0.15),0_0_80px_rgba(111,232,214,0.08)]"
-            style={{ background: '#ffffff', width: 'fit-content' }}>
-            <QrPattern size={200} />
+        {/* QR + stats side by side */}
+        <div className="relative z-10 flex items-stretch gap-5">
+          {/* QR code visual */}
+          <div className="shrink-0 rounded-2xl flex items-center justify-center" style={{ width: 148, height: 148, background: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {loadingQr ? (
+              <Loader2 size={32} className="animate-spin" style={{ color: '#6fe8d6' }} />
+            ) : qrDataUrl ? (
+              <img src={qrDataUrl} alt="QR Code" className="w-full h-full object-contain" />
+            ) : (
+              <QrPattern size={128} />
+            )}
           </div>
 
-          <p className="mt-5 font-mono text-xs" style={{ color: 'rgba(111,232,214,0.5)' }}>
-            {qrUrl.replace('https://', '')}
-          </p>
-
-          {/* Merchant ID */}
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5"
-            style={{ background: 'rgba(111,232,214,0.08)', border: '1px solid rgba(111,232,214,0.15)' }}>
-            <div className="h-1.5 w-1.5 rounded-full bg-[#6fe8d6] animate-pulse" />
-            <span className="text-[10px] font-bold font-mono" style={{ color: '#6fe8d6' }}>
-              {profile.merchantId}
-            </span>
+          {/* Live stats */}
+          <div className="flex-1 flex flex-col justify-between py-1">
+            {collections.length > 0 ? (
+              <>
+                <Stat label="Payments received" value={String(totalScans)} />
+                <div className="h-px" style={{ background: 'rgba(111,232,214,0.2)' }} />
+                <Stat label="Total collected" value={`₦${(totalCollected / 1000).toFixed(1)}k`} />
+                <div className="h-px" style={{ background: 'rgba(111,232,214,0.2)' }} />
+                <Stat label="Average ticket" value={`₦${avgTicket.toLocaleString()}`} />
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-2">
+                <Sparkles size={24} style={{ color: 'rgba(111,232,214,0.5)' }} />
+                <div className="text-xs font-medium leading-snug" style={{ color: 'rgba(111,232,214,0.6)' }}>
+                  Share your QR to start receiving payments
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </motion.div>
 
-      {/* ── Actions ── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
-        className="grid grid-cols-2 gap-3">
-        <button onClick={copyLink}
-          className="flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black transition-all active:scale-95"
-          style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
-          <AnimatePresence mode="wait">
-            {copiedLink
-              ? <motion.span key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="flex items-center gap-2"><Check size={15} /> Copied!</motion.span>
-              : <motion.span key="copy" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="flex items-center gap-2"><Copy size={15} /> Copy Link</motion.span>
-            }
-          </AnimatePresence>
+        {/* Shareable link pill */}
+        <button onClick={handleCopy} className="relative z-10 mt-4 w-full h-11 rounded-xl inline-flex items-center justify-between px-4 gap-2 cursor-pointer" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(111,232,214,0.15)' }}>
+          <span className="font-mono text-xs tracking-wider truncate" style={{ color: 'rgba(111,232,214,0.6)' }}>{shareUrl}</span>
+          <span className="shrink-0">
+            {copied ? <Check size={14} style={{ color: '#6fe8d6' }} /> : <Copy size={14} style={{ color: 'rgba(111,232,214,0.6)' }} />}
+          </span>
         </button>
-        <button onClick={copyPayload}
-          className="flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black transition-all active:scale-95"
-          style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
-          <AnimatePresence mode="wait">
-            {copiedPayload
-              ? <motion.span key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="flex items-center gap-2"><Check size={15} /> Copied!</motion.span>
-              : <motion.span key="copy" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="flex items-center gap-2"><QrCode size={15} /> QR Data</motion.span>
-            }
-          </AnimatePresence>
-        </button>
-      </motion.div>
+        {copied && (
+          <div className="relative z-10 mt-2 text-center text-xs font-semibold" style={{ color: '#6fe8d6' }}>
+            Link copied to clipboard ✓
+          </div>
+        )}
 
-      {/* ── Info card ── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}
-        className="rounded-2xl p-5" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-        <h3 className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'var(--text-tertiary)' }}>
-          How it works
-        </h3>
-        <div className="space-y-3">
+        {/* Action buttons */}
+        <div className="relative z-10 mt-3 grid grid-cols-4 gap-2">
           {[
-            { n: '1', text: 'Customer opens BadePay and taps Scan' },
-            { n: '2', text: 'They point the camera at your QR code' },
-            { n: '3', text: 'Payment is instant — funds hit your wallet' },
-          ].map(({ n, text }) => (
-            <div key={n} className="flex items-start gap-3">
-              <div className="h-6 w-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5 accent-icon-wrap"
-                style={{ color: 'var(--accent-text)' }}>{n}</div>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{text}</p>
+            { icon: Download, label: 'Download' },
+            { icon: Share2, label: 'Share' },
+            { icon: Printer, label: 'Print' },
+            { icon: QrCode, label: 'Display', action: () => setShowFullscreenQR(true) },
+          ].map((a) => (
+            <button key={a.label} onClick={a.action || undefined} className="h-11 rounded-xl inline-flex items-center justify-center gap-1.5 text-xs font-semibold" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(111,232,214,0.15)', color: 'rgba(111,232,214,0.8)' }}>
+              <a.icon size={14} /> {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* QR Type Selection Cards */}
+      <div>
+        <div className="text-xs uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-tertiary)' }}>QR Code Types</div>
+        <div className="space-y-3">
+          {/* Static QR Card */}
+          <button onClick={() => setTab('static')} className={`w-full rounded-2xl p-4 flex items-start gap-4 text-left transition-all ${tab === 'static' ? 'ring-2 ring-[#6fe8d6]/20' : ''}`} style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+            <div className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(111,232,214,0.1)' }}>
+              <QrCode size={20} style={{ color: '#6fe8d6' }} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Static QR</div>
+                {tab === 'static' && <div className="h-2 w-2 rounded-full bg-[#6fe8d6]" />}
+              </div>
+              <div className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                Customer scans QR — funds land in your wallet instantly
+              </div>
+              {collections.length > 0 && (
+                <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#34d399' }}>
+                  <ArrowUpRight size={14} />
+                  {totalScans} payment{totalScans !== 1 ? 's' : ''} collected
+                </div>
+              )}
+            </div>
+            <ChevronRight size={20} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
+          </button>
+
+          {/* Dynamic QR Card */}
+          <button onClick={() => setTab('dynamic')} className={`w-full rounded-2xl p-4 flex items-start gap-4 text-left transition-all ${tab === 'dynamic' ? 'ring-2 ring-[#8A2BE2]/20' : ''}`} style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+            <div className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(138,43,226,0.1)' }}>
+              <Zap size={20} style={{ color: '#8A2BE2' }} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Dynamic QR</div>
+                {tab === 'dynamic' && <div className="h-2 w-2 rounded-full bg-[#8A2BE2]" />}
+              </div>
+              <div className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                Set exact invoice amount for each transaction
+              </div>
+            </div>
+            <ChevronRight size={20} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
+          </button>
+
+          {/* Printable QR Card */}
+          <button onClick={() => setShowFullscreenQR(true)} className="w-full rounded-2xl p-4 flex items-start gap-4 text-left transition-all" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+            <div className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(52,211,153,0.1)' }}>
+              <Printer size={20} style={{ color: '#34d399' }} />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Printable QR</div>
+              <div className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                Download & print for your counter or storefront
+              </div>
+            </div>
+            <ChevronRight size={20} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
+          </button>
+        </div>
+      </div>
+
+      {/* Dynamic QR Generation */}
+      {tab === 'dynamic' && (
+        <button onClick={() => setShowNewQR(true)} className="w-full h-12 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
+          <Plus size={18} /> Generate New Dynamic QR
+        </button>
+      )}
+
+      {/* How it works */}
+      <div>
+        <div className="text-xs uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-tertiary)' }}>How it works</div>
+        <div className="space-y-2.5">
+          {[
+            { n: '1', title: 'Display your QR', desc: 'Show it on screen or print it for your counter or storefront.' },
+            { n: '2', title: 'Customer scans', desc: 'They scan with any banking app — Bade pay, Kuda, Moniepoint, GTB and more.' },
+            { n: '3', title: 'Instant settlement', desc: 'Funds land in your Bade pay wallet immediately, with SMS confirmation.' },
+          ].map((s) => (
+            <div key={s.n} className="flex items-start gap-3.5 rounded-2xl px-4 py-3" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+              <div className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
+                {s.n}
+              </div>
+              <div>
+                <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{s.title}</div>
+                <div className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{s.desc}</div>
+              </div>
             </div>
           ))}
         </div>
-      </motion.div>
+      </div>
+
+      {/* Security note */}
+      <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(111,232,214,0.05)', border: '1px solid rgba(111,232,214,0.15)' }}>
+        <Lock size={16} style={{ color: '#6fe8d6' }} />
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+          All QR payments are <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>end-to-end encrypted</span> and verified by Bade pay's fraud engine in real time.
+        </p>
+      </div>
+
+      {/* Generate new dynamic QR drawer */}
+      {showNewQR && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40 backdrop-blur-sm" onClick={() => setShowNewQR(false)}>
+          <div className="rounded-t-3xl p-6" style={{ background: 'var(--background)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-1.5 rounded-full mx-auto mb-5" style={{ background: 'var(--border)' }} />
+            <div className="text-base font-bold mb-1" style={{ color: 'var(--text-primary)' }}>New Dynamic QR</div>
+            <div className="text-xs mb-5" style={{ color: 'var(--text-secondary)' }}>Generate a one-time QR for a specific amount.</div>
+
+            <label className="text-xs uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-tertiary)' }}>Label / Purpose</label>
+            <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="e.g. Table 4 order, Invoice #001" className="w-full h-12 rounded-2xl px-4 text-sm outline-none mb-4" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+
+            <label className="text-xs uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-tertiary)' }}>Amount (₦)</label>
+            <input type="number" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} placeholder="Enter exact amount" className="w-full h-12 rounded-2xl px-4 text-sm font-mono outline-none mb-5" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+
+            <button onClick={handleGenerateDynamicQr} disabled={!newLabel.trim() || !newAmount || loadingDynamicQr} className="w-full h-13 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
+              {loadingDynamicQr ? <><Loader2 size={18} className="animate-spin" /> Generating...</> : <><QrCode size={18} /> Generate QR Code</>}
+            </button>
+            <button onClick={() => setShowNewQR(false)} className="w-full mt-3 h-11 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen QR display */}
+      {showFullscreenQR && (
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--background)' }}>
+          <div className="px-6 pt-2 flex items-center justify-between">
+            <button onClick={() => setShowFullscreenQR(false)} className="h-9 w-9 rounded-full flex items-center justify-center" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
+              <X size={16} style={{ color: 'var(--text-secondary)' }} />
+            </button>
+            <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Display QR Code</div>
+            <div className="w-9" />
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-center p-6">
+            <div className="text-center mb-8">
+              <div className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{businessName}</div>
+              <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Scan to pay</div>
+            </div>
+
+            <div className="rounded-3xl p-6" style={{ background: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {loadingQr ? (
+                <Loader2 size={128} className="animate-spin" style={{ color: '#6fe8d6' }} />
+              ) : dynamicQrDataUrl ? (
+                <img src={dynamicQrDataUrl} alt="QR Code" className="w-64 h-64 object-contain" />
+              ) : qrDataUrl ? (
+                <img src={qrDataUrl} alt="QR Code" className="w-64 h-64 object-contain" />
+              ) : (
+                <QrPattern size={256} />
+              )}
+            </div>
+
+            <div className="mt-8 text-center">
+              <div className="text-xs mb-2" style={{ color: 'var(--text-secondary)' }}>Share this link</div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-11 rounded-xl px-4 flex items-center justify-center" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
+                  <span className="font-mono text-xs tracking-wider truncate" style={{ color: 'var(--text-tertiary)' }}>{shareUrl}</span>
+                </div>
+                <button onClick={handleCopy} className="h-11 w-11 rounded-xl flex items-center justify-center" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                </button>
+              </div>
+              {copied && (
+                <div className="mt-2 text-xs font-semibold" style={{ color: '#6fe8d6' }}>
+                  Link copied to clipboard ✓
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-widest font-semibold" style={{ color: 'rgba(111,232,214,0.6)' }}>{label}</div>
+      <div className="text-lg font-bold tabular mt-0.5" style={{ color: '#ffffff' }}>{value}</div>
     </div>
   );
 }

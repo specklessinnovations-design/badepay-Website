@@ -72,24 +72,52 @@ export const adminService = {
 
   /**
    * Get platform stats.
+   * Backend: GET /admin/dashboard
    */
   getStats: async () => {
-    const usersResp = await adminApiClient.getUsers(1, 1);
-    const txResp = await adminApiClient.getTransactions(1, 1);
-    const merchantsResp = await adminApiClient.getMerchants();
-    const usersTotal = usersResp?.data?.total ?? usersResp?.data?.pagination?.totalCount ?? 0;
-    const txTotal = txResp?.data?.total ?? txResp?.data?.pagination?.totalCount ?? 0;
-    const pendingKyc = 0;
-    const totalVolume = 0;
-    return { users: usersTotal, transactions: txTotal, pendingKyc, totalVolume };
+    try {
+      const resp = await adminApiClient.get('/dashboard');
+      const data = resp?.data || {};
+      return {
+        users: data.users?.total || 0,
+        activeUsers: data.users?.active || 0,
+        merchants: data.users?.merchants || 0,
+        transactions: data.transactions?.total || 0,
+        totalVolume: data.transactions?.totalVolume || 0,
+        todayVolume: data.transactions?.todayVolume || 0,
+        pendingDisputes: data.disputes?.requiresAction || 0,
+        openDisputes: data.disputes?.open || 0,
+        recentTransactions: data.recentTransactions || [],
+      };
+    } catch {
+      return {
+        users: 0,
+        activeUsers: 0,
+        merchants: 0,
+        transactions: 0,
+        totalVolume: 0,
+        todayVolume: 0,
+        pendingDisputes: 0,
+        openDisputes: 0,
+        recentTransactions: [],
+      };
+    }
   },
 
   /**
    * Get users list.
    * Backend: GET /admin/users
    */
-  getUsers: async (page = 1, limit = 50): Promise<{ data: { data: AdminUserRecord[] } }> => {
-    const resp = await adminApiClient.getUsers(page, limit);
+  getUsers: async (page = 1, limit = 50, search?: string, userType?: string, kycStatus?: string, isActive?: boolean): Promise<{ data: { data: AdminUserRecord[] } }> => {
+    const query = new URLSearchParams();
+    if (page) query.set('page', String(page));
+    if (limit) query.set('limit', String(limit));
+    if (search) query.set('search', search);
+    if (userType) query.set('userType', userType);
+    if (kycStatus) query.set('kycStatus', kycStatus);
+    if (isActive !== undefined) query.set('isActive', String(isActive));
+    const qs = query.toString();
+    const resp = await adminApiClient.get(`/admin/users${qs ? '?' + qs : ''}`);
     const users = resp?.data?.users ?? [];
     const transactionsResp = await adminApiClient.getTransactions(1, 1000).catch(() => ({ data: { transactions: [] } }));
     const transactions = transactionsResp?.data?.transactions ?? [];
@@ -114,7 +142,11 @@ export const adminService = {
    * Backend: GET /admin/transactions
    */
   getTransactions: async (page = 1, limit = 50): Promise<{ data: { data: AdminTxRecord[] } }> => {
-    const resp = await adminApiClient.getTransactions(page, limit);
+    const query = new URLSearchParams();
+    if (page) query.set('page', String(page));
+    if (limit) query.set('limit', String(limit));
+    const qs = query.toString();
+    const resp = await adminApiClient.get(`/admin/transactions${qs ? '?' + qs : ''}`);
     const transactions = resp?.data?.transactions ?? [];
     const usersResp = await adminApiClient.getUsers(1, 1000).catch(() => ({ data: { users: [] } }));
     const users = usersResp?.data?.users ?? [];
@@ -127,8 +159,8 @@ export const adminService = {
    * Backend: GET /admin/users (filter kycStatus=pending)
    */
   getPendingKyc: async (): Promise<KYCSubmission[]> => {
-    const usersResp = await adminApiClient.getUsers(1, 1000);
-    const users = usersResp?.data?.users ?? [];
+    const resp = await adminApiClient.get('/admin/users?kycStatus=pending&limit=100');
+    const users = resp?.data?.users ?? [];
     return mapUsersToKycSubmissions(users as any).filter((s) => s.status === 'pending');
   },
 
@@ -137,10 +169,13 @@ export const adminService = {
    * Backend: PATCH /admin/users/:id/kyc
    */
   reviewKyc: async (userId: string, action: 'approve' | 'reject') => {
-    if (action === 'approve') {
-      return adminApiClient.approveKyc(userId, 2);
+    const tier = action === 'approve' ? 2 : 1;
+    try {
+      await adminApiClient.patch(`/admin/users/${userId}/kyc`, { tier });
+      return { success: true };
+    } catch {
+      return { success: false };
     }
-    return adminApiClient.approveKyc(userId, 1 as 2 | 3).catch(() => ({ success: false }));
   },
 
   /**
@@ -148,7 +183,11 @@ export const adminService = {
    * Backend: GET /admin/disputes
    */
   getDisputes: async (page = 1, limit = 50) => {
-    const resp = await adminApiClient.getDisputes(page, limit);
+    const query = new URLSearchParams();
+    if (page) query.set('page', String(page));
+    if (limit) query.set('limit', String(limit));
+    const qs = query.toString();
+    const resp = await adminApiClient.get(`/admin/disputes${qs ? '?' + qs : ''}`);
     return resp?.data?.disputes ?? resp?.data ?? [];
   },
 
@@ -157,7 +196,12 @@ export const adminService = {
    * Backend: PATCH /admin/disputes/:id
    */
   updateDispute: async (id: string, status: string) => {
-    return adminApiClient.updateDispute(id, status);
+    try {
+      await adminApiClient.patch(`/admin/disputes/${id}`, { status });
+      return { success: true };
+    } catch {
+      return { success: false };
+    }
   },
 
   /**
@@ -165,7 +209,12 @@ export const adminService = {
    * Backend: POST /admin/transactions/:id/reverse
    */
   reverseTransaction: async (id: string) => {
-    return adminApiClient.reverseTransaction(id);
+    try {
+      await adminApiClient.post(`/admin/transactions/${id}/reverse`);
+      return { success: true };
+    } catch {
+      return { success: false };
+    }
   },
 };
 

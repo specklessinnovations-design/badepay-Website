@@ -5,7 +5,7 @@ import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail, Lock, User, Eye, EyeOff, ArrowRight, ArrowLeft,
-  Check, AlertCircle, Users, Store, ShieldCheck,
+  Check, AlertCircle, ShieldCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import authService from '@/services/authService';
@@ -27,7 +27,6 @@ interface SignupData {
   confirmPassword: string;
   pin: string;
   confirmPin: string;
-  role: 'customer' | 'merchant';
 }
 
 const StepBubbles = ({ current }: { current: number }) => (
@@ -85,14 +84,9 @@ function RegisterForm() {
     email: '', otp: ['', '', '', '', '', ''],
     firstName: '', lastName: '',
     password: '', confirmPassword: '', pin: '', confirmPin: '',
-    role: 'customer',
   });
 
   const otpInputs = useRef<(HTMLInputElement | null)[]>([]);
-
-  useEffect(() => {
-    if (searchParams.get('role') === 'merchant') setData(p => ({ ...p, role: 'merchant' }));
-  }, []);
 
   useEffect(() => {
     if (step === 2 && resendTimer > 0) {
@@ -163,7 +157,7 @@ function RegisterForm() {
           lastName: data.lastName,
           email: data.email.trim().toLowerCase(),
           password: data.password,
-          userType: data.role === 'merchant' ? 'merchant' : 'consumer',
+          userType: 'consumer',
         });
         setResendTimer(42);
         bpToast.success('Account created! Check your email for a verification code.');
@@ -177,7 +171,7 @@ function RegisterForm() {
         try {
           await setPin(data.pin);
           bpToast.success(`Welcome to BadePay, ${data.firstName}! 🎉`);
-          navigate(data.role === 'merchant' ? '/merchant' : '/dashboard');
+          navigate('/dashboard');
         } catch (err: any) {
           setError(err?.message || 'Failed to set PIN');
           return;
@@ -311,38 +305,6 @@ function RegisterForm() {
               <p className="text-sm text-[var(--text-secondary)] mb-6">Use details matching your official ID.</p>
 
               <div className="space-y-4">
-                {/* Account type */}
-                <div>
-                  <label className="block text-sm font-semibold text-[var(--text-primary)] mb-2.5">Account Type</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { id: 'customer', label: 'Personal', desc: 'For everyday banking', icon: Users },
-                      { id: 'merchant', label: 'Business', desc: 'Accept QR payments', icon: Store },
-                    ].map(({ id, label, desc, icon: Icon }) => {
-                      const active = data.role === id;
-                      return (
-                        <button key={id} type="button" onClick={() => setData(p => ({ ...p, role: id as any }))}
-                          className="flex flex-col gap-3 p-4 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
-                          style={{
-                            background: active ? 'rgba(111,232,214,0.07)' : 'var(--surface-secondary)',
-                            border: `2px solid ${active ? '#6fe8d6' : 'var(--border)'}`,
-                            boxShadow: active ? '0 0 20px rgba(111,232,214,0.15)' : 'none',
-                          }}>
-                          <div className="flex h-9 w-9 items-center justify-center rounded-xl"
-                            style={{ background: active ? 'rgba(111,232,214,0.15)' : 'var(--surface-tertiary)' }}>
-                            <Icon size={17} style={{ color: active ? 'var(--accent-text)' : 'var(--text-tertiary)' }} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold" style={{ color: active ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{label}</p>
-                            <p className="text-xs mt-0.5" style={{ color: active ? 'var(--text-secondary)' : 'var(--text-tertiary)' }}>{desc}</p>
-                          </div>
-                          {active && <div className="ml-auto self-start"><div className="w-5 h-5 rounded-full bg-[#6fe8d6] flex items-center justify-center"><Check size={11} strokeWidth={3} className="text-[#1a1a1a]" /></div></div>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <PremiumInput label="First name" placeholder="Tunde" icon={<User size={15} />}
                     value={data.firstName} onChange={e => setData(p => ({ ...p, firstName: e.target.value }))} />

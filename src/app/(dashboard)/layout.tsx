@@ -24,6 +24,8 @@ const SUB_PAGES: Record<string, string> = {
   '/profile/notifications': 'Notifications',
   '/profile/support': 'Help & support',
   '/profile/statements': 'Statements',
+  '/profile/change-pin': 'Change transaction PIN',
+  '/profile/change-password': 'Change password',
   '/set-pin': 'Transaction PIN',
   '/transaction/success': 'Transaction Successful',
   '/transaction/failed': 'Transaction Failed',

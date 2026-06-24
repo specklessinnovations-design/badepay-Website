@@ -44,6 +44,15 @@ export const walletService = {
   },
 
   /**
+   * Recalculate wallet balance from transactions.
+   * Backend: POST /wallet/recalculate-balance
+   */
+  recalculateBalance: async (): Promise<{ balance: number; previousBalance: number }> => {
+    const resp = await apiClient.post('/wallet/recalculate-balance');
+    return resp?.data || resp;
+  },
+
+  /**
    * Legacy alias kept for compatibility.
    */
   topUp: async (amount?: number): Promise<any> => {

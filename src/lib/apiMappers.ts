@@ -1,5 +1,5 @@
 import { User } from '@/store/useAuthStore';
-import { Transaction } from '@/mock/transactions';
+import { Transaction } from '@/store/useTransactionStore';
 
 export function mapProfileToUser(profile: Record<string, unknown>): User {
   const kycMap: Record<string, 0 | 1 | 2 | 3> = { verified: 2, pending: 1, rejected: 0 };

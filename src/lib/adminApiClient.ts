@@ -36,6 +36,11 @@ async function adminFetch<T = any>(method: string, path: string, body?: any): Pr
 }
 
 const adminApiClient = {
+  get: async (path: string) => adminFetch("GET", path),
+  post: async (path: string, body?: any) => adminFetch("POST", path, body),
+  patch: async (path: string, body?: any) => adminFetch("PATCH", path, body),
+  delete: async (path: string) => adminFetch("DELETE", path),
+
   getUsers: async (page = 1, limit = 50) =>
     adminFetch("GET", `/admin/users?page=${page}&limit=${limit}`),
 

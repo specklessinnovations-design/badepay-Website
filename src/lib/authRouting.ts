@@ -1,7 +1,8 @@
 import type { User } from '@/store/useAuthStore';
 
 export function isMerchantOnboardingComplete(user: User | null | undefined): boolean {
-  return !!user?.merchantProfile?.onboardingComplete;
+  if (!user || user.userType !== 'merchant') return false;
+  return !!user.merchantProfile?.businessName;
 }
 
 export function getPostAuthPath(user: User | null | undefined): string {

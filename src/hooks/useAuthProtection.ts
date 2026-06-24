@@ -42,7 +42,7 @@ const PROTECTED_ROUTES = [
 
 const MERCHANT_ROUTES = ['/merchant'];
 
-const CONSUMER_ROUTES = ['/dashboard', '/activity', '/profile', '/transfer', '/bills', '/cards', '/history', '/scan', '/stores'];
+const CONSUMER_ROUTES = ['/dashboard', '/activity', '/transfer', '/bills', '/cards', '/history', '/scan', '/stores'];
 
 const MERCHANT_ONBOARDING_PATH = '/merchant/onboarding';
 
@@ -53,7 +53,7 @@ export function useAuthProtection() {
   
   const [pathname, navigate] = useLocation();
 
-  const { isAuthenticated, user, checkSessionValidity } = useAuthStore();
+  const { isAuthenticated, user, checkSessionValidity, authSetupComplete } = useAuthStore();
 
 
 
@@ -81,7 +81,7 @@ export function useAuthProtection() {
 
 
 
-    if (isAuthenticated && PUBLIC_AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
+    if (isAuthenticated && authSetupComplete && PUBLIC_AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
 
       navigate(getPostAuthPath(user));
 
@@ -159,7 +159,7 @@ export function useAuthProtection() {
 
     }
 
-  }, [isAuthenticated, user, pathname, navigate, checkSessionValidity]);
+  }, [isAuthenticated, user, pathname, navigate, checkSessionValidity, authSetupComplete]);
 
 }
 

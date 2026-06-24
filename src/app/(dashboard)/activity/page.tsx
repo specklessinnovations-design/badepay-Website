@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Download, X, ArrowUpRight, ArrowDownLeft, Zap, FileText, TrendingUp, TrendingDown, ChevronRight, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { useTransactionStore } from '@/store/useTransactionStore';
-import type { Transaction } from '@/mock/transactions';
+import type { Transaction } from '@/store/useTransactionStore';
 import { formatNGN, formatTimeAgo } from '@/utils/formatting';
 import { filterTransactions, getTransactionTotals, type ActivityFilter } from '@/lib/personalHelpers';
 import { exportTransactionsCsv } from '@/lib/exportStatements';
@@ -18,16 +18,16 @@ const FILTERS: { id: ActivityFilter; label: string }[] = [
   { id: 'transfer', label: 'Transfers' },
 ];
 
-const CATEGORY_LABELS: Record<Transaction['category'], string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   transfer: 'Transfer', bills: 'Bill payment', deposit: 'Deposit', withdrawal: 'Withdrawal',
 };
 
-const CATEGORY_ICONS: Record<Transaction['category'], React.ElementType> = {
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
   transfer: ArrowUpRight, bills: Zap, deposit: ArrowDownLeft, withdrawal: ArrowUpRight,
 };
 
 function TxIcon({ tx }: { tx: Transaction }) {
-  const Icon = CATEGORY_ICONS[tx.category] ?? FileText;
+  const Icon = CATEGORY_ICONS[tx.category || 'transfer'] ?? FileText;
   const isCredit = tx.type === 'credit';
   return (
     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors"
@@ -42,9 +42,14 @@ function TxIcon({ tx }: { tx: Transaction }) {
 
 export default function ActivityPage() {
   const transactions = useTransactionStore((s) => s.transactions);
+  const fetchTransactions = useTransactionStore((s) => s.fetchTransactions);
   const [, navigate] = useLocation();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ActivityFilter>('all');
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
 
   const filtered = useMemo(() => filterTransactions(transactions, filter, query), [transactions, filter, query]);
   const { totalIn, totalOut } = useMemo(() => getTransactionTotals(filtered), [filtered]);

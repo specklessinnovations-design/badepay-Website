@@ -80,16 +80,17 @@ const STATS = [
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const [, navigate] = useLocation();
-  const { isAuthenticated, user, checkSessionValidity } = useAuthStore();
+  const { isAuthenticated, user, checkSessionValidity, authSetupComplete } = useAuthStore();
 
   React.useEffect(() => {
     if (!isAuthenticated) return;
+    if (!authSetupComplete && window.location.pathname.startsWith('/register')) return;
     if (!user || !checkSessionValidity()) {
       useAuthStore.setState({ user: null, isAuthenticated: false, sessionToken: undefined, refreshToken: undefined, lastLoginTime: undefined });
       return;
     }
     navigate(user.userType === 'merchant' ? getPostAuthPath(user) : '/dashboard');
-  }, [isAuthenticated, user, navigate, checkSessionValidity]);
+  }, [isAuthenticated, user, navigate, checkSessionValidity, authSetupComplete]);
 
   return (
     <AppShell className="flex h-screen overflow-hidden">

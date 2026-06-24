@@ -4,11 +4,63 @@
  */
 import apiClient from '@/lib/apiClient';
 
+export interface BillValidation {
+  accountNumber: string;
+  accountName: string;
+  provider: string;
+  billType: string;
+}
+
+export interface BillPurchaseResponse {
+  transaction: any;
+  token?: string;
+}
+
 export const billsService = {
-  purchaseAirtime: async (payload: any) => apiClient.post('/bills/airtime', payload),
-  purchaseData: async (payload: any) => apiClient.post('/bills/data', payload),
-  payElectricity: async (payload: any) => apiClient.post('/bills/electricity', payload),
-  payCable: async (payload: any) => apiClient.post('/bills/cable', payload),
+  /**
+   * Validate bill account.
+   * Backend: POST /bills/validate
+   */
+  validateAccount: async (accountNumber: string, provider: string, billType: string): Promise<BillValidation> => {
+    const resp = await apiClient.post('/bills/validate', { accountNumber, provider, billType });
+    return resp?.data?.data ?? resp?.data;
+  },
+
+  /**
+   * Purchase airtime.
+   * Backend: POST /bills/airtime
+   */
+  purchaseAirtime: async (payload: any): Promise<BillPurchaseResponse> => {
+    const resp = await apiClient.post('/bills/airtime', payload);
+    return resp?.data?.data ?? resp?.data;
+  },
+
+  /**
+   * Purchase data.
+   * Backend: POST /bills/data
+   */
+  purchaseData: async (payload: any): Promise<BillPurchaseResponse> => {
+    const resp = await apiClient.post('/bills/data', payload);
+    return resp?.data?.data ?? resp?.data;
+  },
+
+  /**
+   * Purchase electricity.
+   * Backend: POST /bills/electricity
+   */
+  payElectricity: async (payload: any): Promise<BillPurchaseResponse> => {
+    const resp = await apiClient.post('/bills/electricity', payload);
+    return resp?.data?.data ?? resp?.data;
+  },
+
+  /**
+   * Purchase cable TV.
+   * Backend: POST /bills/cable
+   */
+  payCable: async (payload: any): Promise<BillPurchaseResponse> => {
+    const resp = await apiClient.post('/bills/cable', payload);
+    return resp?.data?.data ?? resp?.data;
+  },
 };
 
 export default billsService;

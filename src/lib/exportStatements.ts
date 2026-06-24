@@ -1,16 +1,16 @@
-import type { Transaction } from '@/mock/transactions';
+import type { Transaction } from '@/store/useTransactionStore';
 import { formatNGN, formatDate } from '@/utils/formatting';
 
 export function exportTransactionsCsv(transactions: Transaction[], filename = 'badepay-statements.csv') {
   const headers = ['ID', 'Date', 'Name', 'Description', 'Type', 'Category', 'Amount', 'Status'];
   const rows = transactions.map((tx) => [
     tx.id,
-    formatDate(tx.date, 'full'),
-    tx.name,
-    tx.description,
+    formatDate(tx.date || tx.createdAt || '', 'full'),
+    tx.name || 'Transaction',
+    tx.description || '',
     tx.type,
-    tx.category,
-    tx.amount.toString(),
+    tx.category || 'transfer',
+    (tx.amount || 0).toString(),
     tx.status,
   ]);
 
@@ -32,7 +32,7 @@ export function exportTransactionsPdf(transactions: Transaction[], userName: str
     ? transactions
         .map(
           (tx) =>
-            `${formatDate(tx.date, 'short')} · ${tx.name} · ${tx.type === 'credit' ? '+' : '-'}${formatNGN(tx.amount)} · ${tx.status}`
+            `${formatDate(tx.date || tx.createdAt || '', 'short')} · ${tx.name || 'Transaction'} · ${tx.type === 'credit' ? '+' : '-'}${formatNGN(tx.amount || 0)} · ${tx.status}`
         )
         .join('\n')
     : 'No transactions recorded.';

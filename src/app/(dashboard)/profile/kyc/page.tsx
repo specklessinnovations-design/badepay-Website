@@ -1,20 +1,30 @@
 
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuthStore } from '@/store/useAuthStore';
-import { getKycTierInfo } from '@/lib/personalHelpers';
+import kycService from '@/services/kycService';
 import toast from 'react-hot-toast';
 
 export default function KycPage() {
   const [, navigate] = useLocation();
-  const { user, updateKycData, isLoading } = useAuthStore();
+  const { user, syncUserFromStorage } = useAuthStore();
   const [bvn, setBvn] = useState('');
   const [nin, setNin] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    syncUserFromStorage();
+  }, [syncUserFromStorage]);
 
   if (!user) return null;
 
-  const kyc = getKycTierInfo(user.kycLevel);
+  const kycLabel =
+    user.kycLevel === 3
+      ? 'Tier 3 · Utility bill verified'
+      : user.kycLevel === 2
+        ? 'Tier 2 · BVN/NIN verified'
+        : 'Tier 1 · Basic access';
+
   const canUpgrade = user.kycLevel < 2;
 
   const handleUpgrade = async (e: React.FormEvent) => {
@@ -28,17 +38,17 @@ export default function KycPage() {
       return;
     }
 
+    setLoading(true);
     try {
-      await updateKycData({
-        bvnVerified: true,
-        ninVerified: true,
-        kycStatus: 'pending',
-        kycSubmittedAt: new Date().toISOString(),
-      } as Partial<typeof user>);
-      toast.success('Documents submitted — awaiting admin review');
+      // Submit BVN for Tier 2
+      await kycService.verifyTier2({ bvn });
+      toast.success('BVN submitted — awaiting verification');
+      await syncUserFromStorage();
       navigate('/profile');
-    } catch {
+    } catch (err) {
       toast.error('Verification failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,20 +57,21 @@ export default function KycPage() {
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
         <p className="text-sm text-[var(--text-secondary)]">Current tier</p>
         <p className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">Tier {user.kycLevel}</p>
-        <p className="text-sm text-[var(--text-secondary)]">{kyc.label} · {kyc.access}</p>
+        <p className="text-sm text-[var(--text-secondary)]">{kycLabel}</p>
       </div>
 
       {canUpgrade ? (
         <form onSubmit={handleUpgrade} className="space-y-4">
-          <p className="text-sm text-[var(--text-secondary)]">{kyc.nextBenefit}</p>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Upgrade to Tier 2 to increase your transaction limits. Submit your BVN to get started.
+          </p>
           <Field label="BVN" value={bvn} onChange={setBvn} placeholder="11-digit BVN" maxLength={11} />
-          <Field label="NIN" value={nin} onChange={setNin} placeholder="11-digit NIN" maxLength={11} />
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={loading}
             className="w-full rounded-xl bg-[#6fe8d6] py-3.5 text-sm font-semibold text-[#1a1a1a] disabled:opacity-50"
           >
-            {isLoading ? 'Verifying…' : 'Submit for review'}
+            {loading ? 'Verifying…' : 'Submit for review'}
           </button>
         </form>
       ) : (

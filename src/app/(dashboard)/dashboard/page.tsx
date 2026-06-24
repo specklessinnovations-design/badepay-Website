@@ -5,17 +5,21 @@ import {
   Plus, Send, ArrowLeftRight, QrCode, Landmark,
   Smartphone, Wifi, Zap, Tv, ChevronRight,
   TrendingUp, TrendingDown, Eye, EyeOff, ShieldCheck,
-  Store,
+  Store, RefreshCw, Bell,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTransactionStore } from '@/store/useTransactionStore';
+import { useWalletStore } from '@/store/useWalletStore';
+import { useNotificationStore } from '@/store/useNotificationStore';
 import { formatNGN, formatTimeAgo } from '@/utils/formatting';
 import {
   getGreeting, formatAccountDisplay, computeMonthlyChange,
   getKycTierInfo, formatDisplayName,
 } from '@/lib/personalHelpers';
 import { HomeWalletModals, type HomeModalType } from '@/components/dashboard/HomeWalletModals';
+import walletService from '@/services/walletService';
+import toast from 'react-hot-toast';
 
 type QuickActionId = 'add' | 'transfer' | 'scan' | 'bills' | 'stores';
 
@@ -45,16 +49,57 @@ export default function DashboardHome() {
   const user = useAuthStore(s => s.user);
   const syncUserFromStorage = useAuthStore(s => s.syncUserFromStorage);
   const transactions = useTransactionStore(s => s.transactions);
+  const fetchTransactions = useTransactionStore(s => s.fetchTransactions);
+  const refreshBalance = useWalletStore(s => s.refreshBalance);
+  const unreadCount = useNotificationStore(s => s.unreadCount);
+  const fetchNotifications = useNotificationStore(s => s.fetchNotifications);
   const recent = useMemo(() => transactions.slice(0, 4), [transactions]);
   const [showBalance, setShowBalance] = useState(true);
   const [activeModal, setActiveModal] = useState<HomeModalType | null>(null);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number>(user?.balance || 0);
 
-  useEffect(() => { syncUserFromStorage(); }, [syncUserFromStorage]);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          syncUserFromStorage(),
+          fetchTransactions({ limit: 20 }),
+          fetchNotifications(),
+        ]);
+        const balanceData = await walletService.getBalance();
+        setWalletBalance(balanceData.balance);
+      } catch {}
+    };
+
+    loadData();
+
+    const onFocus = () => loadData();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [syncUserFromStorage, fetchTransactions, fetchNotifications]);
+
   if (!user) return null;
 
   const monthlyChange = computeMonthlyChange(transactions);
   const kyc = getKycTierInfo(user.kycLevel);
   const accountDisplay = formatAccountDisplay(user.accountNumber);
+
+  const handleRecalculateBalance = async () => {
+    if (!user) return;
+    setIsRecalculating(true);
+    try {
+      const resp = await walletService.recalculateBalance();
+      toast.success(`Balance recalculated! New: ₦${resp.balance.toLocaleString()}`);
+      const freshBalance = await walletService.getBalance();
+      setWalletBalance(freshBalance.balance);
+      syncUserFromStorage();
+    } catch (error: any) {
+      toast.error(`Failed to recalculate balance: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
 
   const handleQuickAction = (id: QuickActionId, href?: string) => {
     if (href) { navigate(href); return; }
@@ -73,10 +118,20 @@ export default function DashboardHome() {
             {formatDisplayName(user.firstName)} 👋
           </h1>
         </div>
-        <div className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold"
-          style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent-text)' }}>
-          <ShieldCheck size={13} style={{ color: 'var(--accent-text)' }} />
-          Tier {user.kycLevel}
+        <div className="flex items-center gap-3">
+          <Link href="/profile/notifications" className="relative h-9 w-9 rounded-full flex items-center justify-center transition-colors" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
+            <Bell size={16} style={{ color: 'var(--text-secondary)' }} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: '#EF4444' }}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </Link>
+          <div className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold"
+            style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', color: 'var(--accent-text)' }}>
+            <ShieldCheck size={13} style={{ color: 'var(--accent-text)' }} />
+            Tier {user.kycLevel}
+          </div>
         </div>
       </motion.div>
 
@@ -104,14 +159,24 @@ export default function DashboardHome() {
 
           <div className="flex items-center gap-3">
             <p className="text-3xl lg:text-4xl font-black tracking-tight" style={{ color: '#ffffff' }}>
-              {showBalance ? formatNGN(user.balance) : '₦ ••••••'}
+              {showBalance ? formatNGN(walletBalance) : '₦ ••••••'}
             </p>
-            <motion.button type="button" whileTap={{ scale: 0.9 }}
-              onClick={() => setShowBalance(v => !v)}
-              className="rounded-full p-2 transition-colors"
-              style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)' }}>
-              {showBalance ? <EyeOff size={17} /> : <Eye size={17} />}
-            </motion.button>
+            <div className="flex items-center gap-2">
+              <motion.button type="button" whileTap={{ scale: 0.9 }}
+                onClick={handleRecalculateBalance}
+                disabled={isRecalculating}
+                className="rounded-full p-2 transition-colors disabled:opacity-50"
+                style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)' }}
+                title="Recalculate balance">
+                <RefreshCw size={17} className={isRecalculating ? 'animate-spin' : ''} />
+              </motion.button>
+              <motion.button type="button" whileTap={{ scale: 0.9 }}
+                onClick={() => setShowBalance(v => !v)}
+                className="rounded-full p-2 transition-colors"
+                style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)' }}>
+                {showBalance ? <EyeOff size={17} /> : <Eye size={17} />}
+              </motion.button>
+            </div>
           </div>
 
           <p className="mt-1.5 text-xs font-medium" style={{ color: 'rgba(255,255,255,0.35)' }}>

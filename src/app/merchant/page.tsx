@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { Link } from 'wouter';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Link, useLocation } from 'wouter';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, QrCode, Eye, EyeOff, ArrowRight, Calendar, Package, ShoppingBag, Globe, Clock, Plus } from 'lucide-react';
+import { TrendingUp, Users, QrCode, Eye, EyeOff, ArrowRight, Calendar, Package, ShoppingBag, Globe, Clock, Plus, LogOut, User, ChevronRight } from 'lucide-react';
 import { formatNGN, formatDate } from '@/utils/formatting';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMerchantStore } from '@/store/useMerchantStore';
@@ -15,10 +15,28 @@ const fadeUp = (delay = 0) => ({
 
 export default function MerchantDashboard() {
   const user = useAuthStore(s => s.user);
+  const logout = useAuthStore(s => s.logout);
+  const [, navigate] = useLocation();
   const payments = useMerchantStore(s => s.payments);
   const settlements = useMerchantStore(s => s.settlements);
+  const fetchPayments = useMerchantStore(s => s.fetchPayments);
+  const fetchSettlements = useMerchantStore(s => s.fetchSettlements);
   const { stores, products, orders } = useMerchantStoreData();
   const [showRevenue, setShowRevenue] = useState(true);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleGoToPersonal = () => {
+    window.location.href = '/dashboard';
+  };
+
+  useEffect(() => {
+    fetchPayments();
+    fetchSettlements();
+  }, [fetchPayments, fetchSettlements]);
 
   const merchantId = user?.id || '';
   const merchantSlug = user?.merchantProfile?.qrSlug || '';
@@ -264,7 +282,7 @@ export default function MerchantDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-black truncate" style={{ color: 'var(--text-primary)' }}>{p.customerName}</p>
-                    <p className="text-xs truncate" style={{ color: 'var(--text-tertiary)' }}>{formatDate(new Date(p.date))}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-tertiary)' }}>{formatDate(new Date(p.createdAt))}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-sm font-black" style={{ color: '#34d399' }}>+{formatNGN(p.amount)}</p>
@@ -277,6 +295,35 @@ export default function MerchantDashboard() {
             </div>
           )}
         </div>
+      </motion.div>
+
+      {/* ── Account actions ── */}
+      <motion.div {...fadeUp(0.2)} className="space-y-2">
+        <button onClick={handleGoToPersonal}
+          className="flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-colors hover:bg-[var(--surface-secondary)] w-full"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+          <div className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'var(--surface-secondary)' }}>
+            <User size={16} style={{ color: 'var(--text-tertiary)' }} />
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-sm font-black" style={{ color: 'var(--text-primary)' }}>Personal Profile</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Back to personal account</p>
+          </div>
+          <ChevronRight size={16} style={{ color: 'var(--text-tertiary)' }} />
+        </button>
+        <button onClick={handleLogout}
+          className="flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-colors hover:bg-[var(--surface-secondary)] w-full"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+          <div className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(239,68,68,0.1)' }}>
+            <LogOut size={16} style={{ color: '#EF4444' }} />
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-sm font-black" style={{ color: '#EF4444' }}>Sign out</p>
+            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Log out of your account</p>
+          </div>
+        </button>
       </motion.div>
     </div>
   );

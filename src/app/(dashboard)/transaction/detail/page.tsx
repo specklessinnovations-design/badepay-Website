@@ -6,7 +6,7 @@ import {
   Zap, FileText, RefreshCw, Home, Download,
 } from 'lucide-react';
 import { useTransactionStore } from '@/store/useTransactionStore';
-import type { Transaction } from '@/mock/transactions';
+import type { Transaction } from '@/store/useTransactionStore';
 import { formatNGN, formatDate } from '@/utils/formatting';
 import { bpToast } from '@/lib/bpToast';
 
@@ -17,12 +17,20 @@ const STATUS_CONFIG = {
   failed: { label: 'Failed', color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', Icon: XCircle },
 };
 
-const CATEGORY_ICONS: Record<Transaction['category'], React.ElementType> = {
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
   transfer: ArrowUpRight, bills: Zap, deposit: ArrowDownLeft, withdrawal: ArrowUpRight,
 };
 
-const CATEGORY_LABELS: Record<Transaction['category'], string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   transfer: 'Transfer', bills: 'Bill Payment', deposit: 'Deposit', withdrawal: 'Withdrawal',
+};
+
+const getCategoryIcon = (category?: string): React.ElementType => {
+  return CATEGORY_ICONS[category || 'transfer'] ?? FileText;
+};
+
+const getCategoryLabel = (category?: string): string => {
+  return CATEGORY_LABELS[category || 'transfer'] ?? 'Transfer';
 };
 
 function DetailRow({ label, value, mono, copy, onCopy }: {
@@ -87,7 +95,7 @@ export default function TransactionDetailPage() {
   const statusKey = (tx.status as string === 'completed' ? 'completed' : tx.status) as keyof typeof STATUS_CONFIG;
   const sc = STATUS_CONFIG[statusKey] || STATUS_CONFIG.success;
   const StatusIcon = sc.Icon;
-  const CategoryIcon = CATEGORY_ICONS[tx.category] ?? FileText;
+  const CategoryIcon = getCategoryIcon(tx.category);
   const isCredit = tx.type === 'credit';
 
   return (
@@ -142,13 +150,10 @@ export default function TransactionDetailPage() {
             Transaction Details
           </p>
         </div>
-        <DetailRow label="Type" value={CATEGORY_LABELS[tx.category]} />
+        <DetailRow label="Type" value={getCategoryLabel(tx.category)} />
         <DetailRow label="Direction" value={isCredit ? 'Money received' : 'Money sent'} />
-        <DetailRow label="Date & time" value={formatDate(tx.date, 'full')} />
-        {tx.fee != null && tx.fee > 0 && (
-          <DetailRow label="Fee" value={formatNGN(tx.fee)} />
-        )}
-        {tx.fee === 0 && <DetailRow label="Transaction fee" value="Free" />}
+        <DetailRow label="Date & time" value={formatDate(tx.date || tx.createdAt || '', 'full')} />
+        <DetailRow label="Transaction fee" value="Free" />
         <DetailRow label="Status" value={sc.label} />
       </motion.div>
 

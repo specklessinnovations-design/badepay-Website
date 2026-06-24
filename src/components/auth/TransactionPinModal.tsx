@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 interface TransactionPinModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (pin: string) => void;
   title?: string;
   description?: string;
 }
@@ -31,7 +31,7 @@ export function TransactionPinModal({
     try {
       const isValid = await verifyPin(value);
       if (isValid) {
-        onSuccess();
+        onSuccess(value);
         setPin('');
         onClose();
       } else {

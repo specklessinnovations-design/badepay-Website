@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -19,18 +19,20 @@ const fadeUp = {
 
 export default function CardsPage() {
   const cards = useCardStore((s) => s.cards);
+  const fetchCards = useCardStore((s) => s.fetchCards);
   const createCard = useCardStore((s) => s.createCard);
   const toggleFreeze = useCardStore((s) => s.toggleFreeze);
-  const fundCard = useCardStore((s) => s.fundCard);
   const setSpendingLimit = useCardStore((s) => s.setSpendingLimit);
-  const setCardPin = useCardStore((s) => s.setCardPin);
-  const updateChannels = useCardStore((s) => s.updateChannels);
   const kycLevel = useAuthStore((s) => s.user?.kycLevel ?? 0);
 
   const [showCreate, setShowCreate] = useState(false);
   const [currency, setCurrency] = useState<'NGN' | 'USD'>('NGN');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [modal, setModal] = useState<CardModalType>(null);
+
+  useEffect(() => {
+    fetchCards();
+  }, [fetchCards]);
 
   const activeCount = useMemo(() => cards.filter((c) => c.status === 'active').length, [cards]);
   const selectedCard = useMemo(() => cards.find((c) => c.id === selectedId) ?? cards[0] ?? null, [cards, selectedId]);
@@ -39,21 +41,31 @@ export default function CardsPage() {
   const spendingUsed = selectedCard?.spendingUsed ?? 0;
   const spendingLimit = selectedCard?.spendingLimit ?? 0;
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (kycLevel < 2) {
       bpToast.error('Complete Tier 2 verification to get a virtual card');
       setShowCreate(false);
       return;
     }
-    const card = createCard(currency);
-    setSelectedId(card.id);
-    bpToast.success(`${currency} virtual card created`);
-    setShowCreate(false);
+    const card = await createCard(currency);
+    if (card) {
+      setSelectedId(card.id);
+      bpToast.success(`${currency} virtual card created`);
+      setShowCreate(false);
+    } else {
+      bpToast.error('Failed to create card');
+    }
   };
 
   const openModal = (type: CardModalType) => {
     if (!selectedCard) { bpToast.error('Create or select a card first'); return; }
     setModal(type);
+  };
+
+  const handleToggleFreeze = async () => {
+    if (!selectedCard) return;
+    await toggleFreeze(selectedCard.id);
+    bpToast.success(selectedCard.status === 'active' ? 'Card frozen ❄️' : 'Card unfrozen ✅');
   };
 
   return (
@@ -155,11 +167,7 @@ export default function CardsPage() {
                   title: selectedCard?.status === 'frozen' ? 'Unfreeze card' : 'Freeze card',
                   desc: selectedCard?.status === 'frozen' ? 'Resume transactions on this card' : 'Pauses all transactions instantly',
                   color: selectedCard?.status === 'frozen' ? '#10B981' : '#6fe8d6',
-                  action: () => {
-                    if (!selectedCard) return;
-                    toggleFreeze(selectedCard.id);
-                    bpToast.success(selectedCard.status === 'active' ? 'Card frozen ❄️' : 'Card unfrozen ✅');
-                  },
+                  action: handleToggleFreeze,
                 },
                 { icon: Eye, title: 'Show card details', desc: 'PAN, CVV and expiry', color: '#6fe8d6', action: () => openModal('details') },
                 { icon: SlidersHorizontal, title: 'Spending controls', desc: 'Limits, channels and merchants', color: '#6fe8d6', action: () => openModal('spending') },
@@ -221,14 +229,11 @@ export default function CardsPage() {
       <CardModals
         card={selectedCard} type={modal} onClose={() => setModal(null)}
         onFund={(amount) => {
-          if (!selectedCard) return;
-          const ok = fundCard(selectedCard.id, amount);
-          if (ok) bpToast.success('Card funded successfully');
-          else bpToast.error('Could not fund card — check balance or card status');
+          bpToast.info('Card funding coming soon');
         }}
         onSetLimit={(limit) => selectedCard && setSpendingLimit(selectedCard.id, limit)}
-        onSetPin={(pin) => selectedCard && setCardPin(selectedCard.id, pin)}
-        onUpdateChannels={(channels) => selectedCard && updateChannels(selectedCard.id, channels)}
+        onSetPin={(pin) => bpToast.info('Card PIN setting coming soon')}
+        onUpdateChannels={(channels) => bpToast.info('Channel updates coming soon')}
       />
     </div>
   );

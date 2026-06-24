@@ -1,5 +1,5 @@
 import type { KYCLevel } from '@/store/useAuthStore';
-import type { Transaction } from '@/mock/transactions';
+import type { Transaction } from '@/store/useTransactionStore';
 
 export function getGreeting(): string {
   const hour = new Date().getHours();
@@ -72,8 +72,8 @@ export function computeMonthlyChange(transactions: Transaction[]): number {
 
 export function getTransactionTotals(transactions: Transaction[]) {
   const successful = transactions.filter((tx) => tx.status === 'success');
-  const totalIn = successful.filter((tx) => tx.type === 'credit').reduce((s, tx) => s + tx.amount, 0);
-  const totalOut = successful.filter((tx) => tx.type === 'debit').reduce((s, tx) => s + tx.amount, 0);
+  const totalIn = successful.filter((tx) => tx.type === 'credit').reduce((s, tx) => s + (tx.amount || 0), 0);
+  const totalOut = successful.filter((tx) => tx.type === 'debit').reduce((s, tx) => s + (tx.amount || 0), 0);
   return { totalIn, totalOut };
 }
 
@@ -84,8 +84,8 @@ export function filterTransactions(transactions: Transaction[], filter: Activity
   return transactions.filter((tx) => {
     const matchesQuery =
       !q ||
-      tx.name.toLowerCase().includes(q) ||
-      tx.description.toLowerCase().includes(q) ||
+      (tx.name && tx.name.toLowerCase().includes(q)) ||
+      (tx.description && tx.description.toLowerCase().includes(q)) ||
       tx.amount.toString().includes(q) ||
       tx.id.toLowerCase().includes(q);
 

@@ -1,5 +1,5 @@
 import type { StoredUser } from '@/services/authService';
-import type { Transaction } from '@/mock/transactions';
+import type { Transaction } from '@/store/useTransactionStore';
 import type { AdminUserRecord, AdminTxRecord, KYCSubmission, AnalyticsData } from '@/types/admin';
 import platformDataService from '@/services/platformDataService';
 
@@ -30,7 +30,7 @@ export function storedUserToAdminRecord(
     id: user.id,
     fullName,
     email: user.email,
-    phone: user.phone,
+    phone: user.phone ?? '—',
     accountNumber: user.accountNumber ?? '—',
     balance: user.balance,
     kycStatus: mapKycDisplayStatus(user),
@@ -77,13 +77,13 @@ export function transactionToAdminRecord(tx: Transaction, users: StoredUser[]): 
     reference: tx.reference ?? tx.id,
     senderName,
     senderEmail,
-    recipientName: tx.recipientName ?? tx.name,
+    recipientName: tx.recipientName ?? tx.name ?? '—',
     amount: tx.amount,
-    fee: tx.fee ?? Math.round(tx.amount * 0.005),
+    fee: 0,
     type: mapTxCategory(tx.category),
-    category: tx.category,
+    category: tx.category ?? 'transfer',
     status: tx.status === 'success' ? 'success' : tx.status === 'pending' ? 'pending' : 'failed',
-    createdAt: tx.date,
+    createdAt: tx.date ?? tx.createdAt ?? '',
     userId: tx.userId,
   };
 }
@@ -93,7 +93,11 @@ export function mapTransactionsToAdminRecords(
   users: StoredUser[]
 ): AdminTxRecord[] {
   return [...transactions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => {
+      const dateA = new Date(a.date || a.createdAt || 0).getTime();
+      const dateB = new Date(b.date || b.createdAt || 0).getTime();
+      return dateB - dateA;
+    })
     .map((tx) => transactionToAdminRecord(tx, users));
 }
 

@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { useAuthStore } from './useAuthStore';
 import { useTransactionStore } from './useTransactionStore';
-import { findMerchantByScanTarget, useMerchantStore } from './useMerchantStore';
-import { authService } from '@/services/authService';
+import { useMerchantStore } from './useMerchantStore';
+import { walletService } from '@/services/walletService';
+import transferService from '@/services/transferService';
+import billsService from '@/services/billsService';
 
 export interface BankAccount {
   id: string;
@@ -14,135 +16,183 @@ export interface BankAccount {
 
 interface WalletState {
   linkedBanks: BankAccount[];
-  deposit: (amount: number) => boolean;
-  withdraw: (amount: number, bankId: string) => boolean;
-  sendMoney: (recipientName: string, amount: number, note?: string) => boolean;
-  transferToBank: (bankName: string, accountNumber: string, accountName: string, amount: number) => boolean;
-  payBill: (billerName: string, amount: number, category?: TransactionCategory, note?: string) => boolean;
-  scanPay: (merchantName: string, amount: number) => boolean;
+  isLoading: boolean;
+  deposit: (amount: number) => Promise<{ success: boolean; authorizationUrl?: string; reference?: string; error?: string }>;
+  withdraw: (amount: number, bankId: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  sendMoney: (recipientAccountNumber: string, amount: number, pin: string, narration?: string) => Promise<{ success: boolean; error?: string }>;
+  transferToBank: (bankName: string, accountNumber: string, bankCode: string, amount: number, pin: string, narration?: string) => Promise<{ success: boolean; error?: string }>;
+  payBill: (category: string, payload: any) => Promise<{ success: boolean; error?: string }>;
+  scanPay: (merchantSlug: string, amount: number, pin: string) => Promise<{ success: boolean; error?: string }>;
   addBankAccount: (bankName: string, accountNumber: string, accountName: string) => void;
   removeBankAccount: (id: string) => void;
   getBalance: () => number;
-}
-
-type TransactionCategory = 'transfer' | 'bills' | 'deposit' | 'withdrawal';
-
-function updateBalance(delta: number): boolean {
-  const user = useAuthStore.getState().user;
-  if (!user) return false;
-  const newBal = user.balance + delta;
-  if (newBal < 0) return false;
-  useAuthStore.setState({ user: { ...user, balance: newBal } });
-  authService.updateUserBalance(user.id, delta).catch(() => {});
-  return true;
+  refreshBalance: () => Promise<void>;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
   linkedBanks: [],
+  isLoading: false,
 
   getBalance: () => useAuthStore.getState().user?.balance ?? 0,
 
-  deposit: (amount) => {
-    if (amount <= 0) return false;
-    if (!updateBalance(amount)) return false;
-    useTransactionStore.getState().addTransaction({
-      name: 'Wallet top-up',
-      amount,
-      type: 'credit',
-      category: 'deposit',
-      description: 'Add money to wallet',
-    });
-    return true;
+  refreshBalance: async () => {
+    try {
+      const balanceData = await walletService.getBalance();
+      const user = useAuthStore.getState().user;
+      if (user) {
+        useAuthStore.setState({ user: { ...user, balance: balanceData.balance } });
+      }
+    } catch (error) {
+      console.error('Failed to refresh balance:', error);
+    }
   },
 
-  withdraw: (amount, bankId) => {
-    const user = useAuthStore.getState().user;
-    if (!user || amount <= 0 || amount > user.balance) return false;
-
-    const bank = get().linkedBanks.find((b) => b.id === bankId) || get().linkedBanks[0];
-    const destinationName = bank ? `${bank.bankName} (${bank.accountNumber})` : 'Linked bank';
-
-    if (!updateBalance(-amount)) return false;
-
-    useTransactionStore.getState().addTransaction({
-      name: 'Bank withdrawal',
-      amount,
-      type: 'debit',
-      category: 'withdrawal',
-      description: `Transferred to ${destinationName}`,
-    });
-    return true;
+  deposit: async (amount) => {
+    if (amount <= 0) return { success: false, error: 'Invalid amount' };
+    set({ isLoading: true });
+    try {
+      const result = await walletService.fund(amount);
+      if (result.authorizationUrl) {
+        return { success: true, authorizationUrl: result.authorizationUrl, reference: result.reference };
+      }
+      return { success: false, error: 'Failed to initiate funding' };
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Funding failed' };
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
-  sendMoney: (recipientName, amount, note) => {
+  withdraw: async (amount, bankId, pin) => {
     const user = useAuthStore.getState().user;
-    if (!user || amount <= 0 || amount > user.balance) return false;
-    if (!updateBalance(-amount)) return false;
-
-    useTransactionStore.getState().addTransaction({
-      name: recipientName,
-      amount,
-      type: 'debit',
-      category: 'transfer',
-      description: note || `Transfer to ${recipientName}`,
-    });
-    return true;
-  },
-
-  transferToBank: (bankName, accountNumber, accountName, amount) => {
-    const user = useAuthStore.getState().user;
-    if (!user || amount <= 0 || amount > user.balance) return false;
-    if (!updateBalance(-amount)) return false;
-
-    const masked = accountNumber.length >= 4 ? `****${accountNumber.slice(-4)}` : accountNumber;
-    useTransactionStore.getState().addTransaction({
-      name: accountName,
-      amount,
-      type: 'debit',
-      category: 'transfer',
-      description: `Bank transfer to ${accountName} · ${bankName} (${masked})`,
-    });
-    return true;
-  },
-
-  payBill: (billerName, amount, category = 'bills', note) => {
-    const user = useAuthStore.getState().user;
-    if (!user || amount <= 0 || amount > user.balance) return false;
-    if (!updateBalance(-amount)) return false;
-
-    useTransactionStore.getState().addTransaction({
-      name: billerName,
-      amount,
-      type: 'debit',
-      category,
-      description: note || `Payment to ${billerName}`,
-    });
-    return true;
-  },
-
-  scanPay: (merchantName, amount) => {
-    const user = useAuthStore.getState().user;
-    if (!user || amount <= 0 || amount > user.balance) return false;
-    if (!updateBalance(-amount)) return false;
-
-    useTransactionStore.getState().addTransaction({
-      name: merchantName,
-      amount,
-      type: 'debit',
-      category: 'transfer',
-      description: `QR payment to ${merchantName}`,
-    });
-
-    const merchant = findMerchantByScanTarget(merchantName);
-    if (merchant) {
-      useMerchantStore.getState().recordPayment(
-        merchant.id,
-        `${user.firstName} ${user.lastName}`.trim(),
-        amount
-      );
+    if (!user || amount <= 0 || amount > user.balance) {
+      return { success: false, error: 'Invalid withdrawal amount' };
     }
 
-    return true;
+    const bank = get().linkedBanks.find((b) => b.id === bankId) || get().linkedBanks[0];
+    if (!bank) return { success: false, error: 'No bank account selected' };
+
+    set({ isLoading: true });
+    try {
+      await walletService.withdraw({
+        amount,
+        accountNumber: bank.accountNumber.replace(/\*/g, ''),
+        bankCode: bank.bankName,
+        narration: 'Withdrawal',
+      });
+      await get().refreshBalance();
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Withdrawal failed' };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  sendMoney: async (recipientAccountNumber, amount, pin, narration) => {
+    const user = useAuthStore.getState().user;
+    if (!user || amount <= 0 || amount > user.balance) {
+      return { success: false, error: 'Invalid transfer amount' };
+    }
+
+    set({ isLoading: true });
+    try {
+      await transferService.initiateTransfer({
+        type: 'p2p',
+        amount,
+        pin,
+        recipientAccountNumber,
+        narration,
+      });
+      await get().refreshBalance();
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Transfer failed' };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  transferToBank: async (bankName, accountNumber, bankCode, amount, pin, narration) => {
+    const user = useAuthStore.getState().user;
+    if (!user || amount <= 0 || amount > user.balance) {
+      return { success: false, error: 'Invalid transfer amount' };
+    }
+
+    set({ isLoading: true });
+    try {
+      await transferService.initiateTransfer({
+        type: 'bank',
+        amount,
+        pin,
+        accountNumber,
+        bankCode,
+        narration,
+      });
+      await get().refreshBalance();
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Bank transfer failed' };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  payBill: async (category, payload) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    set({ isLoading: true });
+    try {
+      switch (category) {
+        case 'airtime':
+          await billsService.purchaseAirtime(payload);
+          break;
+        case 'data':
+          await billsService.purchaseData(payload);
+          break;
+        case 'electricity':
+          await billsService.payElectricity(payload);
+          break;
+        case 'cable':
+          await billsService.payCable(payload);
+          break;
+        default:
+          throw new Error('Invalid bill category');
+      }
+      await get().refreshBalance();
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Bill payment failed' };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  scanPay: async (merchantSlug, amount, pin) => {
+    const user = useAuthStore.getState().user;
+    if (!user || amount <= 0 || amount > user.balance) {
+      return { success: false, error: 'Invalid payment amount' };
+    }
+
+    set({ isLoading: true });
+    try {
+      // QR payment - use transfer service with P2P to merchant
+      await transferService.initiateTransfer({
+        type: 'p2p',
+        amount,
+        pin,
+        recipientAccountNumber: merchantSlug,
+        narration: 'QR Payment',
+      });
+      await get().refreshBalance();
+
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'QR payment failed' };
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
   addBankAccount: (bankName, accountNumber, accountName) => {

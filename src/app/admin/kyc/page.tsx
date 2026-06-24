@@ -31,10 +31,10 @@ export default function AdminKYCPage() {
         header: 'User Profile',
         cell: ({ row }) => (
           <div>
-            <p className="font-bold text-sm" style={{ color: '#000000' }}>
+            <p className="font-bold text-sm" style={{ color: 'var(--ad-fg-strong)' }}>
               {row.original.userName}
             </p>
-            <p className="text-xs font-medium mt-0.5" style={{ color: '#666666' }}>
+            <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--ad-muted)' }}>
               {row.original.userEmail}
             </p>
           </div>
@@ -48,7 +48,7 @@ export default function AdminKYCPage() {
             className="rounded-lg px-3 py-1.5 text-xs font-black"
             style={{
               background: 'rgba(111,232,214,0.08)',
-              color: '#666666',
+              color: 'var(--ad-muted)',
               border: '1px solid rgba(111,232,214,0.12)',
             }}
           >
@@ -83,7 +83,7 @@ export default function AdminKYCPage() {
         cell: ({ row }) => {
           if (row.original.status !== 'pending') {
             return (
-              <span className="text-xs font-bold" style={{ color: '#999999' }}>
+              <span className="text-xs font-bold" style={{ color: 'var(--ad-muted-soft)' }}>
                 —
               </span>
             );
@@ -124,13 +124,13 @@ export default function AdminKYCPage() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#999999' }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
             Identity Verification
           </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: '#000000' }}>
+          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
             KYC Review Queue
           </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: '#666666' }}>
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
             {submissions.length} total submission{submissions.length !== 1 ? 's' : ''} · {pendingCount} awaiting review
           </p>
         </div>

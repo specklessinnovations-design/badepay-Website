@@ -409,3 +409,58 @@ html[data-theme="light"] .surface-card { box-shadow: 0 2px 12px rgba(0,0,0,0.07)
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ─── Admin Portal · Dark "Linear" Theme ─────────────────────────────────── */
+.admin-shell {
+  --ad-bg: #0b0d10;
+  --ad-bg-elev: #101317;
+  --ad-card: #15181d;
+  --ad-card-hover: #1a1e24;
+  --ad-border: rgba(255,255,255,0.06);
+  --ad-border-strong: rgba(255,255,255,0.10);
+  --ad-fg: #e6e8eb;
+  --ad-fg-strong: #f5f7fa;
+  --ad-muted: #8b9099;
+  --ad-muted-soft: #5d6168;
+  --ad-accent: #6fe8d6;
+  --ad-accent-soft: rgba(111,232,214,0.10);
+  --ad-accent-ring: rgba(111,232,214,0.20);
+  --ad-danger: #f87171;
+  --ad-warn: #fbbf24;
+  --ad-success: #34d399;
+  --ad-info: #60a5fa;
+  --ad-violet: #a78bfa;
+  --ad-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 2px rgba(0,0,0,0.4), 0 8px 32px rgba(0,0,0,0.35);
+
+  background: var(--ad-bg) !important;
+  color: var(--ad-fg);
+  font-feature-settings: "ss01","cv11","tnum";
+}
+.admin-shell h1, .admin-shell h2, .admin-shell h3, .admin-shell h4 {
+  color: var(--ad-fg-strong);
+  letter-spacing: -0.02em;
+}
+.admin-shell .ad-card {
+  background: var(--ad-card);
+  border: 1px solid var(--ad-border);
+  border-radius: 14px;
+  box-shadow: var(--ad-shadow);
+}
+.admin-shell .ad-card-hover:hover { background: var(--ad-card-hover); border-color: var(--ad-border-strong); }
+.admin-shell input, .admin-shell textarea, .admin-shell select {
+  color: var(--ad-fg);
+}
+.admin-shell input::placeholder, .admin-shell textarea::placeholder { color: var(--ad-muted-soft); }
+.admin-shell ::-webkit-scrollbar { width: 8px; height: 8px; }
+.admin-shell ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 8px; }
+.admin-shell ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
+
+/* Ambient gradient backdrop */
+.admin-shell::before {
+  content: "";
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(900px 500px at 12% -10%, rgba(111,232,214,0.06), transparent 60%),
+    radial-gradient(700px 400px at 100% 0%, rgba(96,165,250,0.04), transparent 60%);
+}
+.admin-shell > * { position: relative; z-index: 1; }

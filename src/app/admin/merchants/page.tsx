@@ -86,10 +86,10 @@ export default function AdminMerchantsPage() {
                 <Store size={18} />
               </div>
               <div>
-                <p className="font-bold text-sm" style={{ color: '#000000' }}>
+                <p className="font-bold text-sm" style={{ color: 'var(--ad-fg-strong)' }}>
                   {businessName}
                 </p>
-                <p className="text-xs font-medium mt-0.5" style={{ color: '#666666' }}>
+                <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--ad-muted)' }}>
                   {merchant.email}
                 </p>
               </div>
@@ -101,7 +101,7 @@ export default function AdminMerchantsPage() {
         accessorKey: 'merchantProfile.businessType',
         header: 'Business Type',
         cell: ({ row }) => (
-          <span className="text-xs font-bold" style={{ color: '#666666' }}>
+          <span className="text-xs font-bold" style={{ color: 'var(--ad-muted)' }}>
             {row.original.merchantProfile?.businessType || 'N/A'}
           </span>
         ),
@@ -114,7 +114,7 @@ export default function AdminMerchantsPage() {
             className="rounded-lg px-3 py-1 text-xs font-black capitalize"
             style={{
               background: 'rgba(111,232,214,0.08)',
-              color: '#666666',
+              color: 'var(--ad-muted)',
               border: '1px solid rgba(111,232,214,0.12)',
             }}
           >
@@ -212,13 +212,13 @@ export default function AdminMerchantsPage() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#999999' }}>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
             Business Registry
           </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: '#000000' }}>
+          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
             Merchant Management
           </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: '#666666' }}>
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
             {merchants.length} registered merchant{merchants.length === 1 ? '' : 's'} · {pendingCount} pending approval
           </p>
         </div>
@@ -247,7 +247,7 @@ export default function AdminMerchantsPage() {
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#999999' }} />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ad-muted-soft)' }} />
           <input
             type="text"
             placeholder="Search by name, email, or phone..."
@@ -255,9 +255,9 @@ export default function AdminMerchantsPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium outline-none transition-all"
             style={{
-              background: '#ffffff',
+              background: 'var(--ad-card)',
               border: '1px solid #e5e5e5',
-              color: '#000000',
+              color: 'var(--ad-fg-strong)',
             }}
           />
         </div>
@@ -274,7 +274,7 @@ export default function AdminMerchantsPage() {
               className={`rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
                 filterStatus === filter.value
                   ? 'bg-[#6fe8d6] text-[#1a1a1a]'
-                  : 'bg-white text-black/60 hover:bg-black/5'
+                  : 'bg-[var(--ad-card)] text-[var(--ad-fg-strong)]/60 hover:bg-[var(--ad-card)]/5'
               }`}
               style={{
                 border: filterStatus === filter.value ? '1px solid #6fe8d6' : '1px solid #e5e5e5',

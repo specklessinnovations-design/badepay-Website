@@ -3,7 +3,7 @@
 import React from 'react';
 import { Link } from 'wouter';
 import { useLocation } from 'wouter';
-import { LayoutDashboard, Users, FileText, AlertTriangle, BarChart3, Settings, ShieldCheck, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, AlertTriangle, BarChart3, Settings, ShieldCheck, LogOut, X, Store } from 'lucide-react';
 import { useAdminAuthStore } from '@/store/useAdminAuthStore';
 import { useAdminDisputesStore } from '@/store/useAdminDisputesStore';
 import { useAdminKYCStore } from '@/store/useAdminKYCStore';
@@ -35,7 +35,8 @@ export function AdminSidebar({ mobileOpen, setMobileOpen }: AdminSidebarProps) {
       title: 'USER MANAGEMENT',
       items: [
         { label: 'Users', icon: Users, href: '/admin/users' },
-        { label: 'KYC Queue', icon: ShieldCheck, href: '/admin/kyc', badge: pendingKyc || undefined },
+        { label: 'Merchants', icon: Store, href: '/admin/merchants', badge: pendingKyc || undefined },
+        { label: 'KYC Queue', icon: ShieldCheck, href: '/admin/kyc' },
       ],
     },
     {

@@ -76,8 +76,8 @@ export const adminService = {
    */
   getStats: async () => {
     try {
-      const resp = await adminApiClient.get('/dashboard');
-      const data = resp?.data || {};
+      const resp = await adminApiClient.get('/admin/dashboard');
+      const data = resp?.data || resp;
       return {
         users: data.users?.total || 0,
         activeUsers: data.users?.active || 0,
@@ -105,6 +105,50 @@ export const adminService = {
   },
 
   /**
+   * Get analytics data.
+   * Backend: GET /admin/dashboard
+   */
+  getAnalytics: async () => {
+    try {
+      const resp = await adminApiClient.get('/admin/dashboard');
+      const data = resp?.data || resp;
+      return {
+        dailyRevenue: data.dailyRevenue || [],
+        weeklyUsers: data.weeklyUsers || [],
+        monthlyVolume: data.monthlyVolume || [],
+        kpiSummary: {
+          totalUsers: data.users?.total || 0,
+          totalVolume: data.transactions?.totalVolume || 0,
+          totalTransactions: data.transactions?.total || 0,
+          totalRevenue: data.revenue?.total || 0,
+          activeToday: data.users?.active || 0,
+          pendingKYC: data.kyc?.pending || 0,
+          openDisputes: data.disputes?.open || 0,
+          merchantCount: data.users?.merchants || 0,
+          consumerCount: data.users?.consumers || 0,
+        },
+      };
+    } catch {
+      return {
+        dailyRevenue: [],
+        weeklyUsers: [],
+        monthlyVolume: [],
+        kpiSummary: {
+          totalUsers: 0,
+          totalVolume: 0,
+          totalTransactions: 0,
+          totalRevenue: 0,
+          activeToday: 0,
+          pendingKYC: 0,
+          openDisputes: 0,
+          merchantCount: 0,
+          consumerCount: 0,
+        },
+      };
+    }
+  },
+
+  /**
    * Get users list.
    * Backend: GET /admin/users
    */
@@ -119,7 +163,7 @@ export const adminService = {
     const qs = query.toString();
     const resp = await adminApiClient.get(`/admin/users${qs ? '?' + qs : ''}`);
     const users = resp?.data?.users ?? [];
-    const transactionsResp = await adminApiClient.getTransactions(1, 1000).catch(() => ({ data: { transactions: [] } }));
+    const transactionsResp = await adminApiClient.get('/admin/transactions?page=1&limit=1000').catch(() => ({ data: { transactions: [] } }));
     const transactions = transactionsResp?.data?.transactions ?? [];
     const mapped = mapUsersToAdminRecords(users, transactions as any) as AdminUserRecord[];
     return { data: { data: mapped } };
@@ -148,7 +192,7 @@ export const adminService = {
     const qs = query.toString();
     const resp = await adminApiClient.get(`/admin/transactions${qs ? '?' + qs : ''}`);
     const transactions = resp?.data?.transactions ?? [];
-    const usersResp = await adminApiClient.getUsers(1, 1000).catch(() => ({ data: { users: [] } }));
+    const usersResp = await adminApiClient.get('/admin/users?page=1&limit=1000').catch(() => ({ data: { users: [] } }));
     const users = usersResp?.data?.users ?? [];
     const mapped = mapTransactionsToAdminRecords(transactions as any, users as any) as AdminTxRecord[];
     return { data: { data: mapped } };

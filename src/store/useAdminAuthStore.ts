@@ -38,8 +38,7 @@ export const useAdminAuthStore = create<AdminAuthState>()(
             return true;
           }
           return false;
-        } catch (error) {
-          console.error('Admin login failed:', error);
+        } catch {
           return false;
         }
       },

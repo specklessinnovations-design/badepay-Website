@@ -15,6 +15,14 @@ export interface AdminUserRecord {
   totalVolume: number;
   merchantId?: string;
   businessCategory?: string;
+  merchantProfile?: {
+    tradingName?: string;
+    businessName?: string;
+    businessType?: string;
+    category?: string;
+    verified?: boolean;
+    qrSlug?: string;
+  };
 }
 
 export interface AdminTxRecord {
@@ -60,4 +68,18 @@ export interface AnalyticsData {
   };
 }
 
-export type { DisputeRecord } from '@/services/platformDataService';
+export interface DisputeRecord {
+  id: string;
+  ticketNumber: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  transactionId: string;
+  amount: number;
+  issueType: string;
+  priority: 'high' | 'medium' | 'low';
+  status: 'open' | 'under_review' | 'resolved' | 'closed';
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}

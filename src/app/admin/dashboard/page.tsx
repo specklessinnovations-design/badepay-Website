@@ -11,7 +11,7 @@ const A_CARD = {
   background: 'var(--ad-card)',
   border: '1px solid #e5e5e5',
   borderRadius: '1rem',
-  boxShadow: '0 4px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(111,232,214,0.06)',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(111,232,214,0.06)',
 } as const;
 
 export default function AdminDashboardPage() {
@@ -232,7 +232,7 @@ function StatCard({
       style={{
         background: 'var(--ad-card)',
         border: '1px solid #e5e5e5',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.45)',
       }}
     >
       <div

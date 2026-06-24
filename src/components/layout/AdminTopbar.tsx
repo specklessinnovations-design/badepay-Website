@@ -22,7 +22,7 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
       style={{
         background: 'var(--ad-card)',
         borderBottom: '1px solid #e5e5e5',
-        boxShadow: '0 1px 12px rgba(0,0,0,0.08)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 24px rgba(0,0,0,0.5)',
       }}
     >
       <div className="flex items-center gap-3">

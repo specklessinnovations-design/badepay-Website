@@ -9,7 +9,7 @@ const A_CARD = {
   background: 'var(--ad-card)',
   border: '1px solid #e5e5e5',
   borderRadius: '1rem',
-  boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.45)',
   padding: '2rem',
 } as const;
 

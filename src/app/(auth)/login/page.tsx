@@ -37,10 +37,28 @@ function LoginForm() {
     if (!validate()) return;
     try {
       await login(formData.email.trim().toLowerCase(), formData.password, formData.rememberDevice);
+      
+      const user = useAuthStore.getState().user;
+      
+      // If merchant login selected but user doesn't have merchant profile
+      if (accountType === 'merchant' && !user?.merchantProfile?.businessName) {
+        bpToast.error('No merchant account found. Please complete merchant onboarding or use personal login.');
+        return;
+      }
+      
       bpToast.success('Welcome back!');
-      navigate(getPostAuthPath(useAuthStore.getState().user));
+      navigate(getPostAuthPath(user, accountType));
     } catch (err) {
-      bpToast.error(error || (err instanceof Error ? err.message : 'Login failed. Check your credentials.'));
+      const errorMessage = err instanceof Error ? err.message : 'Login failed. Check your credentials.';
+      
+      // Provide more specific error messages
+      if (errorMessage.toLowerCase().includes('user not found') || errorMessage.toLowerCase().includes('invalid credentials')) {
+        bpToast.error('Invalid email or password. Please check your credentials and try again.');
+      } else if (errorMessage.toLowerCase().includes('account suspended')) {
+        bpToast.error('Your account has been suspended. Please contact support.');
+      } else {
+        bpToast.error(errorMessage);
+      }
     }
   };
 

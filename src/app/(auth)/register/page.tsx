@@ -171,6 +171,7 @@ function RegisterForm() {
         try {
           await setPin(data.pin);
           bpToast.success(`Welcome to BadePay, ${data.firstName}! 🎉`);
+          // Default to personal dashboard after registration
           navigate('/dashboard');
         } catch (err: any) {
           setError(err?.message || 'Failed to set PIN');

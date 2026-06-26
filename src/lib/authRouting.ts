@@ -6,12 +6,20 @@ export function isMerchantOnboardingComplete(user: User | null | undefined): boo
   return !!user.merchantProfile?.businessName;
 }
 
-export function getPostAuthPath(user: User | null | undefined): string {
+export function getPostAuthPath(user: User | null | undefined, loginType: 'personal' | 'merchant' = 'personal'): string {
   if (!user) return '/login';
-  if (user.userType === 'merchant') {
-    if (!isMerchantOnboardingComplete(user)) return '/merchant/onboarding';
+  
+  // If user selected merchant login, redirect to merchant dashboard
+  if (loginType === 'merchant') {
+    // Check if user has merchant profile
+    if (!user.merchantProfile?.businessName) {
+      return '/merchant/onboarding';
+    }
     return '/merchant';
   }
+  
+  // If user selected personal login, redirect to personal dashboard
+  // regardless of whether they have a merchant account
   return '/dashboard';
 }
 

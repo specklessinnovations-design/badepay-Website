@@ -89,7 +89,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       useAuthStore.setState({ user: null, isAuthenticated: false, sessionToken: undefined, refreshToken: undefined, lastLoginTime: undefined });
       return;
     }
-    navigate(user.userType === 'merchant' ? getPostAuthPath(user) : '/dashboard');
+    // Default to personal dashboard for authenticated users on auth pages
+    // Users can navigate to merchant dashboard manually if they have merchant access
+    navigate('/dashboard');
   }, [isAuthenticated, user, navigate, checkSessionValidity, authSetupComplete]);
 
   return (

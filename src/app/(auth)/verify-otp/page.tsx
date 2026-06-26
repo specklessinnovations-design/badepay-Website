@@ -76,7 +76,8 @@ export default function VerifyOTPPage() {
     try {
       await verifyOtp(code);
       bpToast.success('Email verified!');
-      navigate(getPostAuthPath(useAuthStore.getState().user));
+      // Default to personal dashboard after OTP verification
+      navigate('/dashboard');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Invalid code';
       setError(msg);

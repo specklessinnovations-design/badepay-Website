@@ -1,17 +1,39 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { AdminTxRecord, useAdminTransactionsStore } from '@/store/useAdminTransactionsStore';
 import { DataTable } from '@/components/ui/data-table';
 import { ColumnDef } from '@tanstack/react-table';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Search, RefreshCw } from 'lucide-react';
 
 export default function AdminTransactionsPage() {
-  const { transactions } = useAdminTransactionsStore();
+  const { transactions, refresh, loading } = useAdminTransactionsStore() as any;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'pending' | 'failed'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'transfer' | 'bill' | 'topup' | 'withdrawal'>('all');
 
-  const successCount = transactions.filter((t) => t.status === 'success').length;
-  const pendingCount = transactions.filter((t) => t.status === 'pending').length;
-  const failedCount = transactions.filter((t) => t.status === 'failed').length;
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const filtered = useMemo(() => {
+    return transactions.filter((t: any) => {
+      const searchMatch =
+        t.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.senderName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.senderEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.recipientName?.toLowerCase().includes(searchTerm.toLowerCase());
+      const statusMatch =
+        statusFilter === 'all' || t.status === statusFilter;
+      const typeMatch =
+        typeFilter === 'all' || t.type === typeFilter;
+      return searchMatch && statusMatch && typeMatch;
+    });
+  }, [transactions, searchTerm, statusFilter, typeFilter]);
+
+  const successCount = transactions.filter((t: any) => t.status === 'success').length;
+  const pendingCount = transactions.filter((t: any) => t.status === 'pending').length;
+  const failedCount = transactions.filter((t: any) => t.status === 'failed').length;
 
   const columns = useMemo<ColumnDef<AdminTxRecord>[]>(
     () => [
@@ -106,7 +128,7 @@ export default function AdminTransactionsPage() {
             {transactions.length} platform transaction{transactions.length === 1 ? '' : 's'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {[
             { label: 'Success', count: successCount, color: '#34d399', bg: 'rgba(52,211,153,0.1)' },
             { label: 'Pending', count: pendingCount, color: '#fbbf24', bg: 'rgba(251,191,36,0.1)' },
@@ -125,9 +147,69 @@ export default function AdminTransactionsPage() {
               </p>
             </div>
           ))}
+          <button
+            onClick={refresh}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all hover:-translate-y-0.5"
+            style={{ background: 'var(--ad-card)', border: '1px solid var(--ad-border)', color: 'var(--ad-fg-strong)' }}
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
         </div>
       </div>
-      <DataTable columns={columns} data={transactions} />
+
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ad-muted-soft)' }} />
+          <input
+            type="text"
+            placeholder="Search by reference, sender, recipient…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium outline-none transition-all"
+            style={{
+              background: 'var(--ad-card)',
+              border: '1px solid var(--ad-border)',
+              color: 'var(--ad-fg-strong)',
+            }}
+          />
+        </div>
+        <div className="flex gap-2">
+          {(['all', 'success', 'pending', 'failed'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className="rounded-xl px-4 py-2.5 text-xs font-bold capitalize transition-all"
+              style={{
+                background: statusFilter === s ? '#6fe8d6' : 'var(--ad-card)',
+                color: statusFilter === s ? '#1a1a1a' : 'var(--ad-muted)',
+                border: statusFilter === s ? '1px solid #6fe8d6' : '1px solid var(--ad-border)',
+              }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          {(['all', 'transfer', 'bill', 'topup', 'withdrawal'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t)}
+              className="rounded-xl px-4 py-2.5 text-xs font-bold capitalize transition-all"
+              style={{
+                background: typeFilter === t ? '#6fe8d6' : 'var(--ad-card)',
+                color: typeFilter === t ? '#1a1a1a' : 'var(--ad-muted)',
+                border: typeFilter === t ? '1px solid #6fe8d6' : '1px solid var(--ad-border)',
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <DataTable columns={columns} data={filtered} />
     </div>
   );
 }

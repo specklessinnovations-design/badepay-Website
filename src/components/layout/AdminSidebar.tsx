@@ -3,7 +3,7 @@
 import React from 'react';
 import { Link } from 'wouter';
 import { useLocation } from 'wouter';
-import { LayoutDashboard, Users, FileText, AlertTriangle, BarChart3, Settings, ShieldCheck, LogOut, X, Store } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, AlertTriangle, BarChart3, Settings, ShieldCheck, LogOut, X, Store, TrendingUp } from 'lucide-react';
 import { useAdminAuthStore } from '@/store/useAdminAuthStore';
 import { useAdminDisputesStore } from '@/store/useAdminDisputesStore';
 import { useAdminKYCStore } from '@/store/useAdminKYCStore';
@@ -43,6 +43,7 @@ export function AdminSidebar({ mobileOpen, setMobileOpen }: AdminSidebarProps) {
       title: 'FINANCIAL',
       items: [
         { label: 'Transactions', icon: FileText, href: '/admin/transactions' },
+        { label: 'Bills', icon: TrendingUp, href: '/admin/bills' },
         { label: 'Disputes', icon: AlertTriangle, href: '/admin/disputes', badge: openDisputes || undefined },
       ],
     },
@@ -73,7 +74,7 @@ export function AdminSidebar({ mobileOpen, setMobileOpen }: AdminSidebarProps) {
       >
         <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#6fe8d6] rounded-lg flex items-center justify-center p-1.5 shadow-lg">
+            <div className="w-10 h-10 flex items-center justify-center p-1.5">
               <img src="/favicon.png" alt="BadePay" className="w-full h-full object-contain" />
             </div>
             <span className="text-xl font-black tracking-tight text-[var(--ad-fg-strong)]">

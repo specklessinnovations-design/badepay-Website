@@ -44,12 +44,15 @@ import DashboardLayout from "@/app/(dashboard)/layout";
 import AdminLoginPage from "@/app/admin/login/page";
 import AdminDashboardPage from "@/app/admin/dashboard/page";
 import AdminUsersPage from "@/app/admin/users/page";
+import AdminUserDetailPage from "@/app/admin/users/[id]/page";
 import AdminMerchantsPage from "@/app/admin/merchants/page";
+import AdminMerchantDetailPage from "@/app/admin/merchants/[id]/page";
 import AdminTransactionsPage from "@/app/admin/transactions/page";
 import AdminKycPage from "@/app/admin/kyc/page";
 import AdminDisputesPage from "@/app/admin/disputes/page";
 import AdminAnalyticsPage from "@/app/admin/analytics/page";
 import AdminSettingsPage from "@/app/admin/settings/page";
+import AdminBillsPage from "@/app/admin/bills/page";
 import AdminLayout from "@/app/admin/layout";
 
 import MerchantPage from "@/app/merchant/page";
@@ -167,11 +170,24 @@ function Router() {
       <Route path="/admin/users">
         <AdminLayout><AdminUsersPage /></AdminLayout>
       </Route>
+      <Route path="/admin/users/:id">
+        {(params: any) => (
+          <AdminLayout><AdminUserDetailPage /></AdminLayout>
+        )}
+      </Route>
       <Route path="/admin/merchants">
         <AdminLayout><AdminMerchantsPage /></AdminLayout>
       </Route>
+      <Route path="/admin/merchants/:id">
+        {(params: any) => (
+          <AdminLayout><AdminMerchantDetailPage /></AdminLayout>
+        )}
+      </Route>
       <Route path="/admin/transactions">
         <AdminLayout><AdminTransactionsPage /></AdminLayout>
+      </Route>
+      <Route path="/admin/bills">
+        <AdminLayout><AdminBillsPage /></AdminLayout>
       </Route>
       <Route path="/admin/kyc">
         <AdminLayout><AdminKycPage /></AdminLayout>

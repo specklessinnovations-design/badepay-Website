@@ -12,6 +12,8 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  onRowClick?: (row: any) => void;
+  rowClassName?: string;
 }
 
 function getHeaderLabel<TData, TValue>(column: ColumnDef<TData, TValue>): string {
@@ -25,6 +27,8 @@ function getHeaderLabel<TData, TValue>(column: ColumnDef<TData, TValue>): string
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onRowClick,
+  rowClassName,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -55,8 +59,9 @@ export function DataTable<TData, TValue>({
           rows.map((row) => (
             <div
               key={row.id}
-              className="space-y-3 p-4"
+              className={`space-y-3 p-4 ${rowClassName || ''}`}
               style={{ borderBottom: '1px solid rgba(111,232,214,0.07)' }}
+              onClick={() => onRowClick?.(row)}
             >
               {row.getVisibleCells().map((cell, idx) => {
                 const col = columns[cell.column.getIndex()];
@@ -126,11 +131,12 @@ export function DataTable<TData, TValue>({
               rows.map((row, i) => (
                 <tr
                   key={row.id}
-                  className="transition-colors duration-150 hover:bg-[rgba(111,232,214,0.04)]"
+                  className={`transition-colors duration-150 hover:bg-[rgba(111,232,214,0.04)] ${rowClassName || ''}`}
                   style={{
                     borderBottom:
                       i < rows.length - 1 ? '1px solid rgba(111,232,214,0.06)' : 'none',
                   }}
+                  onClick={() => onRowClick?.(row)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td

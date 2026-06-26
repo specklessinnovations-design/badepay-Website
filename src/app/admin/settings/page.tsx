@@ -2,12 +2,12 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/useToast';
-import { ShieldCheck, Server, AlertCircle, Save } from 'lucide-react';
-import platformDataService, { type PlatformSettings } from '@/services/platformDataService';
+import { ShieldCheck, Server, AlertCircle, Save, RefreshCw } from 'lucide-react';
+import adminApiClient from '@/lib/adminApiClient';
 
 const A_CARD = {
   background: 'var(--ad-card)',
-  border: '1px solid #e5e5e5',
+  border: '1px solid var(--ad-border)',
   borderRadius: '1rem',
   boxShadow: '0 4px 24px rgba(0,0,0,0.45)',
   padding: '2rem',
@@ -34,6 +34,17 @@ const A_LABEL = {
   letterSpacing: '0.08em',
   marginBottom: '0.5rem',
 };
+
+interface PlatformSettings {
+  platformName: string;
+  supportEmail: string;
+  supportPhone: string;
+  corporateAddress: string;
+  maxDailyTransferLimit: number;
+  kycThreshold: number;
+  autoApproveBvn: boolean;
+  maintenanceMode: boolean;
+}
 
 function AdminInput({
   label,
@@ -67,39 +78,90 @@ function AdminInput({
   );
 }
 
+const defaultSettings: PlatformSettings = {
+  platformName: 'BadePay',
+  supportEmail: 'support@badepay.com',
+  supportPhone: '+234 800 123 4567',
+  corporateAddress: '123 Lagos Island, Lagos, Nigeria',
+  maxDailyTransferLimit: 500000,
+  kycThreshold: 100000,
+  autoApproveBvn: false,
+  maintenanceMode: false,
+};
+
 export default function AdminSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [settings, setSettings] = useState<PlatformSettings | null>(null);
-  const { showSuccess } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
+  const [settings, setSettings] = useState<PlatformSettings>(defaultSettings);
+  const { showSuccess, showError } = useToast();
+
+  const fetchSettings = async () => {
+    setIsLoading(true);
+    try {
+      const resp = await adminApiClient.get('/admin/settings');
+      const config = resp?.data?.config || {};
+      setSettings({
+        platformName: config.platformName || defaultSettings.platformName,
+        supportEmail: config.supportEmail || defaultSettings.supportEmail,
+        supportPhone: config.supportPhone || defaultSettings.supportPhone,
+        corporateAddress: config.corporateAddress || defaultSettings.corporateAddress,
+        maxDailyTransferLimit: config.maxDailyTransferLimit || defaultSettings.maxDailyTransferLimit,
+        kycThreshold: config.kycThreshold || defaultSettings.kycThreshold,
+        autoApproveBvn: config.autoApproveBvn ?? defaultSettings.autoApproveBvn,
+        maintenanceMode: config.maintenanceMode ?? defaultSettings.maintenanceMode,
+      });
+    } catch {
+      // Use defaults if fetch fails
+      setSettings(defaultSettings);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setSettings(platformDataService.getPlatformSettings());
+    fetchSettings();
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!settings) return;
-    setIsLoading(true);
-    await platformDataService.savePlatformSettings(settings);
-    await new Promise((r) => setTimeout(r, 400));
-    setIsLoading(false);
-    showSuccess('Platform settings saved.');
+    setIsSaving(true);
+    try {
+      await adminApiClient.put('/admin/settings', settings);
+      showSuccess('Platform settings saved successfully');
+    } catch {
+      showError('Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
-
-  if (!settings) return null;
 
   return (
     <div className="max-w-4xl space-y-8">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
-          System Configuration
-        </p>
-        <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
-          Platform Settings
-        </h2>
-        <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
-          Applies to web and mobile clients from a single configuration store.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
+            System Configuration
+          </p>
+          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
+            Platform Settings
+          </h2>
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
+            Applies to web and mobile clients from a single configuration store.
+          </p>
+        </div>
+        <button
+          onClick={fetchSettings}
+          disabled={isLoading}
+          className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition-all hover:-translate-y-0.5 disabled:opacity-60"
+          style={{
+            background: 'var(--ad-card)',
+            border: '1px solid var(--ad-border)',
+            color: 'var(--ad-fg-strong)',
+          }}
+        >
+          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+          Refresh
+        </button>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
@@ -242,7 +304,7 @@ export default function AdminSettingsPage() {
         <div className="flex justify-end pt-2">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isSaving}
             className="flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-black transition-all hover:-translate-y-0.5 disabled:opacity-60"
             style={{
               background: '#6fe8d6',
@@ -251,7 +313,7 @@ export default function AdminSettingsPage() {
             }}
           >
             <Save size={16} />
-            {isLoading ? 'Saving…' : 'Save System Configurations'}
+            {isSaving ? 'Saving…' : 'Save System Configurations'}
           </button>
         </div>
       </form>

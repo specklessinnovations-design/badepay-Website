@@ -11,21 +11,25 @@ import type {
 
 export type { AdminUserRecord, AdminTxRecord, KYCSubmission, AnalyticsData, DisputeRecord };
 
+// ─── Users Store ──────────────────────────────────────────────────────────────
 interface UsersState {
   users: AdminUserRecord[];
+  loading: boolean;
   refresh: () => void;
   toggleStatus: (id: string) => void;
 }
 
 export const useAdminUsersStore = create<UsersState>((set) => ({
   users: [],
+  loading: false,
 
   refresh: async () => {
+    set({ loading: true });
     try {
       const resp = await adminService.getUsers();
-      set({ users: resp.data.data });
-    } catch (e) {
-      set({ users: [] });
+      set({ users: resp.data.data, loading: false });
+    } catch {
+      set({ users: [], loading: false });
     }
   },
 
@@ -37,21 +41,55 @@ export const useAdminUsersStore = create<UsersState>((set) => ({
   },
 }));
 
+// ─── Merchants Store ──────────────────────────────────────────────────────────
+interface MerchantsState {
+  merchants: any[];
+  loading: boolean;
+  refresh: () => void;
+  toggleStatus: (id: string) => void;
+}
+
+export const useAdminMerchantsStore = create<MerchantsState>((set) => ({
+  merchants: [],
+  loading: false,
+
+  refresh: async () => {
+    set({ loading: true });
+    try {
+      const merchants = await adminService.getMerchants(1, 100);
+      set({ merchants, loading: false });
+    } catch {
+      set({ merchants: [], loading: false });
+    }
+  },
+
+  toggleStatus: async (id) => {
+    const record = useAdminMerchantsStore.getState().merchants.find((m) => m.id === id);
+    if (!record) return;
+    await adminService.toggleUserActive(id, !record.isActive).catch(() => null);
+    await useAdminMerchantsStore.getState().refresh();
+  },
+}));
+
+// ─── Transactions Store ───────────────────────────────────────────────────────
 interface TxState {
   transactions: AdminTxRecord[];
+  loading: boolean;
   refresh: () => void;
   reverseTransaction: (id: string) => void;
 }
 
 export const useAdminTransactionsStore = create<TxState>((set) => ({
   transactions: [],
+  loading: false,
 
   refresh: async () => {
+    set({ loading: true });
     try {
       const resp = await adminService.getTransactions();
-      set({ transactions: resp.data.data });
-    } catch (e) {
-      set({ transactions: [] });
+      set({ transactions: resp.data.data, loading: false });
+    } catch {
+      set({ transactions: [], loading: false });
     }
   },
 
@@ -61,8 +99,10 @@ export const useAdminTransactionsStore = create<TxState>((set) => ({
   },
 }));
 
+// ─── KYC Store ────────────────────────────────────────────────────────────────
 interface KYCState {
   submissions: KYCSubmission[];
+  loading: boolean;
   refresh: () => void;
   approveKYC: (id: string) => void;
   rejectKYC: (id: string) => void;
@@ -70,13 +110,15 @@ interface KYCState {
 
 export const useAdminKYCStore = create<KYCState>((set) => ({
   submissions: [],
+  loading: false,
 
   refresh: async () => {
+    set({ loading: true });
     try {
       const submissions = await adminService.getPendingKyc();
-      set({ submissions });
-    } catch (e) {
-      set({ submissions: [] });
+      set({ submissions, loading: false });
+    } catch {
+      set({ submissions: [], loading: false });
     }
   },
 
@@ -97,17 +139,27 @@ export const useAdminKYCStore = create<KYCState>((set) => ({
   },
 }));
 
+// ─── Disputes Store ───────────────────────────────────────────────────────────
 interface DisputesState {
   disputes: DisputeRecord[];
+  loading: boolean;
   refresh: () => void;
   updateStatus: (id: string, status: DisputeRecord['status']) => void;
 }
 
 export const useAdminDisputesStore = create<DisputesState>((set) => ({
   disputes: [],
+  loading: false,
 
   refresh: async () => {
-    set({ disputes: [] });
+    set({ loading: true });
+    try {
+      const disputes = await adminService.getDisputes();
+      const normalized = Array.isArray(disputes) ? disputes : [];
+      set({ disputes: normalized, loading: false });
+    } catch {
+      set({ disputes: [], loading: false });
+    }
   },
 
   updateStatus: async (id, status) => {
@@ -116,8 +168,10 @@ export const useAdminDisputesStore = create<DisputesState>((set) => ({
   },
 }));
 
+// ─── Analytics Store ──────────────────────────────────────────────────────────
 interface AnalyticsState {
   data: AnalyticsData;
+  loading: boolean;
   refresh: () => void;
 }
 
@@ -126,33 +180,30 @@ const emptyAnalytics: AnalyticsData = {
   weeklyUsers: [],
   monthlyVolume: [],
   kpiSummary: {
-    totalUsers: 0,
-    totalVolume: 0,
-    totalTransactions: 0,
-    totalRevenue: 0,
-    activeToday: 0,
-    pendingKYC: 0,
-    openDisputes: 0,
-    merchantCount: 0,
-    consumerCount: 0,
+    totalUsers: 0, totalVolume: 0, totalTransactions: 0, totalRevenue: 0,
+    activeToday: 0, pendingKYC: 0, openDisputes: 0, merchantCount: 0, consumerCount: 0,
   },
 };
 
 export const useAdminAnalyticsStore = create<AnalyticsState>((set) => ({
   data: emptyAnalytics,
+  loading: false,
 
   refresh: async () => {
+    set({ loading: true });
     try {
       const data = await adminService.getAnalytics();
-      set({ data });
-    } catch (e) {
-      set({ data: computeAnalytics([], [], []) });
+      set({ data, loading: false });
+    } catch {
+      set({ data: computeAnalytics([], [], []), loading: false });
     }
   },
 }));
 
+// ─── Refresh All ──────────────────────────────────────────────────────────────
 export function refreshAllAdminData() {
   useAdminUsersStore.getState().refresh();
+  useAdminMerchantsStore.getState().refresh();
   useAdminTransactionsStore.getState().refresh();
   useAdminKYCStore.getState().refresh();
   useAdminDisputesStore.getState().refresh();

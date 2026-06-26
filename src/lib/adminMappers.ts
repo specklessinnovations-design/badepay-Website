@@ -18,13 +18,10 @@ export function mapKycDisplayStatus(user: StoredUser): AdminUserRecord['kycStatu
 }
 
 export function storedUserToAdminRecord(
-  user: StoredUser,
+  user: any,
   txStats: { count: number; volume: number }
 ): AdminUserRecord {
-  const fullName =
-    user.userType === 'merchant' && user.merchantProfile?.tradingName
-      ? user.merchantProfile.tradingName
-      : `${user.firstName} ${user.lastName}`.trim();
+  const fullName = `${user.firstName} ${user.lastName}`.trim();
 
   return {
     id: user.id,
@@ -32,17 +29,18 @@ export function storedUserToAdminRecord(
     email: user.email,
     phone: user.phone ?? '—',
     accountNumber: user.accountNumber ?? '—',
-    balance: user.balance,
-    kycStatus: mapKycDisplayStatus(user),
+    balance: Number(user.wallet?.balance || 0),
+    kycStatus: mapKycDisplayStatus(user as any),
     isActive: user.isActive !== false,
     userType: user.userType,
     kycLevel: user.kycLevel,
     createdAt: user.createdAt,
-    lastLogin: user.lastLogin ?? user.createdAt,
+    lastLogin: user.lastLoginAt ?? user.createdAt,
     totalTransactions: txStats.count,
     totalVolume: txStats.volume,
-    merchantId: user.merchantProfile?.merchantId,
+    merchantId: user.merchantProfile?.id ?? user.merchantProfile?.merchantId,
     businessCategory: user.merchantProfile?.category,
+    merchantProfile: user.merchantProfile,
   };
 }
 

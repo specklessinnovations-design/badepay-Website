@@ -77,7 +77,8 @@ export default function MerchantStorePage() {
   };
 
   const handleCopyLink = () => {
-    const url = `http://localhost:5173/store/${storeSlug}`;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://badepay.com';
+    const url = `${baseUrl}/store/${storeSlug}`;
     navigator.clipboard.writeText(url);
     toast.success('Store link copied to clipboard!');
   };
@@ -118,7 +119,8 @@ export default function MerchantStorePage() {
   }
 
   const slug = storeSlug || user.merchantProfile.qrSlug || 'store';
-  const storeUrl = `localhost:5173/store/${slug}`;
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://badepay.com';
+  const storeUrl = `${baseUrl}/store/${slug}`;
 
   return (
     <div className="space-y-4">

@@ -4,12 +4,12 @@
  * Admin uses a separate JWT stored under a different key.
  */
 
-import apiClient from '@/lib/apiClient';
 import adminApiClient from '@/lib/adminApiClient';
 import {
   mapUsersToAdminRecords,
   mapTransactionsToAdminRecords,
   mapUsersToKycSubmissions,
+  computeAnalytics,
 } from '@/lib/adminMappers';
 import type { AdminUserRecord, AdminTxRecord, KYCSubmission } from '@/types/admin';
 
@@ -26,37 +26,13 @@ function setAdminToken(token: string | null) {
   else localStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
-/**
- * Override the Authorization header for admin requests by temporarily
- * injecting the admin token into the apiClient.
- */
-async function adminRequest<T = any>(
-  method: 'get' | 'post' | 'patch' | 'delete',
-  path: string,
-  body?: any,
-): Promise<T> {
-  const adminToken = getAdminToken();
-  const url = `${(apiClient as any).BASE_URL || 'http://localhost:3000/api/v1'}${path}`;
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
-  const res = await fetch(url, {
-    method: method.toUpperCase(),
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  let data: any;
-  try { data = await res.json(); } catch { data = {}; }
-  if (!res.ok) throw new Error(data?.message || `Admin request failed: ${res.status}`);
-  return data as T;
-}
-
 export const adminService = {
   /**
    * Admin login.
    * Backend: POST /admin/auth/login
    */
   login: async (email: string, password: string) => {
-    const resp = await apiClient.post('/admin/auth/login', { email, password });
+    const resp = await adminApiClient.post('/admin/auth/login', { email, password });
     const token = resp?.data?.token || resp?.token;
     const admin = resp?.data?.admin || resp?.admin;
     if (token) setAdminToken(token);
@@ -91,14 +67,8 @@ export const adminService = {
       };
     } catch {
       return {
-        users: 0,
-        activeUsers: 0,
-        merchants: 0,
-        transactions: 0,
-        totalVolume: 0,
-        todayVolume: 0,
-        pendingDisputes: 0,
-        openDisputes: 0,
+        users: 0, activeUsers: 0, merchants: 0, transactions: 0,
+        totalVolume: 0, todayVolume: 0, pendingDisputes: 0, openDisputes: 0,
         recentTransactions: [],
       };
     }
@@ -130,26 +100,17 @@ export const adminService = {
       };
     } catch {
       return {
-        dailyRevenue: [],
-        weeklyUsers: [],
-        monthlyVolume: [],
+        dailyRevenue: [], weeklyUsers: [], monthlyVolume: [],
         kpiSummary: {
-          totalUsers: 0,
-          totalVolume: 0,
-          totalTransactions: 0,
-          totalRevenue: 0,
-          activeToday: 0,
-          pendingKYC: 0,
-          openDisputes: 0,
-          merchantCount: 0,
-          consumerCount: 0,
+          totalUsers: 0, totalVolume: 0, totalTransactions: 0, totalRevenue: 0,
+          activeToday: 0, pendingKYC: 0, openDisputes: 0, merchantCount: 0, consumerCount: 0,
         },
       };
     }
   },
 
   /**
-   * Get users list.
+   * Get users list (ALL users — personal + merchant-enabled).
    * Backend: GET /admin/users
    */
   getUsers: async (page = 1, limit = 50, search?: string, userType?: string, kycStatus?: string, isActive?: boolean): Promise<{ data: { data: AdminUserRecord[] } }> => {
@@ -170,12 +131,63 @@ export const adminService = {
   },
 
   /**
+   * Get full user detail.
+   * Backend: GET /admin/users/:id
+   */
+  getUserDetail: async (id: string) => {
+    return adminApiClient.getUser(id);
+  },
+
+  /**
    * Toggle user active status.
    * Backend: PATCH /admin/users/:id/status
    */
   toggleUserActive: async (id: string, isActive: boolean) => {
     try {
       return await adminApiClient.toggleUserActive(id, isActive);
+    } catch {
+      return { success: false };
+    }
+  },
+
+  /**
+   * Lock or unlock user wallet.
+   * Backend: PATCH /admin/users/:id/status
+   */
+  lockWallet: async (id: string, lock: boolean) => {
+    try {
+      return await adminApiClient.lockWallet(id, lock);
+    } catch {
+      return { success: false };
+    }
+  },
+
+  /**
+   * Get merchants list (dedicated).
+   * Backend: GET /admin/merchants
+   */
+  getMerchants: async (page = 1, limit = 50, search?: string) => {
+    const resp = await adminApiClient.getMerchants(page, limit, search);
+    // Backend returns: { status: 'success', data: { merchants: [...], pagination: {...} } }
+    const merchants = resp?.data?.merchants ?? resp?.merchants ?? [];
+    return merchants;
+  },
+
+  /**
+   * Get full merchant detail.
+   * Backend: GET /admin/merchants/:id
+   */
+  getMerchantDetail: async (id: string) => {
+    return adminApiClient.getMerchantDetail(id);
+  },
+
+  /**
+   * Verify a merchant.
+   * Backend: POST /admin/merchants/:id/verify
+   */
+  verifyMerchant: async (id: string) => {
+    try {
+      return await adminApiClient.verifyMerchant(id);
     } catch {
       return { success: false };
     }
@@ -213,9 +225,10 @@ export const adminService = {
    * Backend: PATCH /admin/users/:id/kyc
    */
   reviewKyc: async (userId: string, action: 'approve' | 'reject') => {
-    const tier = action === 'approve' ? 2 : 1;
+    const kycStatus = action === 'approve' ? 'approved' : 'rejected';
+    const kycLevel = action === 'approve' ? 2 : undefined;
     try {
-      await adminApiClient.patch(`/admin/users/${userId}/kyc`, { tier });
+      await adminApiClient.updateKyc(userId, kycStatus, kycLevel);
       return { success: true };
     } catch {
       return { success: false };

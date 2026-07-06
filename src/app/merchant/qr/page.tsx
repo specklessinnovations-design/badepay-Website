@@ -316,8 +316,8 @@ export default function MerchantQrPage() {
         <div className="space-y-2.5">
           {[
             { n: '1', title: 'Display your QR', desc: 'Show it on screen or print it for your counter or storefront.' },
-            { n: '2', title: 'Customer scans', desc: 'They scan with any banking app — Bade pay, Kuda, Moniepoint, GTB and more.' },
-            { n: '3', title: 'Instant settlement', desc: 'Funds land in your Bade pay wallet immediately, with SMS confirmation.' },
+            { n: '2', title: 'Customer scans', desc: 'They scan with any banking app — Bade Pay, Kuda, Moniepoint, GTB and more.' },
+            { n: '3', title: 'Instant settlement', desc: 'Funds land in your Bade Pay wallet immediately, with SMS confirmation.' },
           ].map((s) => (
             <div key={s.n} className="flex items-start gap-3.5 rounded-2xl px-4 py-3" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
               <div className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
@@ -336,7 +336,7 @@ export default function MerchantQrPage() {
       <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(111,232,214,0.05)', border: '1px solid rgba(111,232,214,0.15)' }}>
         <Lock size={16} style={{ color: '#6fe8d6' }} />
         <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-          All QR payments are <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>end-to-end encrypted</span> and verified by Bade pay's fraud engine in real time.
+          All QR payments are <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>end-to-end encrypted</span> and verified by Bade Pay's fraud engine in real time.
         </p>
       </div>
 

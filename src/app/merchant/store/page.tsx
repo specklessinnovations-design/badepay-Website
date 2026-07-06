@@ -312,7 +312,7 @@ export default function MerchantStorePage() {
               <Sparkles size={16} /> Live storefront link
             </div>
             <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-              Share this link with customers to let them shop your store, build orders, and pay with their Bade pay wallets or linked bank accounts.
+              Share this link with customers to let them shop your store, build orders, and pay with their Bade Pay wallets or linked bank accounts.
             </p>
             <div className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: 'var(--background)', border: '1px solid var(--border)' }}>
               <span className="text-xs font-mono truncate flex-1" style={{ color: 'var(--text-tertiary)' }}>{storeUrl}</span>

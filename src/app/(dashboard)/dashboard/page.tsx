@@ -5,7 +5,7 @@ import {
   Plus, Send, ArrowLeftRight, QrCode, Landmark,
   Smartphone, Wifi, Zap, Tv, ChevronRight,
   TrendingUp, TrendingDown, Eye, EyeOff, ShieldCheck,
-  Store, RefreshCw, Bell,
+  Store, RefreshCw, Bell, Sparkles,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -110,6 +110,16 @@ export default function DashboardHome() {
   return (
     <div className="space-y-5 lg:space-y-6">
 
+      {/* ── Advert Banner ── */}
+      <motion.div {...fadeUp(0)}>
+        <div className="w-full h-32 rounded-2xl bg-gradient-to-r from-primary/20 to-primary/10 border border-border flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-[14px] font-bold text-primary">Ad Space</p>
+            <p className="text-[12px] text-muted-foreground">Your ad here</p>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Switch to Merchant if applicable */}
       {user?.merchantProfile && (
         <motion.div {...fadeUp(0)}>
@@ -133,7 +143,7 @@ export default function DashboardHome() {
         </motion.div>
       )}
 
-      {/* ── Greeting row ── */}
+      {/* ── Greeting row with AI and Location ── */}
       <motion.div {...fadeUp(0)} className="flex items-center justify-between pt-1 lg:pt-0">
         <div>
           <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'var(--text-tertiary)' }}>{getGreeting()}</p>
@@ -142,6 +152,10 @@ export default function DashboardHome() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
+          {/* AI Button */}
+          <button className="h-9 w-9 rounded-full flex items-center justify-center transition-colors" style={{ background: 'var(--primary)', border: '1px solid var(--border)' }}>
+            <Sparkles size={16} style={{ color: 'var(--primary-foreground)' }} />
+          </button>
           <Link href="/profile/notifications" className="relative h-9 w-9 rounded-full flex items-center justify-center transition-colors" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
             <Bell size={16} style={{ color: 'var(--text-secondary)' }} />
             {unreadCount > 0 && (
@@ -158,139 +172,53 @@ export default function DashboardHome() {
         </div>
       </motion.div>
 
-      {/* ── Balance card ── */}
-      <motion.div {...fadeUp(0.07)}
-        className="relative overflow-hidden rounded-3xl p-6"
-        style={{
-          background: 'linear-gradient(145deg,#0e0e16 0%,#141420 50%,#0a0a12 100%)',
-          border: '1px solid rgba(255,255,255,0.07)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
-        }}>
-        {/* Glow orbs */}
-        <div className="pointer-events-none absolute -right-12 -top-12 h-52 w-52 rounded-full opacity-50"
-          style={{ background: 'radial-gradient(circle,rgba(111,232,214,0.2) 0%,transparent 70%)' }} />
-        <div className="pointer-events-none absolute -left-8 -bottom-8 h-40 w-40 rounded-full opacity-30"
-          style={{ background: 'radial-gradient(circle,rgba(111,232,214,0.15) 0%,transparent 70%)' }} />
-        {/* Grid texture */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.02]"
-          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.8) 1px,transparent 1px)', backgroundSize: '28px 28px' }} />
-
-        <div className="relative z-10">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] mb-2" style={{ color: 'rgba(111,232,214,0.6)' }}>
-            Available balance
-          </p>
-
-          <div className="flex items-center gap-3">
-            <p className="text-3xl lg:text-4xl font-black tracking-tight" style={{ color: '#ffffff' }}>
-              {showBalance ? formatNGN(walletBalance) : '₦ ••••••'}
-            </p>
-            <div className="flex items-center gap-2">
-              <motion.button type="button" whileTap={{ scale: 0.9 }}
-                onClick={handleRecalculateBalance}
-                disabled={isRecalculating}
-                className="rounded-full p-2 transition-colors disabled:opacity-50"
-                style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)' }}
-                title="Recalculate balance">
-                <RefreshCw size={17} className={isRecalculating ? 'animate-spin' : ''} />
-              </motion.button>
-              <motion.button type="button" whileTap={{ scale: 0.9 }}
-                onClick={() => setShowBalance(v => !v)}
-                className="rounded-full p-2 transition-colors"
-                style={{ color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.06)' }}>
-                {showBalance ? <EyeOff size={17} /> : <Eye size={17} />}
-              </motion.button>
+      {/* ── Quick Actions ── */}
+      <motion.div {...fadeUp(0.07)} className="grid grid-cols-4 gap-3">
+        {QUICK_ACTIONS.map(({ id, label, icon: Icon, href }) => (
+          <button
+            key={id}
+            onClick={() => handleQuickAction(id, href)}
+            className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}
+          >
+            <div className="h-12 w-12 rounded-xl flex items-center justify-center" style={{ background: 'var(--primary)' }}>
+              <Icon size={24} style={{ color: 'var(--primary-foreground)' }} />
             </div>
-          </div>
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{label}</span>
+          </button>
+        ))}
+      </motion.div>
 
-          <p className="mt-1.5 text-xs font-medium" style={{ color: 'rgba(255,255,255,0.35)' }}>
-            {accountDisplay || '—'} · BadePay
-          </p>
-
-          <div className="mt-4 flex items-center gap-3">
-            <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
-              style={{ background: 'rgba(255,255,255,0.07)' }}>
-              {monthlyChange >= 0
-                ? <TrendingUp size={13} style={{ color: '#10B981' }} />
-                : <TrendingDown size={13} style={{ color: '#EF4444' }} />}
-              <span className="text-xs font-bold" style={{ color: monthlyChange >= 0 ? '#10B981' : '#EF4444' }}>
-                {monthlyChange >= 0 ? '+' : ''}{monthlyChange.toFixed(1)}% this month
-              </span>
-            </div>
-
-            <Link href="/add-money"
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-black transition-all active:scale-95"
-              style={{ background: '#6fe8d6', color: '#1a1a1a', boxShadow: '0 2px 16px rgba(111,232,214,0.4)' }}>
-              <Plus size={12} /> Add money
+      {/* ── Services Grid ── */}
+      <motion.div {...fadeUp(0.14)}>
+        <div className="grid grid-cols-4 gap-3">
+          {PAY_TOP_UP.map(({ label, icon: Icon, href }) => (
+            <Link
+              key={label}
+              href={href}
+              className="flex flex-col items-center gap-2 p-3 rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+            >
+              <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ background: 'var(--primary)/10' }}>
+                <Icon size={20} style={{ color: 'var(--primary)' }} />
+              </div>
+              <span className="text-xs font-medium text-center" style={{ color: 'var(--text-secondary)' }}>{label}</span>
             </Link>
-          </div>
+          ))}
         </div>
       </motion.div>
 
-      {/* ── Quick actions ── */}
-      <motion.section {...fadeUp(0.13)}>
-        <div className="grid grid-cols-4 gap-2.5 sm:gap-3 lg:grid-cols-5">
-          {QUICK_ACTIONS.map(({ id, label, icon: Icon, href }) => (
-            <motion.button
-              key={id}
-              type="button"
-              whileHover={{ scale: 1.04, y: -2 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => handleQuickAction(id, href)}
-              className={`flex flex-col items-center gap-2.5 rounded-2xl p-3 transition-colors${id === 'scan' ? ' hidden lg:flex' : ''}`}
-              style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl accent-icon-wrap transition-all duration-300">
-                <Icon size={20} style={{ color: 'var(--accent-text)' }} />
-              </div>
-              <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{label}</span>
-            </motion.button>
-          ))}
-        </div>
-      </motion.section>
-
-      {/* ── KYC banner ── */}
-      {user.kycLevel < 2 && kyc.nextBenefit && (
-        <motion.div {...fadeUp(0.17)}>
-          <Link href="/profile/kyc"
-            className="surface-card flex items-center justify-between p-4 transition-all duration-300 hover:-translate-y-0.5"
-            style={{
-              border: '1px solid var(--accent-border)',
-              background: 'linear-gradient(to right, var(--accent-bg), transparent)',
-            }}>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl accent-icon-wrap">
-                <ShieldCheck size={20} style={{ color: 'var(--accent-text)' }} />
-              </div>
-              <div>
-                <p className="font-black text-sm" style={{ color: 'var(--text-primary)' }}>Complete Tier 2 verification</p>
-                <p className="mt-0.5 text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{kyc.nextBenefit}</p>
-              </div>
-            </div>
-            <ChevronRight size={20} className="shrink-0" style={{ color: 'var(--accent-text)' }} />
-          </Link>
-        </motion.div>
-      )}
-
-      {/* ── Pay & top up ── */}
-      <motion.section {...fadeUp(0.2)}>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-black" style={{ color: 'var(--text-primary)' }}>Pay & top up</h2>
-          <Link href="/bills" className="text-xs font-bold transition-colors hover:opacity-80"
-            style={{ color: 'var(--accent-text)' }}>See all →</Link>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {PAY_TOP_UP.map(({ label, icon: Icon, href }, i) => (
-            <motion.div key={label} whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}>
-              <Link href={href}
-                className="surface-card flex flex-col items-center gap-2.5 p-4 transition-all duration-300 group">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl accent-icon-wrap transition-all duration-300 group-hover:scale-110">
-                  <Icon size={22} style={{ color: 'var(--accent-text)' }} />
-                </div>
-                <span className="text-xs font-bold text-center" style={{ color: 'var(--text-primary)' }}>{label}</span>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </motion.section>
+      {/* ── Notifications Strip ── */}
+      <motion.div {...fadeUp(0.21)}>
+        <Link href="/profile/notifications" className="flex items-center gap-3 p-4 rounded-2xl transition-all hover:scale-[1.01]" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
+          <Bell size={20} style={{ color: 'var(--primary)' }} />
+          <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>View all notifications</span>
+          {unreadCount > 0 && (
+            <span className="h-2 w-2 rounded-full" style={{ background: '#EF4444' }} />
+          )}
+          <ChevronRight size={20} style={{ color: 'var(--text-tertiary)' }} />
+        </Link>
+      </motion.div>
 
       {/* ── Recent activity ── */}
       <motion.section {...fadeUp(0.25)}>

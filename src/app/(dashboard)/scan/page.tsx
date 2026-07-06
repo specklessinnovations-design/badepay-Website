@@ -247,7 +247,7 @@ export default function ScanPayPage() {
                 {loading ? 'Reading QR code…' : 'Hold steady'}
               </div>
               <p className="mt-2 text-white/60 text-sm">
-                Point your camera at a Bade pay personal or merchant QR code.
+                Point your camera at a Bade Pay personal or merchant QR code.
               </p>
             </div>
           </>

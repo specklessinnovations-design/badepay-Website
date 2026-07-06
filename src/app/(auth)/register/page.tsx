@@ -5,7 +5,7 @@ import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail, Lock, User, Eye, EyeOff, ArrowRight, ArrowLeft,
-  Check, AlertCircle, ShieldCheck,
+  Check, AlertCircle, ShieldCheck, Calendar,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import authService from '@/services/authService';
@@ -16,7 +16,7 @@ import { getPostAuthPath } from '@/lib/authRouting';
 import { PrivacyPolicyModal } from '@/components/ui/privacy-policy-modal';
 import { ConsentModal } from '@/components/ui/consent-modal';
 
-const STEPS = ['Email', 'Profile', 'Verify', 'Secure PIN'];
+const STEPS = ['Email', 'Profile', 'Age', 'Verify', 'Secure PIN'];
 
 interface SignupData {
   email: string;
@@ -25,6 +25,7 @@ interface SignupData {
   lastName: string;
   password: string;
   confirmPassword: string;
+  dob: string;
   pin: string;
   confirmPin: string;
 }
@@ -83,13 +84,13 @@ function RegisterForm() {
   const [data, setData] = useState<SignupData>({
     email: '', otp: ['', '', '', '', '', ''],
     firstName: '', lastName: '',
-    password: '', confirmPassword: '', pin: '', confirmPin: '',
+    password: '', confirmPassword: '', dob: '', pin: '', confirmPin: '',
   });
 
   const otpInputs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    if (step === 2 && resendTimer > 0) {
+    if (step === 3 && resendTimer > 0) {
       const interval = setInterval(() => setResendTimer(t => t - 1), 1000);
       return () => clearInterval(interval);
     }
@@ -151,7 +152,16 @@ function RegisterForm() {
         if (!data.lastName.trim()) { setError('Last name is required'); return; }
         if (data.password.length < 6) { setError('Password needs at least 6 characters'); return; }
         if (data.password !== data.confirmPassword) { setError("Passwords don't match"); return; }
-
+      } else if (step === 2) {
+        if (!data.dob) { setError('Please enter your date of birth'); return; }
+        // Proper 18+ check using exact date (not just year)
+        const birthDate = new Date(data.dob);
+        const today = new Date();
+        const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+        if (birthDate > eighteenYearsAgo) {
+          setError('You must be 18 years or older to open an account');
+          return;
+        }
         await register({
           firstName: data.firstName,
           lastName: data.lastName,
@@ -161,11 +171,11 @@ function RegisterForm() {
         });
         setResendTimer(42);
         bpToast.success('Account created! Check your email for a verification code.');
-      } else if (step === 2) {
+      } else if (step === 3) {
         const code = data.otp.join('');
         if (code.length !== 6) { setError('Enter all 6 digits'); return; }
         await verifyOtp(code);
-      } else if (step === 3) {
+      } else if (step === 4) {
         if (!data.pin || data.pin.length !== 4) { setError('PIN must be exactly 4 digits'); return; }
         if (data.pin !== data.confirmPin) { setError("PINs don't match"); return; }
         try {
@@ -248,8 +258,8 @@ function RegisterForm() {
 
       {/* Back link */}
       <div className="mb-6 flex items-center justify-between">
-        {step > 0 && step !== 2 ? (
-          <button onClick={() => { setError(''); if (step === 3) { setPinStep('enter'); setData(p => ({ ...p, pin: '', confirmPin: '' })); } setStep(s => s - 1); }}
+        {step > 0 && step !== 3 ? (
+          <button onClick={() => { setError(''); if (step === 4) { setPinStep('enter'); setData(p => ({ ...p, pin: '', confirmPin: '' })); } setStep(s => s - 1); }}
             className="flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-80" style={{ color: 'var(--text-secondary)' }}>
             <ArrowLeft size={15} /> Back
           </button>
@@ -352,8 +362,39 @@ function RegisterForm() {
             </div>
           )}
 
-          {/* ─── Step 2: OTP ─── */}
+          {/* ─── Step 2: Age Verification ─── */}
           {step === 2 && (
+            <div>
+              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Age Verification</h1>
+              <p className="text-sm text-[var(--text-secondary)] mb-6">Please enter your date of birth to verify you're 18 or older.</p>
+
+              <div className="space-y-4">
+                <PremiumInput
+                  label="Date of birth"
+                  type="date"
+                  icon={<Calendar size={15} />}
+                  value={data.dob}
+                  onChange={e => setData(p => ({ ...p, dob: e.target.value }))}
+                  max={(() => {
+                    const d = new Date();
+                    d.setFullYear(d.getFullYear() - 18);
+                    return d.toISOString().split('T')[0];
+                  })()}
+                />
+
+                <div className="flex items-start gap-3 p-4 rounded-2xl"
+                  style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
+                  <ShieldCheck size={16} className="text-[#6fe8d6] shrink-0 mt-0.5" />
+                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                    You must be at least 18 years old to use BadePay. Your date of birth is used for age verification only.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─── Step 3: OTP ─── */}
+          {step === 3 && (
             <div>
               <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Verify your email</h1>
               <p className="text-sm text-[var(--text-secondary)] mb-6">
@@ -398,8 +439,8 @@ function RegisterForm() {
             </div>
           )}
 
-          {/* ─── Step 3: PIN ─── */}
-          {step === 3 && (
+          {/* ─── Step 4: PIN ─── */}
+          {step === 4 && (
             <div>
               <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">
                 {pinStep === 'enter' ? 'Create transaction PIN' : 'Confirm your PIN'}
@@ -459,15 +500,15 @@ function RegisterForm() {
       </AnimatePresence>
 
       {/* Next button — hidden on pin step (uses numpad) */}
-      {step < 3 && (
+      {step < 4 && (
         <div className="mt-8">
           <PremiumButton type="button" fullWidth size="lg" onClick={handleNext} isLoading={isLoading} disabled={isLoading}>
-            {!isLoading && <>{step === 1 ? 'Create account' : step === 2 ? 'Verify email' : 'Continue'} <ArrowRight size={17} /></>}
+            {!isLoading && <>{step === 1 ? 'Continue' : step === 2 ? 'Create account' : step === 3 ? 'Verify email' : 'Continue'} <ArrowRight size={17} /></>}
           </PremiumButton>
         </div>
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <PremiumButton type="button" fullWidth size="lg" className="mt-8"
           onClick={handleNext} isLoading={isLoading}
           disabled={isLoading || data.pin.length !== 4 || data.confirmPin.length !== 4}>

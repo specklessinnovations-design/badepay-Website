@@ -3,7 +3,7 @@
 import React from 'react';
 import { Link } from 'wouter';
 import { useLocation } from 'wouter';
-import { LayoutDashboard, Users, FileText, AlertTriangle, BarChart3, Settings, ShieldCheck, LogOut, X, Store, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, AlertTriangle, BarChart3, Settings, ShieldCheck, LogOut, X, Store, TrendingUp, Sparkles } from 'lucide-react';
 import { useAdminAuthStore } from '@/store/useAdminAuthStore';
 import { useAdminDisputesStore } from '@/store/useAdminDisputesStore';
 import { useAdminKYCStore } from '@/store/useAdminKYCStore';
@@ -49,7 +49,10 @@ export function AdminSidebar({ mobileOpen, setMobileOpen }: AdminSidebarProps) {
     },
     {
       title: 'PLATFORM',
-      items: [{ label: 'Analytics', icon: BarChart3, href: '/admin/analytics' }],
+      items: [
+        { label: 'Analytics', icon: BarChart3, href: '/admin/analytics' },
+        { label: 'Explore Nigeria', icon: Sparkles, href: '/admin/explore-nigeria' },
+      ],
     },
     {
       title: 'SYSTEM',

@@ -39,6 +39,8 @@ import ProfileSupportPage from "@/app/(dashboard)/profile/support/page";
 import ProfileStatementsPage from "@/app/(dashboard)/profile/statements/page";
 import ChangePinPage from "@/app/(dashboard)/profile/change-pin/page";
 import ChangePasswordPage from "@/app/(dashboard)/profile/change-password/page";
+import AIAssistantPage from "@/app/(dashboard)/ai/page";
+import ExploreNigeriaPage from "@/app/(dashboard)/explore-nigeria/page";
 import DashboardLayout from "@/app/(dashboard)/layout";
 
 import AdminLoginPage from "@/app/admin/login/page";
@@ -53,6 +55,7 @@ import AdminDisputesPage from "@/app/admin/disputes/page";
 import AdminAnalyticsPage from "@/app/admin/analytics/page";
 import AdminSettingsPage from "@/app/admin/settings/page";
 import AdminBillsPage from "@/app/admin/bills/page";
+import AdminExploreNigeriaPage from "@/app/admin/explore-nigeria/page";
 import AdminLayout from "@/app/admin/layout";
 
 import MerchantPage from "@/app/merchant/page";
@@ -156,6 +159,12 @@ function Router() {
       <Route path="/profile/change-password">
         <DashboardLayout><ChangePasswordPage /></DashboardLayout>
       </Route>
+      <Route path="/ai">
+        <DashboardLayout><AIAssistantPage /></DashboardLayout>
+      </Route>
+      <Route path="/explore-nigeria">
+        <DashboardLayout><ExploreNigeriaPage /></DashboardLayout>
+      </Route>
       <Route path="/profile">
         <DashboardLayout><ProfilePage /></DashboardLayout>
       </Route>
@@ -200,6 +209,9 @@ function Router() {
       </Route>
       <Route path="/admin/settings">
         <AdminLayout><AdminSettingsPage /></AdminLayout>
+      </Route>
+      <Route path="/admin/explore-nigeria">
+        <AdminLayout><AdminExploreNigeriaPage /></AdminLayout>
       </Route>
       <Route path="/admin">
         <AdminLayout><AdminDashboardPage /></AdminLayout>

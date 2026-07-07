@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Video, MapPin, PlayCircle, ImageIcon, Search } from 'lucide-react';
+import { Video, MapPin, PlayCircle, ImageIcon, Search, Zap } from 'lucide-react';
 import apiClient from '@/lib/apiClient';
 
-type ExploreItem = {
+type VideoItem = {
   id: string;
   title: string;
   description: string;
-  mediaType: 'image' | 'video';
-  mediaUrl: string;
-  location: string;
+  videoUrl: string;
+  thumbnailUrl?: string;
   category: string;
+  location?: string;
+  duration?: number;
+  featured?: boolean;
+  publishedAt: string;
   createdAt: string;
 };
 
@@ -21,18 +24,17 @@ const fadeUp = (delay = 0) => ({
 });
 
 export default function VideoPage() {
-  const [items, setItems] = useState<ExploreItem[]>([]);
+  const [items, setItems] = useState<VideoItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [activeType, setActiveType] = useState<'all' | 'image' | 'video'>('all');
-  const [activeItem, setActiveItem] = useState<ExploreItem | null>(null);
+  const [activeItem, setActiveItem] = useState<VideoItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await apiClient.get('/explore-nigeria');
-        if (!cancelled) setItems(res?.data?.items || []);
+        const res = await apiClient.get('/videos');
+        if (!cancelled) setItems(res?.data?.videos || []);
       } catch {
         if (!cancelled) setItems([]);
       } finally {
@@ -44,10 +46,10 @@ export default function VideoPage() {
   }, []);
 
   const filtered = items.filter(item => {
-    const matchType = activeType === 'all' || item.mediaType === activeType;
     const matchQuery = !query || item.title.toLowerCase().includes(query.toLowerCase()) ||
-      item.location.toLowerCase().includes(query.toLowerCase());
-    return matchType && matchQuery;
+      (item.location && item.location.toLowerCase().includes(query.toLowerCase()));
+    const matchFeatured = query !== 'featured' || item.featured;
+    return matchQuery && matchFeatured;
   });
 
   return (
@@ -83,27 +85,25 @@ export default function VideoPage() {
         </div>
       </motion.div>
 
-      {/* Type filter tabs */}
+      {/* Filter tabs */}
       <motion.div {...fadeUp(0.08)} className="flex items-center gap-2">
-        {(['all', 'video', 'image'] as const).map(type => (
+        {['All', 'Featured'].map(type => (
           <button
             key={type}
-            onClick={() => setActiveType(type)}
+            onClick={() => setQuery(type === 'All' ? '' : 'featured')}
             className="flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold capitalize transition-all"
             style={{
-              background: activeType === type ? '#0b7367' : 'var(--surface-secondary)',
-              color: activeType === type ? '#fff' : 'var(--text-secondary)',
-              border: `1.5px solid ${activeType === type ? '#0b7367' : 'var(--border)'}`,
-            }}
-          >
-            {type === 'video' && <PlayCircle size={13} />}
-            {type === 'image' && <ImageIcon size={13} />}
-            {type === 'all' ? 'All media' : type === 'video' ? 'Videos' : 'Images'}
+              background: (type === 'All' && !query) || (type === 'Featured' && query === 'featured') ? '#0b7367' : 'var(--surface-secondary)',
+              color: (type === 'All' && !query) || (type === 'Featured' && query === 'featured') ? '#fff' : 'var(--text-secondary)',
+              border: `1.5px solid ${(type === 'All' && !query) || (type === 'Featured' && query === 'featured') ? '#0b7367' : 'var(--border)'}`,
+            }}>
+            {type === 'Featured' && <Zap size={13} />}
+            {type}
           </button>
         ))}
         {items.length > 0 && (
           <span className="ml-auto text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>
-            {filtered.length} item{filtered.length !== 1 ? 's' : ''}
+            {filtered.length} video{filtered.length !== 1 ? 's' : ''}
           </span>
         )}
       </motion.div>
@@ -142,33 +142,30 @@ export default function VideoPage() {
               onClick={() => setActiveItem(item)}
               className="relative aspect-[3/4] cursor-pointer overflow-hidden rounded-2xl group"
             >
-              {item.mediaType === 'video' ? (
-                <video
-                  src={item.mediaUrl}
-                  muted loop playsInline
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              ) : (
-                <img
-                  src={item.mediaUrl}
-                  alt={item.title}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              )}
+              <video
+                src={item.videoUrl}
+                poster={item.thumbnailUrl}
+                muted loop playsInline
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
               {/* Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-              {item.mediaType === 'video' && (
-                <div className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-                  <PlayCircle size={14} className="text-white" />
+              <div className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                <PlayCircle size={14} className="text-white" />
+              </div>
+              {item.featured && (
+                <div className="absolute top-3 left-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                  Featured
                 </div>
               )}
               <div className="absolute bottom-0 left-0 right-0 p-3">
                 <p className="font-bold text-white text-[14px] leading-tight line-clamp-2">{item.title}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <MapPin size={11} className="text-white/70 shrink-0" />
-                  <span className="text-[11px] text-white/70 uppercase tracking-wide truncate">{item.location}</span>
-                </div>
+                {item.location && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <MapPin size={11} className="text-white/70 shrink-0" />
+                    <span className="text-[11px] text-white/70 uppercase tracking-wide truncate">{item.location}</span>
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
@@ -183,20 +180,18 @@ export default function VideoPage() {
         >
           <div className="relative max-h-[85vh] max-w-2xl w-full rounded-3xl overflow-hidden"
             onClick={e => e.stopPropagation()}>
-            {activeItem.mediaType === 'video' ? (
-              <video src={activeItem.mediaUrl} controls autoPlay className="w-full max-h-[70vh] object-contain bg-black" />
-            ) : (
-              <img src={activeItem.mediaUrl} alt={activeItem.title} className="w-full max-h-[70vh] object-contain bg-black" />
-            )}
+            <video src={activeItem.videoUrl} poster={activeItem.thumbnailUrl} controls autoPlay className="w-full max-h-[70vh] object-contain bg-black" />
             <div className="p-4" style={{ background: 'var(--card)' }}>
               <h2 className="font-black text-base" style={{ color: 'var(--text-primary)' }}>{activeItem.title}</h2>
               {activeItem.description && (
                 <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{activeItem.description}</p>
               )}
-              <div className="flex items-center gap-1 mt-2">
-                <MapPin size={13} style={{ color: 'var(--text-tertiary)' }} />
-                <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>{activeItem.location}</span>
-              </div>
+              {activeItem.location && (
+                <div className="flex items-center gap-1 mt-2">
+                  <MapPin size={13} style={{ color: 'var(--text-tertiary)' }} />
+                  <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>{activeItem.location}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

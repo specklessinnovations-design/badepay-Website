@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -206,7 +206,7 @@ export default function MyQRPage() {
         <div className="space-y-2.5">
           {[
             { n: '1', title: 'Share your QR', desc: 'Send the link or show your QR code to anyone who wants to pay you.' },
-            { n: '2', title: 'They scan & pay', desc: 'They scan with any banking app — Bade Pay, Kuda, Moniepoint, GTB and more.' },
+            { n: '2', title: 'They scan & pay', desc: 'They scan with any banking app — BadePay, Kuda, Moniepoint, GTB and more.' },
             { n: '3', title: 'Instant credit', desc: 'Money lands in your wallet immediately, with SMS confirmation.' },
           ].map((s) => (
             <div key={s.n} className="flex items-start gap-3.5 rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
@@ -226,7 +226,7 @@ export default function MyQRPage() {
       <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: 'rgba(111,232,214,0.05)', border: '1px solid rgba(111,232,214,0.15)' }}>
         <Lock size={16} style={{ color: '#6fe8d6' }} />
         <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-          All QR payments are <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>end-to-end encrypted</span> and verified by Bade Pay's fraud engine in real time.
+          All QR payments are <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>end-to-end encrypted</span> and verified by BadePay's fraud engine in real time.
         </p>
       </div>
 

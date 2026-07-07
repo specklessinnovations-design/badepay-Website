@@ -41,6 +41,9 @@ import ChangePinPage from "@/app/(dashboard)/profile/change-pin/page";
 import ChangePasswordPage from "@/app/(dashboard)/profile/change-password/page";
 import AIAssistantPage from "@/app/(dashboard)/ai/page";
 import ExploreNigeriaPage from "@/app/(dashboard)/explore-nigeria/page";
+import VideoPage from "@/app/(dashboard)/video/page";
+import InsightsPage from "@/app/(dashboard)/insights/page";
+import MarketplacePage from "@/app/(dashboard)/marketplace/page";
 import DashboardLayout from "@/app/(dashboard)/layout";
 
 import AdminLoginPage from "@/app/admin/login/page";
@@ -164,6 +167,15 @@ function Router() {
       </Route>
       <Route path="/explore-nigeria">
         <DashboardLayout><ExploreNigeriaPage /></DashboardLayout>
+      </Route>
+      <Route path="/video">
+        <DashboardLayout><VideoPage /></DashboardLayout>
+      </Route>
+      <Route path="/insights">
+        <DashboardLayout><InsightsPage /></DashboardLayout>
+      </Route>
+      <Route path="/marketplace">
+        <DashboardLayout><MarketplacePage /></DashboardLayout>
       </Route>
       <Route path="/profile">
         <DashboardLayout><ProfilePage /></DashboardLayout>

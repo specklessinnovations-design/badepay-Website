@@ -9,28 +9,33 @@ import { PersonalBottomNav } from '@/components/dashboard/PersonalBottomNav';
 import { PersonalSidebar } from '@/components/dashboard/PersonalSidebar';
 import { AppShell } from '@/components/ui/app-shell';
 
-const MAIN_TABS = ['/dashboard', '/cards', '/activity', '/profile'];
+const MAIN_TABS = ['/dashboard', '/video', '/scan', '/profile/notifications', '/profile'];
 
 const SUB_PAGES: Record<string, string> = {
-  '/scan': 'Scan to pay',
   '/transfer': 'Transfer money',
   '/bills': 'Pay & top up',
   '/stores': 'Merchant Stores',
   '/history': 'History',
+  '/cards': 'My Cards',
+  '/activity': 'Activity',
+  '/add-money': 'Add money',
+  '/ai': 'AI Assistant',
+  '/explore-nigeria': 'Explore Nigeria',
+  '/insights': 'Insights',
+  '/marketplace': 'Marketplace',
   '/profile/edit': 'Edit profile',
   '/profile/security': 'Security center',
   '/profile/kyc': 'KYC verification',
   '/profile/devices': 'Trusted devices',
-  '/profile/notifications': 'Notifications',
   '/profile/support': 'Help & support',
   '/profile/statements': 'Statements',
   '/profile/change-pin': 'Change transaction PIN',
   '/profile/change-password': 'Change password',
-  '/set-pin': 'Transaction PIN',
   '/transaction/success': 'Transaction Successful',
   '/transaction/failed': 'Transaction Failed',
   '/transaction/detail': 'Transaction Details',
 };
+
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [pathname] = useLocation();
@@ -45,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     syncUserFromStorage();
   }, [ensureCurrentDevice, syncUserFromStorage]);
 
-  const showMainNav = MAIN_TABS.some(tab => pathname === tab || pathname.startsWith(`${tab}/`));
+  const showMainNav = MAIN_TABS.includes(pathname as any);
   const subPageTitle = SUB_PAGES[pathname];
 
   if (!user) {

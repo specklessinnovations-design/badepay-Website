@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+﻿import React, { useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowLeft, ShieldCheck, X, AlertTriangle, CheckCircle2, Store, UserCircle2, Lock, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -247,7 +247,7 @@ export default function ScanPayPage() {
                 {loading ? 'Reading QR code…' : 'Hold steady'}
               </div>
               <p className="mt-2 text-white/60 text-sm">
-                Point your camera at a Bade Pay personal or merchant QR code.
+                Point your camera at a BadePay personal or merchant QR code.
               </p>
             </div>
           </>

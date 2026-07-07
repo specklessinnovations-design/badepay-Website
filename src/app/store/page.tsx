@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart, Search, Plus, Minus, X, CheckCircle2, ArrowLeft,
@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useMerchantStoreData, type Product, type CartItem } from '@/store/useMerchantStoreData';
 import { useMerchantStore } from '@/store/useMerchantStore';
-import * as authService from '@/services/authService';
+import { merchantService } from '@/services/merchantService';
 import { formatNGN } from '@/utils/formatting';
 import toast from 'react-hot-toast';
 
@@ -42,22 +42,48 @@ interface CustomerStoreProps {
 }
 
 export default function CustomerStore({ slug }: CustomerStoreProps) {
-  const { stores, products, placeOrder } = useMerchantStoreData();
+  const [storeInfo, setStoreInfo] = useState<any>(null);
+  const [storeProducts, setStoreProducts] = useState<Product[]>([]);
+  const [loadingStore, setLoadingStore] = useState(true);
+  const { placeOrder } = useMerchantStoreData();
   const recordPayment = useMerchantStore(s => s.recordPayment);
 
-  // Find merchant by slug
-  const allUsers = authService.listUsers();
-  const merchant = allUsers.find(u =>
-    u.merchantProfile?.qrSlug === slug ||
-    u.merchantProfile?.tradingName?.toLowerCase().replace(/[^a-z0-9]/g, '') === slug
-  );
-  const merchantId = merchant?.id || slug;
+  useEffect(() => {
+    let cancelled = false;
+    const loadStoreData = async () => {
+      setLoadingStore(true);
+      try {
+        const [storeRes, productsRes] = await Promise.all([
+          merchantService.getPublicStore(slug),
+          merchantService.getPublicStoreProducts(slug),
+        ]);
 
-  const storeInfo = stores[merchantId];
-  const storeProducts = useMemo(() =>
-    (products[merchantId] || []).filter(p => p.isActive && p.stock > 0),
-    [products, merchantId]
-  );
+        if (cancelled) return;
+
+        let storeResult = null;
+        if (storeRes) {
+          if ('store' in storeRes) storeResult = storeRes.store;
+          else if ('data' in storeRes && 'store' in storeRes.data) storeResult = storeRes.data.store;
+          else storeResult = storeRes;
+        }
+        setStoreInfo(storeResult);
+
+        let productsList = [];
+        if (productsRes) {
+          if (Array.isArray(productsRes)) productsList = productsRes;
+          else if ('products' in productsRes) productsList = productsRes.products;
+          else if ('data' in productsRes && 'products' in productsRes.data) productsList = productsRes.data.products;
+        }
+        setStoreProducts(productsList.filter((p: any) => p.isActive && p.stock > 0));
+      } catch (err) {
+        console.error('Failed to load store:', err);
+      } finally {
+        if (!cancelled) setLoadingStore(false);
+      }
+    };
+    loadStoreData();
+    return () => { cancelled = true; };
+  }, [slug]);
 
   const isLive = storeInfo?.isPublished !== false;
 
@@ -119,8 +145,8 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
       paymentMethod,
     });
 
-    if (merchant?.id) {
-      recordPayment(merchant.id, customerName || 'Walk-in Customer', cartTotal);
+    if (storeInfo?.merchantId) {
+      recordPayment(storeInfo.merchantId, customerName || 'Walk-in Customer', cartTotal);
     }
 
     setCompletedOrder(order.reference);
@@ -128,9 +154,20 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
     setStep('success');
   };
 
-  const storeName = storeInfo?.name || merchant?.merchantProfile?.tradingName || 'Store';
-  const storeDesc = storeInfo?.description || merchant?.merchantProfile?.category || '';
+  const storeName = storeInfo?.name || 'Store';
+  const storeDesc = storeInfo?.description || '';
   const bannerUrl = storeInfo?.bannerUrl || '';
+
+  if (loadingStore) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6fe8d6] border-t-transparent" />
+          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Loading Store…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isLive && !storeInfo) {
     return (

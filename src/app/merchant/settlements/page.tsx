@@ -17,9 +17,9 @@ export default function SettlementsPage() {
 
   const settlements = useMemo(() =>
     storeSettlements.map((s) => ({
-      id: s.id, amount: s.amount, date: new Date(s.date),
+      id: s.id, amount: s.amount, date: new Date(s.createdAt),
       status: s.status as 'completed' | 'pending' | 'processing',
-      reference: s.reference, period: formatDate(s.date, 'short'),
+      reference: s.reference, period: formatDate(s.createdAt, 'short'),
     })), [storeSettlements]);
 
   const [selected, setSelected] = useState<typeof settlements[0] | null>(null);

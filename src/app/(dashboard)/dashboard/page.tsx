@@ -221,40 +221,40 @@ export default function DashboardHome() {
   return (
     <div className="space-y-0">
 
-      {/* ── Teal Header Banner ──────────────────────────────────────── */}
+      {/* ── Mint Header Banner ──────────────────────────────────────── */}
       <motion.div
         {...fadeUp(0)}
         className="rounded-b-[28px] overflow-hidden relative"
-        style={{ background: 'linear-gradient(135deg, #0b7367 0%, #0d8a7a 60%, #0a6860 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #6fe8d6 0%, #4dd4c0 100%)' }}
       >
         {/* Decorative circles */}
         <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #6fe8d6 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
+          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
         <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-[0.07]"
-          style={{ background: 'radial-gradient(circle, white 0%, transparent 70%)', transform: 'translate(-30%, 30%)' }} />
+          style={{ background: 'radial-gradient(circle, rgba(0,0,0,0.1) 0%, transparent 70%)', transform: 'translate(-30%, 30%)' }} />
 
         <div className="relative z-10 px-4 pt-5 pb-6">
           {/* Top row: greeting + actions */}
           <div className="flex items-center justify-between mb-5">
             <div>
-              <p className="text-xs font-semibold tracking-widest uppercase text-white/60">{getGreeting()}</p>
-              <h1 className="text-xl font-black text-white mt-0.5">{formatDisplayName(user.firstName)} 👋</h1>
+              <p className="text-xs font-semibold tracking-widest uppercase text-black/60">{getGreeting()}</p>
+              <h1 className="text-xl font-black text-black mt-0.5">{formatDisplayName(user.firstName)} 👋</h1>
             </div>
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsAiOpen(true)}
                 className="h-9 w-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)' }}
+                style={{ background: 'rgba(0,0,0,0.08)', border: '1.5px solid rgba(0,0,0,0.15)' }}
                 aria-label="Open AI assistant"
               >
-                <Sparkles size={16} className="text-white" />
+                <Sparkles size={16} className="text-black" />
               </button>
               <Link href="/profile/notifications"
                 className="relative h-9 w-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)' }}
+                style={{ background: 'rgba(0,0,0,0.08)', border: '1.5px solid rgba(0,0,0,0.15)' }}
               >
-                <Bell size={16} className="text-white" />
+                <Bell size={16} className="text-black" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
                     style={{ background: '#EF4444' }}>
@@ -267,21 +267,21 @@ export default function DashboardHome() {
 
           {/* Balance Card */}
           <div className="rounded-2xl p-4 mb-5"
-            style={{ background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(12px)' }}>
+            style={{ background: 'rgba(0,0,0,0.06)', border: '1.5px solid rgba(0,0,0,0.12)', backdropFilter: 'blur(12px)' }}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-white/70">Available Balance</span>
+              <span className="text-xs font-semibold text-black/70">Available Balance</span>
               <button
                 type="button"
                 onClick={() => setShowBalance(!showBalance)}
-                className="text-white/70 hover:text-white transition-colors"
+                className="text-black/70 hover:text-black transition-colors"
               >
                 {showBalance ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
-            <div className="text-3xl font-black text-white tracking-tight mb-1">
+            <div className="text-3xl font-black text-black tracking-tight mb-1">
               {showBalance ? `₦${displayBalance.toLocaleString()}` : '₦ ••••••'}
             </div>
-            <p className="text-xs text-white/50 font-medium">Account: {user.accountNumber || '••••••••••'}</p>
+            <p className="text-xs text-black/50 font-medium">Account: {user.accountNumber || '••••••••••'}</p>
           </div>
 
           {/* 4 Primary Action Tabs */}
@@ -296,10 +296,10 @@ export default function DashboardHome() {
                 className="flex flex-col items-center gap-2 transition-transform hover:scale-105 active:scale-95"
               >
                 <div className="h-14 w-14 rounded-2xl flex items-center justify-center"
-                  style={{ border: '1.5px solid rgba(255,255,255,0.65)', background: 'rgba(255,255,255,0.08)' }}>
-                  <Icon size={24} className="text-white" strokeWidth={2.2} />
+                  style={{ border: '1.5px solid rgba(0,0,0,0.2)', background: 'rgba(0,0,0,0.05)' }}>
+                  <Icon size={24} className="text-black" strokeWidth={2.2} />
                 </div>
-                <span className="text-[12px] font-bold text-white text-center leading-tight">{label}</span>
+                <span className="text-[12px] font-bold text-black text-center leading-tight">{label}</span>
               </Link>
             ))}
           </div>

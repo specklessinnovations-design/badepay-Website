@@ -46,7 +46,7 @@ export default function EditProfilePage() {
       <Field label="Last name" value={lastName} onChange={setLastName} />
       <Field label="Username" value={username} onChange={setUsername} prefix="@" />
       <Field label="Email" value={user.email} onChange={() => {}} disabled />
-      <Field label="Phone" value={user.phone} onChange={() => {}} disabled />
+      <Field label="Phone" value={user.phone || ''} onChange={() => {}} disabled />
       <button
         type="submit"
         disabled={isLoading}

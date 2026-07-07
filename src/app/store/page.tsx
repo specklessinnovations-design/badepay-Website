@@ -4,9 +4,9 @@ import {
   ShoppingCart, Search, Plus, Minus, X, CheckCircle2, ArrowLeft,
   Store, Package, Star, Wallet, Shield, ChevronRight, Loader2
 } from 'lucide-react';
-import { useMerchantStoreData, type Product, type CartItem } from '@/store/useMerchantStoreData';
+import { useMerchantStoreData, type CartItem } from '@/store/useMerchantStoreData';
 import { useMerchantStore } from '@/store/useMerchantStore';
-import { merchantService } from '@/services/merchantService';
+import { merchantService, type Product } from '@/services/merchantService';
 import { formatNGN } from '@/utils/formatting';
 import toast from 'react-hot-toast';
 
@@ -45,7 +45,6 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
   const [storeInfo, setStoreInfo] = useState<any>(null);
   const [storeProducts, setStoreProducts] = useState<Product[]>([]);
   const [loadingStore, setLoadingStore] = useState(true);
-  const { placeOrder } = useMerchantStoreData();
   const recordPayment = useMerchantStore(s => s.recordPayment);
 
   useEffect(() => {
@@ -68,7 +67,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
         }
         setStoreInfo(storeResult);
 
-        let productsList = [];
+        let productsList: any[] = [];
         if (productsRes) {
           if (Array.isArray(productsRes)) productsList = productsRes;
           else if ('products' in productsRes) productsList = productsRes.products;
@@ -131,27 +130,30 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
   const handlePay = async () => {
     if (pin !== '1234' && pin.length < 4) { toast.error('Enter your 4-digit PIN'); return; }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1800));
+    try {
+      const orderData = await merchantService.placeStoreOrder(slug, {
+        customerName: customerName || 'Walk-in Customer',
+        customerPhone,
+        deliveryAddress: deliveryAddress.trim(),
+        items: cart.map(i => ({ productId: i.product.id, quantity: i.quantity, price: i.product.price })),
+        totalAmount: cartTotal,
+        paymentMethod,
+        pin,
+      });
 
-    const order = placeOrder({
-      merchantSlug: slug,
-      customerName: customerName || 'Walk-in Customer',
-      customerPhone,
-      deliveryAddress: deliveryAddress.trim(),
-      items: cart,
-      totalAmount: cartTotal,
-      status: 'confirmed',
-      paymentStatus: 'paid',
-      paymentMethod,
-    });
+      const reference = orderData?.reference || orderData?.order?.reference || `REF-${Date.now()}`;
 
-    if (storeInfo?.merchantId) {
-      recordPayment(storeInfo.merchantId, customerName || 'Walk-in Customer', cartTotal);
+      if (storeInfo?.merchantId) {
+        recordPayment(storeInfo.merchantId, customerName || 'Walk-in Customer', cartTotal);
+      }
+
+      setCompletedOrder(reference);
+      setLoading(false);
+      setStep('success');
+    } catch (err: any) {
+      toast.error(err?.message || 'Payment failed. Please try again.');
+      setLoading(false);
     }
-
-    setCompletedOrder(order.reference);
-    setLoading(false);
-    setStep('success');
   };
 
   const storeName = storeInfo?.name || 'Store';

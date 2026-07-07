@@ -39,11 +39,14 @@ import ProfileSupportPage from "@/app/(dashboard)/profile/support/page";
 import ProfileStatementsPage from "@/app/(dashboard)/profile/statements/page";
 import ChangePinPage from "@/app/(dashboard)/profile/change-pin/page";
 import ChangePasswordPage from "@/app/(dashboard)/profile/change-password/page";
+import ProfileMyQrPage from "@/app/(dashboard)/profile/my-qr/page";
 import AIAssistantPage from "@/app/(dashboard)/ai/page";
 import ExploreNigeriaPage from "@/app/(dashboard)/explore-nigeria/page";
 import VideoPage from "@/app/(dashboard)/video/page";
 import InsightsPage from "@/app/(dashboard)/insights/page";
 import MarketplacePage from "@/app/(dashboard)/marketplace/page";
+import SavingsPage from "@/app/(dashboard)/savings/page";
+import NewsPage from "@/app/(dashboard)/news/page";
 import DashboardLayout from "@/app/(dashboard)/layout";
 
 import AdminLoginPage from "@/app/admin/login/page";
@@ -162,6 +165,9 @@ function Router() {
       <Route path="/profile/change-password">
         <DashboardLayout><ChangePasswordPage /></DashboardLayout>
       </Route>
+      <Route path="/profile/my-qr">
+        <DashboardLayout><ProfileMyQrPage /></DashboardLayout>
+      </Route>
       <Route path="/ai">
         <DashboardLayout><AIAssistantPage /></DashboardLayout>
       </Route>
@@ -176,6 +182,12 @@ function Router() {
       </Route>
       <Route path="/marketplace">
         <DashboardLayout><MarketplacePage /></DashboardLayout>
+      </Route>
+      <Route path="/savings">
+        <DashboardLayout><SavingsPage /></DashboardLayout>
+      </Route>
+      <Route path="/news">
+        <DashboardLayout><NewsPage /></DashboardLayout>
       </Route>
       <Route path="/profile">
         <DashboardLayout><ProfilePage /></DashboardLayout>

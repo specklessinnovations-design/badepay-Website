@@ -36,14 +36,16 @@ function AddMoneyModal({ onClose }: { onClose: () => void }) {
       return;
     }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    const ok = deposit(value);
+    const result = await deposit(value);
     setLoading(false);
-    if (ok) {
+    if (result.authorizationUrl) {
+      // Redirect to payment gateway
+      window.location.href = result.authorizationUrl;
+    } else if (result.success) {
       toast.success(`${formatNGN(value)} added to your wallet`);
       onClose();
     } else {
-      toast.error('Could not add money');
+      toast.error(result.error || 'Could not add money');
     }
   };
 
@@ -113,14 +115,13 @@ function TransferModal({ onClose }: { onClose: () => void }) {
       return;
     }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    const ok = transferToBank(bankName.trim(), accountNumber.trim(), accountName.trim(), value);
+    const result = await transferToBank(bankName.trim(), accountNumber.trim(), '', value, '', undefined);
     setLoading(false);
-    if (ok) {
+    if (result.success) {
       toast.success(`Transferred ${formatNGN(value)} to ${accountName}`);
       onClose();
     } else {
-      toast.error('Transfer failed');
+      toast.error(result.error || 'Transfer failed');
     }
   };
 

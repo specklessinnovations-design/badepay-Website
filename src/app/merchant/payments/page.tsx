@@ -23,7 +23,7 @@ export default function PaymentsPage() {
   const storePayments = useMerchantStore((s) => s.payments);
   const payments = useMemo(() =>
     storePayments.map((p) => ({
-      id: p.id, customer: p.customerName, amount: p.amount, date: new Date(p.date),
+      id: p.id, customer: p.customerName, amount: p.amount, date: new Date(p.createdAt),
       status: (p.status === 'success' ? 'completed' : p.status) as 'completed' | 'pending' | 'failed',
       reference: p.reference, method: 'qr' as Method,
     })), [storePayments]);

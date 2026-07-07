@@ -23,6 +23,8 @@ const SUB_PAGES: Record<string, string> = {
   '/explore-nigeria': 'Explore Nigeria',
   '/insights': 'Insights',
   '/marketplace': 'Marketplace',
+  '/savings': 'Savings',
+  '/news': 'News & Explore',
   '/profile/edit': 'Edit profile',
   '/profile/security': 'Security center',
   '/profile/kyc': 'KYC verification',
@@ -34,6 +36,8 @@ const SUB_PAGES: Record<string, string> = {
   '/transaction/success': 'Transaction Successful',
   '/transaction/failed': 'Transaction Failed',
   '/transaction/detail': 'Transaction Details',
+  '/profile/my-qr': 'My QR Code',
+  '/profile/notifications': 'Notifications',
 };
 
 

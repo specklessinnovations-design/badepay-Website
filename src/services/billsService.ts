@@ -57,8 +57,21 @@ export const billsService = {
    * Purchase cable TV.
    * Backend: POST /bills/cable
    */
+  /**
+   * Purchase cable TV.
+   * Backend: POST /bills/cable
+   */
   payCable: async (payload: any): Promise<BillPurchaseResponse> => {
     const resp = await apiClient.post('/bills/cable', payload);
+    return resp?.data?.data ?? resp?.data;
+  },
+
+  /**
+   * Pay a generic bill (e.g. betting, transport, healthcare, tax, etc.)
+   * Backend: POST /bills/:category
+   */
+  payGenericBill: async (category: string, payload: any): Promise<any> => {
+    const resp = await apiClient.post(`/bills/${category}`, payload);
     return resp?.data?.data ?? resp?.data;
   },
 };

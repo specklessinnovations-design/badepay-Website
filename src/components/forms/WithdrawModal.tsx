@@ -49,14 +49,14 @@ export function WithdrawModal({ isOpen, onClose }: { isOpen: boolean, onClose: (
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsLoading(false);
 
-    const success = withdraw(numAmount, bankId);
-    if (success) {
+    const result = await withdraw(numAmount, bankId, pin);
+    if (result.success) {
       showSuccess(`Successfully withdrew ₦${numAmount.toLocaleString()}`);
       setAmount('');
       setPin('');
       onClose();
     } else {
-      showError('Withdrawal failed. Please try again.');
+      showError(result.error || 'Withdrawal failed. Please try again.');
     }
   };
 

@@ -4,7 +4,8 @@ import {
   ShoppingBag, Search, CheckCircle2, Clock, XCircle, ChevronDown, ChevronUp,
   Package, CreditCard, Banknote, X, Check, AlertCircle, Filter, TrendingUp
 } from 'lucide-react';
-import { useMerchantStoreData, type Order } from '@/store/useMerchantStoreData';
+import { useMerchantStoreData } from '@/store/useMerchantStoreData';
+import { type Order } from '@/services/merchantService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatNGN, formatDate, formatTimeAgo } from '@/utils/formatting';
 import toast from 'react-hot-toast';
@@ -163,7 +164,7 @@ function OrderCard({ order, onConfirm, onComplete, onCancel }: {
 
 export default function MerchantOrdersPage() {
   const user = useAuthStore(s => s.user);
-  const { orders, updateOrderStatus, markOrderPaid } = useMerchantStoreData();
+  const { orders, updateOrderStatus } = useMerchantStoreData();
   const merchantSlug = user?.merchantProfile?.qrSlug || user?.id || '';
 
   const myOrders = orders.filter(o => o.merchantSlug === merchantSlug);
@@ -188,8 +189,7 @@ export default function MerchantOrdersPage() {
 
   const handleConfirm = (id: string) => {
     updateOrderStatus(id, 'confirmed');
-    markOrderPaid(id);
-    toast.success('Order confirmed & marked paid!');
+    toast.success('Order confirmed!');
   };
   const handleComplete = (id: string) => {
     updateOrderStatus(id, 'completed');

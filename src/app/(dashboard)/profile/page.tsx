@@ -4,13 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight, Shield, KeyRound,
   FileCheck, FileText, Store, Bell, Moon, HelpCircle, LogOut,
-  Camera, Sun,
+  Camera, Sun, Wallet, Eye, EyeOff, Copy, Check, Plus, Send, PiggyBank, ShieldCheck, QrCode
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCardStore } from '@/store/useCardStore';
 import { ThemeContext } from '@/contexts/ThemeContext';
 import { bpToast } from '@/lib/bpToast';
 import apiClient from '@/lib/apiClient';
+import walletService from '@/services/walletService';
 
 export default function ProfilePage() {
   const [, navigate] = useLocation();
@@ -22,9 +23,19 @@ export default function ProfilePage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [balance, setBalance] = useState(user?.balance || 0);
+  const [balanceHidden, setBalanceHidden] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     syncUserFromStorage();
+    const loadBalance = async () => {
+      try {
+        const balanceData = await walletService.getBalance();
+        setBalance(balanceData.balance);
+      } catch {}
+    };
+    loadBalance();
   }, [syncUserFromStorage]);
 
   if (!user) return null;
@@ -123,20 +134,20 @@ export default function ProfilePage() {
 
       {/* ── Cover + Avatar hero ── */}
       <div className="relative -mx-4 lg:-mx-0 lg:rounded-3xl overflow-hidden mb-16"
-        style={{ height: 140, background: 'linear-gradient(135deg, #0d2b2b 0%, #0a3d35 40%, #062e27 100%)' }}>
+        style={{ height: 140, background: 'linear-gradient(135deg, #6fe8d6 0%, #4dd4c0 100%)' }}>
         {/* Mesh orbs */}
         <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full opacity-30"
-          style={{ background: 'radial-gradient(circle, rgba(111,232,214,0.5) 0%, transparent 65%)' }} />
+          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 65%)' }} />
         <div className="pointer-events-none absolute left-1/4 bottom-0 h-32 w-32 rounded-full opacity-15"
-          style={{ background: 'radial-gradient(circle, rgba(111,232,214,0.4) 0%, transparent 65%)' }} />
+          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 65%)' }} />
         {/* Grid dots */}
         <div className="pointer-events-none absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+          style={{ backgroundImage: 'radial-gradient(rgba(0,0,0,0.1) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
 
         {/* Edit profile link — top right */}
         <Link href="/profile/edit"
-          className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white/80 transition-all hover:text-white"
-          style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
+          className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-black/80 transition-all hover:text-black"
+          style={{ background: 'rgba(0,0,0,0.1)', border: '1px solid rgba(0,0,0,0.15)' }}>
           Edit profile
         </Link>
       </div>
@@ -176,12 +187,78 @@ export default function ProfilePage() {
 
         {/* Name block */}
         <div className="text-center lg:text-left pb-1">
-          <h1 className="text-xl font-black text-white leading-tight">{displayName}</h1>
-          <p className="text-sm text-white/70">{user.email || 'no-email@badepay.app'}</p>
+          <h1 className="text-xl font-black text-[var(--text-primary)] leading-tight">{displayName}</h1>
+          <p className="text-sm text-[var(--text-secondary)]">{user.email || 'no-email@badepay.app'}</p>
           <div className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
             style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)' }}>
             <div className="h-1.5 w-1.5 rounded-full bg-[#10B981]" style={{ boxShadow: '0 0 6px rgba(16,185,129,0.8)' }} />
             <span className="text-xs font-bold text-[#10B981]">KYC Tier {kycTier}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Balance card ── */}
+      <div className="mb-6">
+        <div className="rounded-3xl overflow-hidden relative"
+          style={{
+            background: 'linear-gradient(135deg, #0b7367 0%, #085f55 100%)',
+            boxShadow: '0 12px 40px -10px rgba(11,115,103,0.3)',
+          }}>
+          <div className="absolute -right-8 -top-8 h-36 w-36 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+          <div className="relative p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-white/70 font-bold">
+                <Wallet size={14} className="text-white/80" /> Available balance
+              </div>
+              <button
+                onClick={() => setBalanceHidden(!balanceHidden)}
+                className="h-7 w-7 rounded-full flex items-center justify-center text-white/80 hover:text-white"
+                style={{ background: 'rgba(255,255,255,0.1)' }}
+              >
+                {balanceHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+            <div className="flex items-baseline gap-1.5 mt-2 text-white">
+              <span className="text-sm font-bold text-white/70">₦</span>
+              <span className="font-black text-3xl tracking-tight leading-none">
+                {balanceHidden ? '••••••' : balance.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            {user?.accountNumber && (
+              <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
+                <div>
+                  <div className="text-[9px] uppercase tracking-[0.18em] text-white/60 font-bold">Account number</div>
+                  <div className="font-mono text-xs font-semibold tracking-wider mt-0.5 text-white">
+                    {user.accountNumber.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3')}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(user.accountNumber || '');
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="h-7 px-2.5 rounded-xl text-[10px] font-bold flex items-center gap-1.5 text-white"
+                  style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)' }}
+                >
+                  {copied ? (<><Check size={11} className="text-[#10B981]" /><span className="text-[#10B981]">Copied</span></>) : (<><Copy size={11} />Copy</>)}
+                </button>
+              </div>
+            )}
+            <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-3 gap-2">
+              <Link href="/add-money" className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02]"
+                style={{ background: '#6fe8d6', color: '#121212' }}>
+                <Plus size={14} strokeWidth={2.8} /> Add
+              </Link>
+              <Link href="/transfer" className="h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02] text-white"
+                style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                <Send size={12} className="text-[#6fe8d6]" /> Transfer
+              </Link>
+              <Link href="/cards" className="h-10 rounded-xl text-xs font-bold flex items-center justify-center transition-all hover:scale-[1.02] text-white"
+                style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)' }}>
+                Cards
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -201,10 +278,18 @@ export default function ProfilePage() {
         ))}
       </div>
 
+      {/* ── Wallet ── */}
+      <SectionLabel>Wallet</SectionLabel>
+      <div className="mb-6 rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+        <NavRow href="/savings" icon={PiggyBank} label="Savings" sub="Vaults, goals & auto-save" />
+        <NavRow href="/profile/my-qr" icon={QrCode} label="My QR Code" sub="Receive payments via QR" />
+      </div>
+
       {/* ── Security ── */}
       <SectionLabel>Security</SectionLabel>
       <div className="mb-6 rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
         <NavRow href="/profile/security" icon={Shield} label="Security center" sub="Devices & login history" />
+        <NavRow href="/profile/change-pin" icon={ShieldCheck} label="Transaction PIN" sub="4-digit secure PIN" />
         <NavRow href="/profile/change-password" icon={KeyRound} label="Change password"
           sub="Update your login password" />
       </div>

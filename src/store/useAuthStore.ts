@@ -86,6 +86,7 @@ export interface RegisterData {
   lastName: string;
   password: string;
   userType: UserType;
+  location?: string;
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
@@ -145,6 +146,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             phone: data.phone,
             password: data.password,
             userType: data.userType,
+            location: data.location,
           });
 
           set({

@@ -131,6 +131,7 @@ export const authService = {
     businessType?: string;
     category?: string;
     address?: string;
+    location?: string;
   }): Promise<AuthResponse & { pinId?: string }> => {
     const resp = await apiClient.post('/auth/register', {
       ...data,

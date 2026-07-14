@@ -69,8 +69,9 @@ export default function AdminLoginPage() {
               icon={<Mail size={20} />}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="super@badepay.app"
               required
+              className="border-4 border-black"
+              style={{ color: 'black', fontWeight: 'bold' }}
             />
             <Input
               label="Password"
@@ -78,8 +79,9 @@ export default function AdminLoginPage() {
               icon={<Lock size={20} />}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
               required
+              className="border-4 border-black"
+              style={{ color: 'black', fontWeight: 'bold' }}
             />
 
             <Button type="submit" fullWidth size="lg" isLoading={isLoading} className="mt-4 bg-[#6fe8d6] text-[#1a1a1a]">

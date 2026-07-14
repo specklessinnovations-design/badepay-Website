@@ -194,8 +194,15 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
 
           {/* Settings */}
           <Link href="/admin/settings">
-            <button className="rounded-xl p-2 transition-colors hover:bg-white/5" style={{ color: 'var(--ad-muted)' }}>
-              <Settings size={20} strokeWidth={2.5} />
+            <button
+              className="flex h-10 w-10 items-center justify-center rounded-xl border transition-all hover:-translate-y-px"
+              style={{
+                color: 'var(--ad-fg)',
+                background: 'var(--ad-card)',
+                borderColor: 'var(--ad-border)',
+              }}
+            >
+              <Settings size={18} strokeWidth={2} />
             </button>
           </Link>
 
@@ -203,16 +210,24 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           <div className="relative">
             <button
               onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-              className="flex items-center gap-2 rounded-xl p-1.5 transition-colors hover:bg-white/5"
+              className="ml-1 flex h-10 items-center gap-2 rounded-xl border py-1 pl-1 pr-2.5 transition-all hover:-translate-y-px"
+              style={{
+                background: 'var(--ad-card)',
+                borderColor: 'var(--ad-border)',
+              }}
             >
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-xl text-xs font-black"
-                style={{ background: 'rgba(111,232,214,0.15)', color: '#6fe8d6' }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black"
+                style={{ background: 'var(--ad-accent-soft)', color: 'var(--ad-accent)', boxShadow: 'inset 0 0 0 1px var(--ad-accent-ring)' }}
               >
                 {admin?.name?.charAt(0) || 'A'}
               </div>
+              <span className="hidden text-[12px] font-bold md:block" style={{ color: 'var(--ad-fg-strong)' }}>
+                {admin?.name?.split(' ')[0] || 'Admin'}
+              </span>
               <ChevronDown size={14} className="hidden md:block" style={{ color: 'var(--ad-muted)' }} />
             </button>
+
 
             {showProfileDropdown && (
               <div

@@ -37,76 +37,101 @@ export function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
 
   return (
     <header
-      className="sticky top-0 z-30 flex h-16 items-center justify-between px-4 md:px-8 backdrop-blur-xl"
+      className="sticky top-0 z-30 flex h-[68px] items-center justify-between gap-4 px-4 md:px-8 backdrop-blur-xl"
       style={{
-        background: 'var(--ad-card)',
+        background: 'color-mix(in oklab, var(--ad-card) 88%, transparent)',
         borderBottom: '1px solid var(--ad-border)',
-        boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 24px rgba(0,0,0,0.5)',
+        boxShadow: '0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -20px rgba(15,23,42,0.15)',
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <button
           onClick={onMenuClick}
-          className="cursor-pointer rounded-xl p-2 transition-colors active:scale-95 md:hidden"
-          style={{ color: '#6fe8d6' }}
+          className="cursor-pointer rounded-xl border p-2 transition-all active:scale-95 md:hidden"
+          style={{
+            color: 'var(--ad-accent)',
+            background: 'var(--ad-accent-soft)',
+            borderColor: 'var(--ad-accent-ring)',
+          }}
         >
-          <Menu size={22} strokeWidth={2.5} />
+          <Menu size={20} strokeWidth={2.25} />
         </button>
-        <div className="flex items-center gap-2">
-          <div
-            className="hidden h-1.5 w-1.5 rounded-full md:block"
-            style={{ background: '#6fe8d6', boxShadow: '0 0 6px rgba(111,232,214,0.8)' }}
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className="hidden h-8 w-[3px] rounded-full md:block"
+            style={{ background: 'var(--ad-accent)', boxShadow: '0 0 12px var(--ad-accent-ring)' }}
           />
-          <h1 className="text-lg font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
-            {title}
-          </h1>
+          <div className="flex min-w-0 flex-col leading-tight">
+            <span
+              className="hidden text-[10px] font-bold uppercase tracking-[0.14em] md:block"
+              style={{ color: 'var(--ad-muted-soft)' }}
+            >
+              Admin Console
+            </span>
+            <h1
+              className="truncate text-[17px] font-black tracking-tight"
+              style={{ color: 'var(--ad-fg-strong)' }}
+            >
+              {title}
+            </h1>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 md:gap-6">
-        <div
-          className="hidden w-64 items-center rounded-xl px-3.5 py-2.5 transition-all md:flex"
+      <div className="flex items-center gap-2 md:gap-3">
+        <label
+          className="group hidden h-10 items-center rounded-xl px-3 transition-all focus-within:shadow-[0_0_0_3px_var(--ad-accent-ring)] md:flex md:w-72 lg:w-80"
           style={{
             background: 'var(--ad-bg-elev)',
             border: '1px solid var(--ad-border)',
           }}
         >
-          <Search size={15} style={{ color: 'var(--ad-muted)' }} />
+          <Search size={16} strokeWidth={2.25} style={{ color: 'var(--ad-muted)' }} />
           <input
             type="text"
-            placeholder="Search (Cmd+K)"
-            className="ml-2 w-full border-none bg-transparent text-sm font-bold outline-none"
+            placeholder="Search users, transactions…"
+            className="ml-2 w-full border-none bg-transparent text-[13px] font-medium outline-none placeholder:font-normal"
             style={{ color: 'var(--ad-fg-strong)' }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                // Trigger search on current page - this would need to be implemented per page
-                e.currentTarget.blur();
-              }
+              if (e.key === 'Enter') e.currentTarget.blur();
             }}
           />
-        </div>
+          <kbd
+            className="ml-2 hidden items-center gap-0.5 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold lg:inline-flex"
+            style={{
+              borderColor: 'var(--ad-border-strong)',
+              color: 'var(--ad-muted)',
+              background: 'var(--ad-card)',
+            }}
+          >
+            ⌘K
+          </kbd>
+        </label>
 
-        <div
-          className="flex items-center gap-3 pl-4 md:gap-4 md:pl-6"
-          style={{ borderLeft: '1px solid var(--ad-border)' }}
-        >
+        <div className="flex items-center gap-1.5">
           {/* Notifications */}
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative rounded-xl p-2 transition-colors hover:bg-white/5"
-              style={{ color: 'var(--ad-muted)' }}
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border transition-all hover:-translate-y-px"
+              style={{
+                color: 'var(--ad-fg)',
+                background: 'var(--ad-card)',
+                borderColor: 'var(--ad-border)',
+              }}
             >
-              <Bell size={20} strokeWidth={2.5} />
+              <Bell size={18} strokeWidth={2} />
               {totalNotifications > 0 && (
                 <span
-                  className="absolute right-1 top-1 flex h-2.5 w-2.5 items-center justify-center rounded-full border-2 text-[9px] font-black"
-                  style={{ background: '#f87171', borderColor: 'var(--ad-card)', color: 'white' }}
+                  className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 px-1 text-[10px] font-black leading-none"
+                  style={{ background: 'var(--ad-danger)', borderColor: 'var(--ad-card)', color: 'white' }}
                 >
                   {totalNotifications > 9 ? '9+' : totalNotifications}
                 </span>
               )}
             </button>
+            
+
             
             {showNotifications && (
               <div

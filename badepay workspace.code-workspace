@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Bade-Pay-app"
+		},
+		{
+			"path": "../Badepay-Backend"
+		}
+	],
+	"settings": {}
+}

@@ -28,9 +28,8 @@ All critical issues have been identified and resolved. The application is produc
 - **Settings**:
   ```
   VITE_API_URL=http://localhost:3000/api/v1
-  VITE_PRODUCTION_API_URL=https://badepay-backend.vercel.app/api/v1
   ```
-- **API Client**: Properly prioritizes `VITE_PRODUCTION_API_URL` in production mode
+- **API Client**: Uses `VITE_API_URL`, falling back to `https://badepay-backend.vercel.app/api/v1` when unset
 
 #### Mobile App (`/Users/mac/Desktop/Bade-Pay-app`)
 - **File**: `.env`
@@ -333,7 +332,7 @@ The BadePay project is **PRODUCTION READY**. All critical issues have been ident
    - Seed admin account (admin@badepay.com / BadePay@Admin2026!)
 
 2. **Website**:
-   - Set `VITE_PRODUCTION_API_URL` to production backend URL
+   - Set `VITE_API_URL` to production backend URL (or leave unset to use the default production backend)
    - Build and deploy to Vercel/Netlify
    - Configure custom domain
 

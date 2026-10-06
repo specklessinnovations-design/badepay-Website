@@ -3,11 +3,8 @@
  * Uses the admin JWT (stored separately) for all admin API calls.
  */
 
-const isProduction = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'production';
-
-const BASE_URL: string =
-  (typeof import.meta !== 'undefined' && (isProduction ? (import.meta as any).env?.VITE_PRODUCTION_API_URL : (import.meta as any).env?.VITE_API_URL)) ||
-  (isProduction ? 'https://badepay-backend.vercel.app/api/v1' : 'http://localhost:3000/api/v1');
+// Backend base URL is set via VITE_API_URL in .env; falls back to the production backend when unset.
+const BASE_URL: string = import.meta.env.VITE_API_URL || 'https://badepay-backend.vercel.app/api/v1';
 
 const ADMIN_TOKEN_KEY = "badepay_admin_token";
 

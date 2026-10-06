@@ -1871,9 +1871,10 @@ BACKEND_BASE_URL=https://your-backend-url.com
 
 **Environment Variables:**
 ```env
+# Local: http://localhost:3000/api/v1 — Production: https://your-backend-url.com/api/v1
 VITE_API_URL=http://localhost:3000/api/v1
-VITE_PRODUCTION_API_URL=https://your-backend-url.com/api/v1
 ```
+If `VITE_API_URL` is not set, the app falls back to the production backend.
 
 **Deployment Steps:**
 1. Clone repository

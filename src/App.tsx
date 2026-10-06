@@ -74,12 +74,29 @@ import MerchantOrdersPage from "@/app/merchant/orders/page";
 import MerchantLayout from "@/app/merchant/layout";
 import CustomerStore from "@/app/store/page";
 
+import LegalPage from "@/app/legal/page";
+import PrivacyPolicyPage from "@/app/privacy/page";
+import TermsPage from "@/app/terms/page";
+import CookiePolicyPage from "@/app/cookies/page";
+import AmlKycPolicyPage from "@/app/aml-kyc/page";
+import RefundPolicyPage from "@/app/refunds/page";
+import ContactPage from "@/app/contact/page";
+
 const queryClient = new QueryClient();
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
+
+      {/* Public legal & contact pages */}
+      <Route path="/legal" component={LegalPage} />
+      <Route path="/privacy" component={PrivacyPolicyPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/cookies" component={CookiePolicyPage} />
+      <Route path="/aml-kyc" component={AmlKycPolicyPage} />
+      <Route path="/refunds" component={RefundPolicyPage} />
+      <Route path="/contact" component={ContactPage} />
 
       {/* Auth routes */}
       <Route path="/login">

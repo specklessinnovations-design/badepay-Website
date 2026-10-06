@@ -155,8 +155,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           className="relative z-10 flex-shrink-0 px-8 xl:px-12 pb-5 flex items-center justify-between">
           <p className="text-[11px] text-[#404040]">© 2026 BadePay Inc.</p>
           <div className="flex gap-4">
-            {['Privacy','Terms','Security'].map(l => (
-              <a key={l} href="#" className="text-[11px] text-[#404040] hover:text-[#6fe8d6] transition-colors">{l}</a>
+            {[['Privacy','/privacy'],['Terms','/terms'],['Legal','/legal'],['Contact','/contact']].map(([l, href]) => (
+              <Link key={l} href={href} className="text-[11px] text-[#404040] hover:text-[#6fe8d6] transition-colors">{l}</Link>
             ))}
           </div>
         </motion.div>

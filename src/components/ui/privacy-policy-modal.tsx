@@ -27,7 +27,7 @@ const SECTIONS = [
   {
     icon: UserCheck,
     title: 'Your Rights',
-    content: 'You have the right to access, correct, or delete your personal data at any time. You may also withdraw consent or request a copy of your data by contacting support@badepay.com.',
+    content: 'You have the right to access, correct, or delete your personal data at any time. You may also withdraw consent or request a copy of your data by contacting hello@badepay.com.',
   },
   {
     icon: AlertTriangle,
@@ -278,7 +278,8 @@ export function PrivacyPolicyModal({ open, onAccept, onDecline }: PrivacyPolicyM
                     }}>
                       <p style={{ margin: '0 0 8px' }}>
                         Your personal data will be processed and information from your device may be stored, accessed, and shared with our licensed partners to deliver BadePay services.{' '}
-                        <span style={{ color: '#6fe8d6', cursor: 'pointer' }} onClick={() => setShowDetails(true)}>Full policy</span>.
+                        Read our full <a href="/privacy" target="_blank" rel="noreferrer" style={{ color: '#6fe8d6' }}>Privacy Policy</a>{' '}
+                        and <a href="/terms" target="_blank" rel="noreferrer" style={{ color: '#6fe8d6' }}>Terms &amp; Conditions</a>.
                       </p>
                       <p style={{ margin: 0 }}>
                         We comply with the <strong style={{ color: 'rgba(255,255,255,0.45)' }}>Nigeria Data Protection Regulation (NDPR) 2019</strong> and CBN Consumer Protection Framework.

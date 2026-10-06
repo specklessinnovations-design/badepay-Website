@@ -494,7 +494,7 @@ export default function LandingPage() {
         .merchant-grid { display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; flex:1; padding: 80px 48px; max-width:1200px; margin:0 auto; width:100%; }
         .cta-grid { display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; flex:1; padding: 80px 48px; max-width:1200px; margin:0 auto; width:100%; }
 
-        .scroll-arrows { position:fixed; bottom:28px; right:28px; display:flex; flex-direction:column; gap:10px; z-index:1000; }
+        .scroll-arrows { position:fixed; bottom:38px; right:28px; display:flex; flex-direction:column; gap:10px; z-index:1000; }
 
         @media (max-width: 768px) {
           .scroll-arrows { display:none !important; }
@@ -1188,11 +1188,12 @@ export default function LandingPage() {
               <div style={{ display: "flex", alignItems: "center" }}>
                 <img src="/favicon.png" alt="BadePay" style={{ height: 30, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
               </div>
-              <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 10, fontWeight: 300 }}>© 2026 BadePay Inc. Nigeria's QR Payment Leader.</p>
+              <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 10, fontWeight: 300 }}>© 2026 BadePay. Nigeria's QR Payment Leader.</p>
               <div className="cta-footer-links" style={{ display: "flex", gap: 20 }}>
-                <a href="mailto:support@badepay.ng" className="nav-a" style={{ fontSize: 11 }}>Contact</a>
-                <a href="mailto:support@badepay.ng" className="nav-a" style={{ fontSize: 11 }}>Support</a>
-                <a href="#" className="nav-a" style={{ fontSize: 11 }}>Legal</a>
+                <Link href="/contact" className="nav-a" style={{ fontSize: 11 }}>Contact</Link>
+                <Link href="/privacy" className="nav-a" style={{ fontSize: 11 }}>Privacy</Link>
+                <Link href="/terms" className="nav-a" style={{ fontSize: 11 }}>Terms</Link>
+                <Link href="/legal" className="nav-a" style={{ fontSize: 11 }}>Legal</Link>
               </div>
             </div>
           </SectionReveal>

@@ -484,6 +484,7 @@ export default function LandingPage() {
           justify-content: center;
           flex-shrink: 0;
         }
+          
         .hiw-grid { display:grid; grid-template-columns:1fr auto 1fr; gap:24px; align-items:center; flex:1; }
         .hiw-step { display:flex; gap:14px; margin-bottom:14px; }
         .hiw-step-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:14px 16px; flex:1; }

@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SplashScreen } from "@/components/ui/splash-screen";
 import { CookieConsentBanner } from "@/components/ui/cookie-consent-banner";
 import AuthBootstrap from "@/components/auth/AuthBootstrap";
+import { SeoManager } from "@/components/seo/SeoManager";
 
 // Pages
 import LandingPage from "@/app/page";
@@ -305,6 +306,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <WouterRouter base={import.meta.env.BASE_URL?.replace(/\/$/, "") || ""}>
+          <SeoManager />
           <AuthBootstrap />
           <SplashScreen />
           <Router />

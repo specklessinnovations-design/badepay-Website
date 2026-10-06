@@ -1,0 +1,13 @@
+{
+  "name": "BadePay",
+  "short_name": "BadePay",
+  "description": "Fast, secure QR payments in Nigeria.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e0e0e",
+  "theme_color": "#0e0e0e",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/favicon.png", "sizes": "487x512", "type": "image/png", "purpose": "any" }
+  ]
+}

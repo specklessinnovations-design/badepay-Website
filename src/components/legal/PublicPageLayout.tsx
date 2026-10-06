@@ -28,7 +28,6 @@ export function PublicPageLayout({ children, title }: PublicPageLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    document.title = `${title} | BadePay`;
     window.scrollTo(0, 0);
     setMenuOpen(false);
   }, [title, location]);

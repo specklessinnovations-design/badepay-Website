@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /merchant
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /transaction
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-otp
+Disallow: /set-pin
+
+Sitemap: https://www.badepay.com/sitemap.xml

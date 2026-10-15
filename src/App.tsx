@@ -1,4 +1,5 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
+import { ADMIN_BASE } from "@/lib/adminPaths";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
@@ -7,6 +8,13 @@ import { SplashScreen } from "@/components/ui/splash-screen";
 import { CookieConsentBanner } from "@/components/ui/cookie-consent-banner";
 import AuthBootstrap from "@/components/auth/AuthBootstrap";
 import { SeoManager } from "@/components/seo/SeoManager";
+
+const AdminApp = lazy(() => import("@/app/admin/AdminApp"));
+const AdminPortal = () => (
+  <Suspense fallback={<div className="admin-shell h-dvh" />}>
+    <AdminApp />
+  </Suspense>
+);
 
 // Pages
 import LandingPage from "@/app/page";
@@ -50,20 +58,6 @@ import SavingsPage from "@/app/(dashboard)/savings/page";
 import NewsPage from "@/app/(dashboard)/news/page";
 import DashboardLayout from "@/app/(dashboard)/layout";
 
-import AdminLoginPage from "@/app/admin/login/page";
-import AdminDashboardPage from "@/app/admin/dashboard/page";
-import AdminUsersPage from "@/app/admin/users/page";
-import AdminUserDetailPage from "@/app/admin/users/[id]/page";
-import AdminMerchantsPage from "@/app/admin/merchants/page";
-import AdminMerchantDetailPage from "@/app/admin/merchants/[id]/page";
-import AdminTransactionsPage from "@/app/admin/transactions/page";
-import AdminKycPage from "@/app/admin/kyc/page";
-import AdminDisputesPage from "@/app/admin/disputes/page";
-import AdminAnalyticsPage from "@/app/admin/analytics/page";
-import AdminSettingsPage from "@/app/admin/settings/page";
-import AdminBillsPage from "@/app/admin/bills/page";
-import AdminExploreNigeriaPage from "@/app/admin/explore-nigeria/page";
-import AdminLayout from "@/app/admin/layout";
 
 import MerchantPage from "@/app/merchant/page";
 import MerchantOnboardingPage from "@/app/merchant/onboarding/page";
@@ -211,52 +205,12 @@ function Router() {
         <DashboardLayout><ProfilePage /></DashboardLayout>
       </Route>
 
-      {/* Admin routes */}
-      <Route path="/admin/login">
-        <AdminLoginPage />
+      {/* Admin portal: its own lazily loaded chunk under ADMIN_BASE (lib/adminPaths.ts). /admin is not served. */}
+      <Route path={ADMIN_BASE}>
+        <AdminPortal />
       </Route>
-      <Route path="/admin/dashboard">
-        <AdminLayout><AdminDashboardPage /></AdminLayout>
-      </Route>
-      <Route path="/admin/users">
-        <AdminLayout><AdminUsersPage /></AdminLayout>
-      </Route>
-      <Route path="/admin/users/:id">
-        {(params: any) => (
-          <AdminLayout><AdminUserDetailPage /></AdminLayout>
-        )}
-      </Route>
-      <Route path="/admin/merchants">
-        <AdminLayout><AdminMerchantsPage /></AdminLayout>
-      </Route>
-      <Route path="/admin/merchants/:id">
-        {(params: any) => (
-          <AdminLayout><AdminMerchantDetailPage /></AdminLayout>
-        )}
-      </Route>
-      <Route path="/admin/transactions">
-        <AdminLayout><AdminTransactionsPage /></AdminLayout>
-      </Route>
-      <Route path="/admin/bills">
-        <AdminLayout><AdminBillsPage /></AdminLayout>
-      </Route>
-      <Route path="/admin/kyc">
-        <AdminLayout><AdminKycPage /></AdminLayout>
-      </Route>
-      <Route path="/admin/disputes">
-        <AdminLayout><AdminDisputesPage /></AdminLayout>
-      </Route>
-      <Route path="/admin/analytics">
-        <AdminLayout><AdminAnalyticsPage /></AdminLayout>
-      </Route>
-      <Route path="/admin/settings">
-        <AdminLayout><AdminSettingsPage /></AdminLayout>
-      </Route>
-      <Route path="/admin/explore-nigeria">
-        <AdminLayout><AdminExploreNigeriaPage /></AdminLayout>
-      </Route>
-      <Route path="/admin">
-        <AdminLayout><AdminDashboardPage /></AdminLayout>
+      <Route path={`${ADMIN_BASE}/*`}>
+        <AdminPortal />
       </Route>
 
       {/* Merchant routes */}

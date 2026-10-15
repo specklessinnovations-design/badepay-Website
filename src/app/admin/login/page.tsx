@@ -1,100 +1,96 @@
-
-
 import React, { useState } from 'react';
-import { useLocation } from 'wouter';
-import { ShieldCheck, Lock, Mail } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { ShieldCheck, Lock, Mail, KeyRound } from 'lucide-react';
 import { useAdminAuthStore } from '@/store/useAdminAuthStore';
-import { useToast } from '@/hooks/useToast';
+import { Button, TextInput } from '@/components/admin/ui';
 
 export default function AdminLoginPage() {
+  const login = useAdminAuthStore((s) => s.login);
+  const signedOutReason = useAdminAuthStore((s) => s.signedOutReason);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAdminAuthStore();
-  const [, navigate] = useLocation();
-  const { showSuccess, showError } = useToast();
+  const [code, setCode] = useState('');
+  const [step, setStep] = useState<'password' | 'code'>('password');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    const ok = await login(email, password);
-    setIsLoading(false);
-
-    if (ok) {
-      showSuccess('Admin authentication successful');
-      navigate('/admin/dashboard');
-    } else {
-      showError('Invalid admin credentials');
+    setError(null);
+    setBusy(true);
+    try {
+      const result = await login(email.trim(), password, step === 'code' ? code : undefined);
+      if (result === 'twoFactor') setStep('code');
+    } catch (err) {
+      setError((err as Error).message || 'Sign-in failed');
+      if (step === 'code') setCode('');
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <div className="admin-shell flex min-h-screen bg-white">
-      <div className="hidden lg:flex flex-1 flex-col justify-between p-12 text-gray-800 relative overflow-hidden bg-gradient-to-br from-gray-50 to-white">
-        <div className="pointer-events-none absolute -left-20 -top-20 h-96 w-96 rounded-full opacity-20"
-          style={{ background: 'radial-gradient(circle,rgba(111,232,214,0.3) 0%,transparent 65%)' }} />
-        <div className="pointer-events-none absolute -bottom-24 right-0 h-80 w-80 rounded-full opacity-15"
-          style={{ background: 'radial-gradient(circle,rgba(111,232,214,0.25) 0%,transparent 65%)' }} />
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-12 h-12 flex items-center justify-center p-2">
-             <img src="/favicon.png" alt="BadePay" className="w-full h-full object-contain" />
-          </div>
-          <span className="text-2xl font-black tracking-tight text-gray-900">BadePay <span className="text-[#6fe8d6]">Admin</span></span>
+    <div className="admin-shell flex min-h-dvh items-center justify-center px-4 py-10">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex items-center justify-center gap-2">
+          <img src="/favicon.png" alt="" className="h-9 w-9 object-contain" />
+          <span className="text-xl font-bold tracking-tight text-[var(--ad-fg-strong)]">BadePay <span className="text-[#0f766e]">Admin</span></span>
         </div>
-        <div className="relative z-10 max-w-lg mt-20">
-          <ShieldCheck size={72} className="text-[#6fe8d6] mb-8 opacity-80" strokeWidth={1} />
-          <h1 className="text-5xl font-black mb-6 leading-tight tracking-tight text-gray-900">Institutional <br />Control Center.</h1>
-          <p className="text-lg text-gray-600 font-medium leading-relaxed">
-            Securely monitor transactions, resolve disputes, and oversee the digital finance platform from one unified command center.
-          </p>
-        </div>
-        <div className="relative z-10">
-          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Version 2.0.1</p>
-        </div>
-      </div>
 
-      <div className="flex-1 flex flex-col justify-center items-center p-6 lg:p-12 relative z-20 overflow-y-auto bg-white">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">Admin Sign In</h2>
-            <p className="text-sm text-gray-500 font-medium">Please enter your authorized credentials</p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            <Input
-              label="Admin Email"
-              type="email"
-              icon={<Mail size={20} />}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="border-4 border-black"
-              style={{ color: 'black', fontWeight: 'bold' }}
-            />
-            <Input
-              label="Password"
-              type="password"
-              icon={<Lock size={20} />}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="border-4 border-black"
-              style={{ color: 'black', fontWeight: 'bold' }}
-            />
-
-            <Button type="submit" fullWidth size="lg" isLoading={isLoading} className="mt-4 bg-[#6fe8d6] text-[#1a1a1a]">
-              Sign In to Portal
-            </Button>
-          </form>
-
-          <div className="mt-8 pt-8 border-t border-gray-200 text-center">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center gap-2">
-              <ShieldCheck size={14} /> Unauthorized Access Monitored
+        <form onSubmit={submit} className="ad-card space-y-4 p-6" noValidate>
+          <div>
+            <h1 className="text-lg font-bold text-[var(--ad-fg-strong)]">{step === 'password' ? 'Sign in' : 'Two-factor check'}</h1>
+            <p className="mt-0.5 text-sm text-[var(--ad-muted)]">
+              {step === 'password' ? 'Authorised BadePay staff only.' : 'Enter the 6-digit code from your authenticator app.'}
             </p>
           </div>
-        </div>
+
+          {signedOutReason && !error && (
+            <p className="rounded-lg bg-[rgba(29,78,216,0.08)] px-3 py-2 text-xs text-[#1d4ed8]" role="status">{signedOutReason}</p>
+          )}
+          {error && <p className="rounded-lg bg-[rgba(185,28,28,0.08)] px-3 py-2 text-xs text-[#b91c1c]" role="alert">{error}</p>}
+
+          {step === 'password' ? (
+            <>
+              <label className="block space-y-1">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--ad-fg-strong)]"><Mail size={13} /> Email</span>
+                <TextInput type="email" autoComplete="username" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
+              </label>
+              <label className="block space-y-1">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--ad-fg-strong)]"><Lock size={13} /> Password</span>
+                <TextInput type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              </label>
+            </>
+          ) : (
+            <label className="block space-y-1">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--ad-fg-strong)]"><KeyRound size={13} /> Authenticator code</span>
+              <TextInput
+                inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus required
+                className="font-mono tracking-[0.4em]"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              />
+            </label>
+          )}
+
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full"
+            loading={busy}
+            disabled={step === 'password' ? !email || !password : code.length !== 6}
+          >
+            {step === 'password' ? 'Sign in' : 'Verify and sign in'}
+          </Button>
+          {step === 'code' && (
+            <button type="button" className="w-full text-center text-xs text-[var(--ad-muted)] hover:underline" onClick={() => { setStep('password'); setCode(''); setError(null); }}>
+              Use a different account
+            </button>
+          )}
+        </form>
+
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-[var(--ad-muted)]">
+          <ShieldCheck size={12} /> Every sign-in and action is recorded.
+        </p>
       </div>
     </div>
   );

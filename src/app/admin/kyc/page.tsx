@@ -1,220 +1,107 @@
+import React from 'react';
+import { Link } from 'wouter';
+import { RefreshCw, ShieldCheck } from 'lucide-react';
+import { PageHeader, Card, Button, Spinner, ErrorState, EmptyState, KeyValue, Can } from '@/components/admin/ui';
+import { useAdminQuery, useAdminAction } from '@/components/admin/hooks';
+import { useConfirmAction } from '@/components/admin/ConfirmActionDialog';
+import { KycCheckDetails, KycSubmission } from '@/components/admin/KycChecks';
+import adminApiClient from '@/lib/adminApiClient';
+import { adminPath } from '@/lib/adminPaths';
+import { formatDate, formatRelative, fullName } from '@/lib/adminFormat';
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { KYCSubmission, useAdminKYCStore } from '@/store/useAdminKYCStore';
-import { DataTable } from '@/components/ui/data-table';
-import { ColumnDef } from '@tanstack/react-table';
-import { useToast } from '@/hooks/useToast';
-import { ShieldCheck, Search, RefreshCw } from 'lucide-react';
+interface QueueItem extends KycSubmission {
+  userId: string;
+  providerData: Record<string, unknown> | null;
+  user: { id: string; email: string; firstName: string; lastName: string; dateOfBirth: string | null; kycLevel: number } | null;
+}
 
-export default function AdminKYCPage() {
-  const { submissions, approveKYC, rejectKYC, refresh, loading } = useAdminKYCStore() as any;
-  const { showSuccess } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+/** Names/date of birth the provider returned, for comparing against the account. */
+function providerIdentity(data: Record<string, unknown> | null) {
+  if (!data) return [];
+  const pick = (...keys: string[]) => keys.map((k) => data[k]).find((v) => typeof v === 'string' && v) as string | undefined;
+  return [
+    { label: 'Provider first name', value: pick('firstName', 'first_name', 'firstname') ?? '—' },
+    { label: 'Provider last name', value: pick('lastName', 'last_name', 'surname', 'lastname') ?? '—' },
+    { label: 'Provider middle name', value: pick('middleName', 'middle_name', 'middlename') ?? '—' },
+    { label: 'Provider date of birth', value: pick('dateOfBirth', 'date_of_birth', 'birthdate', 'dob') ?? '—' },
+    { label: 'Date of birth the customer entered', value: pick('enteredDateOfBirth') ?? '—' },
+  ];
+}
 
-  useEffect(() => {
-    refresh();
-  }, []);
+export default function KycPage() {
+  const { data, isLoading, error, refetch, isFetching } = useAdminQuery<{ queue: QueueItem[] }>('/admin/kyc/queue');
+  const { run, pending } = useAdminAction();
+  const { confirm, dialog } = useConfirmAction();
 
-  const filtered = useMemo(() => {
-    return submissions.filter((s: any) => {
-      const searchMatch =
-        s.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.userEmail?.toLowerCase().includes(searchTerm.toLowerCase());
-      const statusMatch =
-        statusFilter === 'all' || s.status === statusFilter;
-      return searchMatch && statusMatch;
+  const decide = async (s: QueueItem, decision: 'approve' | 'reject') => {
+    const name = fullName(s.user);
+    const ok = await confirm(decision === 'approve' ? {
+      title: `Approve ${s.type.toUpperCase()} check?`, tone: 'success', confirmLabel: 'Approve',
+      description: <><b>{name}</b> moves to KYC level {s.level}. Approve only if you’re satisfied the identity belongs to this customer.</>,
+      requireNote: true, noteLabel: 'How did you confirm it?',
+    } : {
+      title: `Reject ${s.type.toUpperCase()} check?`, tone: 'danger', confirmLabel: 'Reject',
+      description: <><b>{name}</b> stays at level {s.user?.kycLevel ?? 0} and can try again in the app.</>,
+      requireNote: true, noteLabel: 'Reason for rejection', notePlaceholder: 'e.g. Name on BVN does not match the account holder',
     });
-  }, [submissions, searchTerm, statusFilter]);
-
-  const handleApprove = (id: string) => {
-    approveKYC(id);
-    showSuccess('KYC approved');
+    if (!ok) return;
+    await run(`${decision}-${s.id}`, () => adminApiClient.post(`/admin/kyc/${s.id}/decision`, { decision, note: ok.note }),
+      decision === 'approve' ? 'Check approved' : 'Check rejected');
   };
-
-  const handleReject = (id: string) => {
-    rejectKYC(id);
-    showSuccess('KYC rejected');
-  };
-
-  const pendingCount = submissions.filter((s: any) => s.status === 'pending').length;
-  const approvedCount = submissions.filter((s: any) => s.status === 'approved').length;
-  const rejectedCount = submissions.filter((s: any) => s.status === 'rejected').length;
-
-  const columns = useMemo<ColumnDef<KYCSubmission>[]>(
-    () => [
-      {
-        accessorKey: 'userName',
-        header: 'User Profile',
-        cell: ({ row }) => (
-          <div>
-            <p className="font-bold text-sm" style={{ color: 'var(--ad-fg-strong)' }}>
-              {row.original.userName}
-            </p>
-            <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--ad-muted)' }}>
-              {row.original.userEmail}
-            </p>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'idType',
-        header: 'Document',
-        cell: ({ row }) => (
-          <span
-            className="rounded-lg px-3 py-1.5 text-xs font-black"
-            style={{
-              background: 'rgba(111,232,214,0.08)',
-              color: 'var(--ad-muted)',
-              border: '1px solid rgba(111,232,214,0.12)',
-            }}
-          >
-            {row.original.idType}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: ({ row }) => {
-          const status = row.original.status;
-          const map: Record<string, { bg: string; color: string }> = {
-            approved: { bg: 'rgba(52,211,153,0.12)', color: '#34d399' },
-            pending: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24' },
-            rejected: { bg: 'rgba(248,113,113,0.12)', color: '#f87171' },
-          };
-          const s = map[status] ?? map.pending;
-          return (
-            <span
-              className="rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wider"
-              style={{ background: s.bg, color: s.color }}
-            >
-              {status}
-            </span>
-          );
-        },
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => {
-          if (row.original.status !== 'pending') {
-            return (
-              <span className="text-xs font-bold" style={{ color: 'var(--ad-muted-soft)' }}>
-                —
-              </span>
-            );
-          }
-          return (
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleApprove(row.original.id)}
-                className="rounded-xl px-4 py-2 text-xs font-bold transition-all hover:-translate-y-0.5"
-                style={{
-                  background: 'rgba(52,211,153,0.1)',
-                  color: '#34d399',
-                  border: '1px solid rgba(52,211,153,0.2)',
-                }}
-              >
-                Approve
-              </button>
-              <button
-                onClick={() => handleReject(row.original.id)}
-                className="rounded-xl px-4 py-2 text-xs font-bold transition-all hover:-translate-y-0.5"
-                style={{
-                  background: 'rgba(248,113,113,0.1)',
-                  color: '#f87171',
-                  border: '1px solid rgba(248,113,113,0.2)',
-                }}
-              >
-                Reject
-              </button>
-            </div>
-          );
-        },
-      },
-    ],
-    [submissions]
-  );
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
-            Identity Verification
-          </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
-            KYC Review Queue
-          </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
-            {submissions.length} total submission{submissions.length !== 1 ? 's' : ''} · {pendingCount} awaiting review
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {[
-            { label: 'Pending', count: pendingCount, color: '#fbbf24', bg: 'rgba(251,191,36,0.1)' },
-            { label: 'Approved', count: approvedCount, color: '#34d399', bg: 'rgba(52,211,153,0.1)' },
-            { label: 'Rejected', count: rejectedCount, color: '#f87171', bg: 'rgba(248,113,113,0.1)' },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="flex items-center gap-1.5 rounded-xl px-3 py-2"
-              style={{ background: s.bg, border: `1px solid ${s.color}30` }}
-            >
-              <ShieldCheck size={12} style={{ color: s.color }} />
-              <span className="text-xs font-black" style={{ color: s.color }}>
-                {s.count} {s.label}
-              </span>
-            </div>
-          ))}
-          <button
-            onClick={refresh}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all hover:-translate-y-0.5"
-            style={{ background: 'var(--ad-card)', border: '1px solid var(--ad-border)', color: 'var(--ad-fg-strong)' }}
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="Customers"
+        title="KYC exceptions"
+        description={<>Prembly verifies BVN (level 1) and NIN with a live selfie (level 2) automatically. Only checks it couldn’t approve — name mismatches, duplicate identities, flagged BVNs or PEP hits — land here. Every other result is on the customer’s KYC tab.</>}
+        actions={<Button icon={<RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />} onClick={() => refetch()}>Refresh</Button>}
+      />
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ad-muted-soft)' }} />
-          <input
-            type="text"
-            placeholder="Search by name or email…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium outline-none transition-all"
-            style={{
-              background: 'var(--ad-card)',
-              border: '1px solid var(--ad-border)',
-              color: 'var(--ad-fg-strong)',
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          {(['all', 'pending', 'approved', 'rejected'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className="rounded-xl px-4 py-2.5 text-xs font-bold capitalize transition-all"
-              style={{
-                background: statusFilter === s ? '#6fe8d6' : 'var(--ad-card)',
-                color: statusFilter === s ? '#1a1a1a' : 'var(--ad-muted)',
-                border: statusFilter === s ? '1px solid #6fe8d6' : '1px solid var(--ad-border)',
-              }}
+      {isLoading ? <Spinner /> : error ? <Card><ErrorState error={error} onRetry={() => refetch()} /></Card> : !data?.queue.length ? (
+        <Card><EmptyState icon={<ShieldCheck size={18} />} title="No checks waiting" description="Every identity check has been decided." /></Card>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-xs text-(--ad-muted)">{data.queue.length} waiting, oldest first.</p>
+          {data.queue.map((s) => (
+            <Card
+              key={s.id}
+              title={<span>{fullName(s.user)} <span className="font-normal text-(--ad-muted)">· {s.type.toUpperCase()} · waiting {formatRelative(s.createdAt).replace(' ago', '')}</span></span>}
+              description={s.user?.email}
+              actions={(
+                <>
+                  {s.user && <Link href={adminPath(`/users/${s.user.id}`)}><Button size="sm" variant="ghost">Customer</Button></Link>}
+                  <Can perm="kyc.decide">
+                    <Button size="sm" variant="danger" loading={pending === `reject-${s.id}`} onClick={() => decide(s, 'reject')}>Reject</Button>
+                    <Button size="sm" variant="success" loading={pending === `approve-${s.id}`} onClick={() => decide(s, 'approve')}>Approve</Button>
+                  </Can>
+                </>
+              )}
             >
-              {s}
-            </button>
+              <div className="mb-3 rounded-lg bg-[rgba(180,83,9,0.08)] px-3 py-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#92400e]">Why it needs a person</p>
+                <ul className="mt-0.5 list-disc pl-5 text-sm text-[#78350f]">{s.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+              </div>
+              <KycCheckDetails s={s} />
+              <div className="mt-4 grid grid-cols-1 gap-4 border-t border-(--ad-border) pt-4 md:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-(--ad-fg-strong)">On the BadePay account</p>
+                  <KeyValue columns={1} items={[
+                    { label: 'Name', value: fullName(s.user) },
+                    { label: 'Date of birth', value: formatDate(s.user?.dateOfBirth) },
+                    { label: 'Current level', value: `Level ${s.user?.kycLevel ?? 0}` },
+                  ]} />
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-(--ad-fg-strong)">Returned by Prembly</p>
+                  <KeyValue columns={1} items={providerIdentity(s.providerData)} />
+                </div>
+              </div>
+            </Card>
           ))}
         </div>
-      </div>
-
-      <DataTable columns={columns} data={filtered} />
+      )}
+      {dialog}
     </div>
   );
 }

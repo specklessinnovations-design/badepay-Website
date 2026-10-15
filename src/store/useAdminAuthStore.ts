@@ -1,72 +1,98 @@
-// Admin auth store connected to BadePay backend API
+/**
+ * Admin session. Only the token is stored (localStorage); who the admin is and what they may do
+ * always comes from GET /admin/me. Permission checks here only shape the UI — the API enforces them.
+ */
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import adminService from '@/services/adminService';
+import adminApiClient, { AdminApiError, getAdminToken, setAdminToken, setUnauthorizedHandler } from '@/lib/adminApiClient';
 
-interface AdminUser {
+export interface AdminProfile {
+  id: string;
   name: string;
   email: string;
-  role: 'super_admin' | 'admin';
+  role: string;
+  roleName: string;
+  permissions: string[];
+  twoFactorEnabled: boolean;
+  twoFactorRequired: boolean;
+  lastLoginAt?: string | null;
 }
+
+type Status = 'idle' | 'loading' | 'ready' | 'signedOut';
 
 interface AdminAuthState {
+  status: Status;
+  admin: AdminProfile | null;
+  /** Why the admin was signed out (shown on the sign-in page) */
+  signedOutReason: string | null;
   isAuthenticated: boolean;
-  admin: AdminUser | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => Promise<void>;
-  hasPermission: (action: string) => boolean;
+  /** Returns 'ok', or 'twoFactor' when the authenticator code is needed */
+  login: (email: string, password: string, code?: string) => Promise<'ok' | 'twoFactor'>;
+  loadMe: () => Promise<void>;
+  logout: (reason?: string, opts?: { everywhere?: boolean }) => Promise<void>;
+  replaceToken: (token: string) => void;
+  hasPermission: (permission: string) => boolean;
+  hasAny: (...permissions: string[]) => boolean;
 }
 
-export const useAdminAuthStore = create<AdminAuthState>()(
-  persist(
-    (set, get) => ({
-      isAuthenticated: false,
-      admin: null,
+export const useAdminAuthStore = create<AdminAuthState>()((set, get) => ({
+  status: 'idle',
+  admin: null,
+  signedOutReason: null,
+  isAuthenticated: false,
 
-      login: async (email: string, password: string) => {
-        try {
-          const admin = await adminService.login(email, password);
-          if (admin) {
-            set({
-              isAuthenticated: true,
-              admin: {
-                name: admin.name || 'Admin',
-                email: admin.email || email,
-                role: admin.role === 'superadmin' ? 'super_admin' : 'admin',
-              },
-            });
-            return true;
-          }
-          return false;
-        } catch {
-          return false;
-        }
-      },
+  login: async (email, password, code) => {
+    const resp = await adminApiClient.post('/admin/auth/login', { email, password, ...(code ? { code } : {}) });
+    if (resp?.data?.requiresTwoFactor) return 'twoFactor';
+    const token = resp?.data?.token;
+    if (!token) throw new AdminApiError('Sign-in failed: the server did not return a session', 500);
+    setAdminToken(token);
+    set({ signedOutReason: null });
+    await get().loadMe();
+    return 'ok';
+  },
 
-      logout: async () => {
-        await adminService.logout().catch(() => {});
-        set({ isAuthenticated: false, admin: null });
-      },
+  loadMe: async () => {
+    if (!getAdminToken()) {
+      set({ status: 'signedOut', admin: null, isAuthenticated: false });
+      return;
+    }
+    set((s) => ({ status: s.admin ? s.status : 'loading' }));
+    try {
+      const resp = await adminApiClient.get('/admin/me');
+      set({ admin: resp.data as AdminProfile, status: 'ready', isAuthenticated: true });
+    } catch (e) {
+      if (e instanceof AdminApiError && e.status === 401) {
+        set({ status: 'signedOut', admin: null, isAuthenticated: false });
+      } else {
+        // Network trouble: keep the current state; pages show their own errors.
+        set((s) => ({ status: s.admin ? 'ready' : 'signedOut', isAuthenticated: !!s.admin }));
+      }
+    }
+  },
 
-      hasPermission: (action: string) => {
-        const role = get().admin?.role;
-        if (!role) return false;
-        if (role === 'super_admin') return true;
-        const adminPermissions = [
-          'view_dashboard',
-          'view_users',
-          'suspend_users',
-          'view_transactions',
-          'review_kyc',
-          'view_disputes',
-          'resolve_disputes',
-          'view_analytics',
-          'manage_merchants',
-          'view_audit_log',
-        ];
-        return adminPermissions.includes(action);
-      },
-    }),
-    { name: 'badepay-admin-auth' }
-  )
-);
+  logout: async (reason, opts) => {
+    if (opts?.everywhere) await adminApiClient.post('/admin/auth/logout').catch(() => {});
+    setAdminToken(null);
+    set({ admin: null, status: 'signedOut', isAuthenticated: false, signedOutReason: reason ?? null });
+  },
+
+  replaceToken: (token) => setAdminToken(token),
+
+  hasPermission: (permission) => !!get().admin?.permissions.includes(permission),
+  hasAny: (...permissions) => permissions.some((p) => get().admin?.permissions.includes(p)),
+}));
+
+// A 401 from any admin call ends the session (expired token, disabled admin, revoked sessions).
+setUnauthorizedHandler(() => {
+  const { status } = useAdminAuthStore.getState();
+  if (status !== 'signedOut') {
+    useAdminAuthStore.setState({
+      admin: null, status: 'signedOut', isAuthenticated: false,
+      signedOutReason: 'Your session ended. Please sign in again.',
+    });
+  }
+});
+
+/** Hook form: re-renders when permissions change. */
+export const useCan = (permission: string): boolean =>
+  useAdminAuthStore((s) => !!s.admin?.permissions.includes(permission));

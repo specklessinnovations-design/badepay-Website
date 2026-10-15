@@ -1,322 +1,182 @@
-
-import React, { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/useToast';
-import { ShieldCheck, Server, AlertCircle, Save, RefreshCw } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'wouter';
+import { Save, Undo2 } from 'lucide-react';
+import { PageHeader, Card, Field, TextInput, TextArea, Select, Toggle, Button, Spinner, ErrorState, Badge } from '@/components/admin/ui';
+import { useAdminQuery, useAdminAction } from '@/components/admin/hooks';
+import { useConfirmAction } from '@/components/admin/ConfirmActionDialog';
 import adminApiClient from '@/lib/adminApiClient';
+import { adminPath } from '@/lib/adminPaths';
+import { formatMoney } from '@/lib/adminFormat';
+import { useCan } from '@/store/useAdminAuthStore';
 
-const A_CARD = {
-  background: 'var(--ad-card)',
-  border: '1px solid var(--ad-border)',
-  borderRadius: '1rem',
-  boxShadow: '0 4px 24px rgba(0,0,0,0.45)',
-  padding: '2rem',
-} as const;
-
-const A_INPUT = {
-  background: 'rgba(111,232,214,0.05)',
-  border: '1px solid rgba(111,232,214,0.12)',
-  borderRadius: '0.75rem',
-  color: 'var(--ad-fg-strong)',
-  padding: '0.75rem 1rem',
-  width: '100%',
-  fontSize: '0.875rem',
-  fontWeight: 700,
-  outline: 'none',
-} as const;
-
-const A_LABEL = {
-  display: 'block',
-  color: 'var(--ad-muted)',
-  fontSize: '0.7rem',
-  fontWeight: 700,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.08em',
-  marginBottom: '0.5rem',
-};
-
+interface Limits { perTransaction: number; daily: number; monthly: number }
 interface PlatformSettings {
-  platformName: string;
-  supportEmail: string;
-  supportPhone: string;
-  corporateAddress: string;
-  maxDailyTransferLimit: number;
-  kycThreshold: number;
-  autoApproveBvn: boolean;
-  maintenanceMode: boolean;
+  maintenanceMode: boolean; maintenanceMessage: string;
+  limits: Record<'0' | '1' | '2' | '3', Limits>;
+  fraud: { maxPaymentsPerHour: number; newDeviceHoldAbove: number; newRecipientHoldAbove: number };
+  settlement: { hourLagos: number; fee: number; newAccountHoldHours: number; cardOrderCommissionPercent: number; splitFeeBearer: 'SUB_ACCOUNT' | 'PARENT_ACCOUNT' | 'PROPORTIONATE' };
+  pilot: { enabled: boolean; message: string; caps: Limits };
+  approvals: { superadminAbove: number };
+  supportEmail: string; supportPhone: string;
 }
 
-function AdminInput({
-  label,
-  value,
-  onChange,
-  type = 'text',
-}: {
-  label: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  type?: string;
-}) {
+const TIER_LABEL = { '0': 'Level 0 — unverified', '1': 'Level 1 — BVN', '2': 'Level 2 — NIN + selfie', '3': 'Level 3 — admin approved' } as const;
+
+/** Flattened "path → value" pairs for a readable diff. */
+function flatten(obj: unknown, prefix = ''): Record<string, unknown> {
+  if (obj === null || typeof obj !== 'object') return { [prefix]: obj };
+  return Object.entries(obj as Record<string, unknown>).reduce((acc, [k, v]) => ({ ...acc, ...flatten(v, prefix ? `${prefix}.${k}` : k) }), {});
+}
+
+function NumberField({ label, value, onChange, disabled, hint, money }: { label: string; value: number; onChange: (v: number) => void; disabled: boolean; hint?: string; money?: boolean }) {
   return (
-    <div>
-      <label style={A_LABEL}>{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        style={A_INPUT}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(111,232,214,0.35)';
-          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(111,232,214,0.08)';
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(111,232,214,0.12)';
-          e.currentTarget.style.boxShadow = 'none';
-        }}
-      />
-    </div>
+    <Field label={label} hint={hint ?? (money ? formatMoney(value) : undefined)}>
+      {(id) => <TextInput id={id} type="number" min={0} step={money ? '1' : 'any'} value={Number.isFinite(value) ? value : ''} disabled={disabled} onChange={(e) => onChange(Number(e.target.value))} />}
+    </Field>
   );
 }
 
-const defaultSettings: PlatformSettings = {
-  platformName: 'BadePay',
-  supportEmail: 'support@badepay.com',
-  supportPhone: '+234 800 123 4567',
-  corporateAddress: '123 Lagos Island, Lagos, Nigeria',
-  maxDailyTransferLimit: 500000,
-  kycThreshold: 100000,
-  autoApproveBvn: false,
-  maintenanceMode: false,
-};
+export default function SettingsPage() {
+  const canManage = useCan('settings.manage');
+  const { data, isLoading, error, refetch } = useAdminQuery<PlatformSettings>('/admin/settings');
+  const [draft, setDraft] = useState<PlatformSettings | null>(null);
+  const { run, pending } = useAdminAction();
+  const { confirm, dialog } = useConfirmAction();
+  useEffect(() => { if (data) setDraft(structuredClone(data)); }, [data]);
 
-export default function AdminSettingsPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [settings, setSettings] = useState<PlatformSettings>(defaultSettings);
-  const { showSuccess, showError } = useToast();
+  const changes = useMemo(() => {
+    if (!data || !draft) return [];
+    const before = flatten(data);
+    const after = flatten(draft);
+    return Object.keys(after).filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k])).map((k) => ({ key: k, before: before[k], after: after[k] }));
+  }, [data, draft]);
 
-  const fetchSettings = async () => {
-    setIsLoading(true);
-    try {
-      const resp = await adminApiClient.get('/admin/settings');
-      const config = resp?.data?.config || {};
-      setSettings({
-        platformName: config.platformName || defaultSettings.platformName,
-        supportEmail: config.supportEmail || defaultSettings.supportEmail,
-        supportPhone: config.supportPhone || defaultSettings.supportPhone,
-        corporateAddress: config.corporateAddress || defaultSettings.corporateAddress,
-        maxDailyTransferLimit: config.maxDailyTransferLimit || defaultSettings.maxDailyTransferLimit,
-        kycThreshold: config.kycThreshold || defaultSettings.kycThreshold,
-        autoApproveBvn: config.autoApproveBvn ?? defaultSettings.autoApproveBvn,
-        maintenanceMode: config.maintenanceMode ?? defaultSettings.maintenanceMode,
-      });
-    } catch {
-      // Use defaults if fetch fails
-      setSettings(defaultSettings);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  if (isLoading || (!draft && !error)) return <Spinner />;
+  if (error || !draft) return <Card><ErrorState error={error} onRetry={() => refetch()} /></Card>;
+  const ro = !canManage;
+  const set = (fn: (d: PlatformSettings) => void) => setDraft((d) => { const next = structuredClone(d!); fn(next); return next; });
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  const limitErrors = (l: Limits) => (l.perTransaction > l.daily || l.daily > l.monthly ? 'Per payment ≤ daily ≤ monthly' : null);
+  const invalid = Object.values(draft.limits).some(limitErrors) || !!limitErrors(draft.pilot.caps);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    try {
-      await adminApiClient.put('/admin/settings', settings);
-      showSuccess('Platform settings saved successfully');
-    } catch {
-      showError('Failed to save settings');
-    } finally {
-      setIsSaving(false);
-    }
+  const save = async () => {
+    const ok = await confirm({
+      title: 'Save these settings?', tone: 'danger', confirmLabel: 'Save settings', stepUp: true,
+      description: (
+        <div>
+          <p className="mb-2">They apply to every customer within about 30 seconds. The audit log records each change with its old value.</p>
+          <ul className="max-h-48 space-y-1 overflow-y-auto rounded-lg bg-(--ad-bg-elev) p-2 font-mono text-[11px]">
+            {changes.map((c) => <li key={c.key}>{c.key}: {String(c.before)} → <b>{String(c.after)}</b></li>)}
+          </ul>
+        </div>
+      ),
+    });
+    if (!ok) return;
+    // Send only the sections that changed.
+    const sections = [...new Set(changes.map((c) => c.key.split('.')[0]))];
+    const patch = Object.fromEntries(sections.map((s) => [s, draft[s as keyof PlatformSettings]]));
+    await run('save', () => adminApiClient.put('/admin/settings', patch, { otp: ok.otp }), 'Settings saved');
   };
 
   return (
-    <div className="max-w-4xl space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
-            System Configuration
-          </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
-            Platform Settings
-          </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
-            Applies to web and mobile clients from a single configuration store.
-          </p>
-        </div>
-        <button
-          onClick={fetchSettings}
-          disabled={isLoading}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition-all hover:-translate-y-0.5 disabled:opacity-60"
-          style={{
-            background: 'var(--ad-card)',
-            border: '1px solid var(--ad-border)',
-            color: 'var(--ad-fg-strong)',
-          }}
-        >
-          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+    <div className="pb-20">
+      <PageHeader
+        eyebrow="Administration"
+        title="Settings"
+        description={<>Platform controls enforced by the API. {ro && <Badge tone="warning">Read-only for your role</Badge>} Change history is in the <Link href={adminPath('/audit-log?targetType=settings')} className="text-[#0f766e] hover:underline">audit log</Link>.</>}
+      />
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Card title="Maintenance mode" description="Pauses every money-moving request. Customers see the message; reads keep working.">
+          <div className="space-y-3">
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">{draft.maintenanceMode ? <Badge tone="danger">ON — payments paused</Badge> : 'Off'}</span>
+              <Toggle label="Maintenance mode" checked={draft.maintenanceMode} disabled={ro} onChange={(v) => set((d) => { d.maintenanceMode = v; })} />
+            </label>
+            <Field label="Message shown to customers">{(id) => <TextArea id={id} rows={2} maxLength={300} disabled={ro} value={draft.maintenanceMessage} onChange={(e) => set((d) => { d.maintenanceMessage = e.target.value; })} />}</Field>
+          </div>
+        </Card>
+
+        <Card title="Approvals (maker-checker)" description="Refunds and stuck-payment outcomes always need a second admin.">
+          <NumberField money label="Only a super administrator may approve from (₦)" value={draft.approvals.superadminAbove} disabled={ro} onChange={(v) => set((d) => { d.approvals.superadminAbove = v; })} />
+        </Card>
+
+        <Card title="Outgoing limits by KYC level" description="Per customer, on personal wallets. Days and months start at Lagos midnight." className="xl:col-span-2">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead><tr className="text-left text-xs text-(--ad-muted)"><th className="py-1.5 pr-3">Level</th><th className="px-2">Per payment (₦)</th><th className="px-2">Daily (₦)</th><th className="px-2">Monthly (₦)</th><th /></tr></thead>
+              <tbody>
+                {(Object.keys(TIER_LABEL) as (keyof typeof TIER_LABEL)[]).map((lvl) => (
+                  <tr key={lvl} className="border-t border-(--ad-border)">
+                    <td className="py-2 pr-3 text-xs font-semibold">{TIER_LABEL[lvl]}</td>
+                    {(['perTransaction', 'daily', 'monthly'] as const).map((k) => (
+                      <td key={k} className="px-2 py-2">
+                        <TextInput type="number" min={0} aria-label={`${TIER_LABEL[lvl]} ${k}`} disabled={ro} value={draft.limits[lvl][k]} onChange={(e) => set((d) => { d.limits[lvl][k] = Number(e.target.value); })} />
+                      </td>
+                    ))}
+                    <td className="px-2 text-xs text-[#b91c1c]">{limitErrors(draft.limits[lvl])}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <Card title="Fraud rules" description="Payments that trip a rule are held for review on the Fraud holds page.">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <NumberField label="Max payments per hour" value={draft.fraud.maxPaymentsPerHour} disabled={ro} onChange={(v) => set((d) => { d.fraud.maxPaymentsPerHour = v; })} hint="More than this is held" />
+            <NumberField money label="New-device hold from (₦)" value={draft.fraud.newDeviceHoldAbove} disabled={ro} onChange={(v) => set((d) => { d.fraud.newDeviceHoldAbove = v; })} />
+            <NumberField money label="New-recipient hold from (₦)" value={draft.fraud.newRecipientHoldAbove} disabled={ro} onChange={(v) => set((d) => { d.fraud.newRecipientHoldAbove = v; })} />
+          </div>
+        </Card>
+
+        <Card title="Merchant settlement">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <NumberField label="Payout hour (Lagos, 0–23)" value={draft.settlement.hourLagos} disabled={ro} onChange={(v) => set((d) => { d.settlement.hourLagos = v; })} hint="When daily/weekly/monthly payouts run" />
+            <NumberField money label="Fee per payout (₦)" value={draft.settlement.fee} disabled={ro} onChange={(v) => set((d) => { d.settlement.fee = v; })} />
+            <NumberField label="Hold after bank change (hours)" value={draft.settlement.newAccountHoldHours} disabled={ro} onChange={(v) => set((d) => { d.settlement.newAccountHoldHours = v; })} hint="0–168" />
+            <NumberField label="Card order commission (%)" value={draft.settlement.cardOrderCommissionPercent} disabled={ro} onChange={(v) => set((d) => { d.settlement.cardOrderCommissionPercent = v; })} hint="0–50" />
+            <Field label="Who pays SeerBit’s fee on split payments">
+              {(id) => <Select id={id} disabled={ro} value={draft.settlement.splitFeeBearer} onChange={(e) => set((d) => { d.settlement.splitFeeBearer = e.target.value as PlatformSettings['settlement']['splitFeeBearer']; })}
+                options={[{ value: 'SUB_ACCOUNT', label: 'Merchant (sub-account)' }, { value: 'PARENT_ACCOUNT', label: 'BadePay' }, { value: 'PROPORTIONATE', label: 'Shared proportionately' }]} />}
+            </Field>
+          </div>
+        </Card>
+
+        <Card title="Private pilot" description="Invite-only sign-up and capped limits. Invites are managed on the Pilot invites page.">
+          <div className="space-y-3">
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">{draft.pilot.enabled ? <Badge tone="warning">Pilot ON — invite only</Badge> : 'Open sign-up'}</span>
+              <Toggle label="Pilot mode" checked={draft.pilot.enabled} disabled={ro} onChange={(v) => set((d) => { d.pilot.enabled = v; })} />
+            </label>
+            <Field label="Message for people without an invite">{(id) => <TextArea id={id} rows={2} maxLength={300} disabled={ro} value={draft.pilot.message} onChange={(e) => set((d) => { d.pilot.message = e.target.value; })} />}</Field>
+            <div className="grid grid-cols-3 gap-2">
+              {(['perTransaction', 'daily', 'monthly'] as const).map((k) => (
+                <NumberField key={k} money label={`Cap: ${k === 'perTransaction' ? 'per payment' : k}`} value={draft.pilot.caps[k]} disabled={ro} onChange={(v) => set((d) => { d.pilot.caps[k] = v; })} />
+              ))}
+            </div>
+            {limitErrors(draft.pilot.caps) && <p className="text-xs text-[#b91c1c]">{limitErrors(draft.pilot.caps)}</p>}
+          </div>
+        </Card>
+
+        <Card title="Support contacts" description="Shown to customers in the apps and emails.">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Support email">{(id) => <TextInput id={id} type="email" disabled={ro} value={draft.supportEmail} onChange={(e) => set((d) => { d.supportEmail = e.target.value; })} />}</Field>
+            <Field label="Support phone">{(id) => <TextInput id={id} disabled={ro} maxLength={20} value={draft.supportPhone} onChange={(e) => set((d) => { d.supportPhone = e.target.value; })} />}</Field>
+          </div>
+        </Card>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
-        {/* General */}
-        <div style={A_CARD}>
-          <div
-            className="mb-6 flex items-center gap-3 pb-4"
-            style={{ borderBottom: '1px solid rgba(111,232,214,0.1)' }}
-          >
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl"
-              style={{ background: 'rgba(111,232,214,0.1)', color: '#6fe8d6' }}
-            >
-              <Server size={20} />
-            </div>
-            <h3 className="text-lg font-black" style={{ color: 'var(--ad-fg-strong)' }}>
-              General Information
-            </h3>
-          </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <AdminInput
-              label="Platform Name"
-              value={settings.platformName}
-              onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
-            />
-            <AdminInput
-              label="Support Email Address"
-              type="email"
-              value={settings.supportEmail}
-              onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
-            />
-            <AdminInput
-              label="Customer Care Hotline"
-              value={settings.supportPhone}
-              onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
-            />
-            <AdminInput
-              label="Corporate Address"
-              value={settings.corporateAddress}
-              onChange={(e) => setSettings({ ...settings, corporateAddress: e.target.value })}
-            />
+      {canManage && changes.length > 0 && (
+        <div className="sticky bottom-4 z-10 mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-(--ad-border-strong) bg-(--ad-card) px-4 py-3 shadow-lg">
+          <p className="text-sm"><b>{changes.length}</b> unsaved change{changes.length === 1 ? '' : 's'}{invalid && <span className="ml-2 text-[#b91c1c]">Fix the limits first</span>}</p>
+          <div className="flex gap-2">
+            <Button icon={<Undo2 size={14} />} onClick={() => setDraft(structuredClone(data!))}>Discard</Button>
+            <Button variant="primary" icon={<Save size={14} />} disabled={invalid} loading={pending === 'save'} onClick={save}>Save changes</Button>
           </div>
         </div>
-
-        {/* Security */}
-        <div style={A_CARD}>
-          <div
-            className="mb-6 flex items-center gap-3 pb-4"
-            style={{ borderBottom: '1px solid rgba(111,232,214,0.1)' }}
-          >
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl"
-              style={{ background: 'rgba(111,232,214,0.1)', color: '#6fe8d6' }}
-            >
-              <ShieldCheck size={20} />
-            </div>
-            <h3 className="text-lg font-black" style={{ color: 'var(--ad-fg-strong)' }}>
-              Security &amp; Limits
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <AdminInput
-              label="Maximum Daily Transfer Limit (NGN)"
-              type="number"
-              value={String(settings.maxDailyTransferLimit)}
-              onChange={(e) => setSettings({ ...settings, maxDailyTransferLimit: Number(e.target.value) })}
-            />
-            <AdminInput
-              label="KYC Requirement Threshold (NGN)"
-              type="number"
-              value={String(settings.kycThreshold)}
-              onChange={(e) => setSettings({ ...settings, kycThreshold: Number(e.target.value) })}
-            />
-
-            {/* Toggle: Auto-Approve BVN */}
-            <div
-              className="col-span-1 flex items-center justify-between rounded-2xl p-5 md:col-span-2"
-              style={{
-                background: 'rgba(52,211,153,0.05)',
-                border: '1px solid rgba(52,211,153,0.12)',
-              }}
-            >
-              <div>
-                <p className="font-black" style={{ color: 'var(--ad-fg-strong)' }}>
-                  Auto-Approve BVN Users
-                </p>
-                <p className="mt-0.5 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
-                  Automatically verify KYC for users with a matching BVN identity.
-                </p>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  className="peer sr-only"
-                  checked={settings.autoApproveBvn}
-                  onChange={(e) => setSettings({ ...settings, autoApproveBvn: e.target.checked })}
-                />
-                <div className="peer h-7 w-14 rounded-full bg-gray-700 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-600 after:bg-[var(--ad-card)] after:transition-all after:content-[''] peer-checked:bg-[#6fe8d6] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
-              </label>
-            </div>
-
-            {/* Toggle: Maintenance Mode */}
-            <div
-              className="col-span-1 flex items-center justify-between rounded-2xl p-5 md:col-span-2"
-              style={{
-                background: 'rgba(248,113,113,0.05)',
-                border: '1px solid rgba(248,113,113,0.15)',
-              }}
-            >
-              <div className="flex items-center gap-4">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}
-                >
-                  <AlertCircle size={20} />
-                </div>
-                <div>
-                  <p className="font-black" style={{ color: '#f87171' }}>
-                    Maintenance Mode
-                  </p>
-                  <p className="mt-0.5 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
-                    Block new consumer and merchant logins platform-wide.
-                  </p>
-                </div>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input
-                  type="checkbox"
-                  className="peer sr-only"
-                  checked={settings.maintenanceMode}
-                  onChange={(e) => setSettings({ ...settings, maintenanceMode: e.target.checked })}
-                />
-                <div className="peer h-7 w-14 rounded-full bg-gray-700 after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-600 after:bg-[var(--ad-card)] after:transition-all after:content-[''] peer-checked:bg-red-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-black transition-all hover:-translate-y-0.5 disabled:opacity-60"
-            style={{
-              background: '#6fe8d6',
-              color: '#030f0d',
-              boxShadow: '0 4px 16px rgba(111,232,214,0.3)',
-            }}
-          >
-            <Save size={16} />
-            {isSaving ? 'Saving…' : 'Save System Configurations'}
-          </button>
-        </div>
-      </form>
+      )}
+      {dialog}
     </div>
   );
 }

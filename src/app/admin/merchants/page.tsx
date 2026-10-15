@@ -1,284 +1,112 @@
-'use client';
-
-import React, { useMemo, useState, useEffect } from 'react';
+import React from 'react';
 import { useLocation } from 'wouter';
-import { useAdminMerchantsStore } from '@/store/useAdminUsersStore';
-import { DataTable } from '@/components/ui/data-table';
-import { ColumnDef } from '@tanstack/react-table';
-import { formatCurrency } from '@/utils/formatCurrency';
-import { useToast } from '@/hooks/useToast';
-import { Store, Check, X, Search, ExternalLink, RefreshCw, Package, ShoppingBag } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { PageHeader, DataTable, Pagination, StatusBadge, Badge, Button } from '@/components/admin/ui';
+import { FilterPanel, FilterGroup, FilterSelect } from '@/components/admin/filters';
+import { useAdminQuery, useAdminAction, useUrlState } from '@/components/admin/hooks';
+import { useConfirmAction } from '@/components/admin/ConfirmActionDialog';
 import adminApiClient from '@/lib/adminApiClient';
+import { adminPath } from '@/lib/adminPaths';
+import { formatDate, formatMoney, fullName, humanize } from '@/lib/adminFormat';
+import { useCan } from '@/store/useAdminAuthStore';
 
-export default function AdminMerchantsPage() {
+export interface MerchantRow {
+  id: string; firstName: string; lastName: string; email: string; phone: string | null; isActive: boolean; createdAt: string;
+  merchantProfile: {
+    id: string; businessName: string; tradingName: string | null; businessType: string; category: string; verified: boolean;
+    payoutSchedule: string; payoutsPausedAt: string | null;
+    wallet: { balance: string | null; isLocked: boolean } | null;
+    store?: { _count?: { products: number; orders: number } } | null;
+  };
+}
+
+export const merchantName = (m: Pick<MerchantRow, 'merchantProfile' | 'firstName' | 'lastName' | 'email'>) =>
+  m.merchantProfile?.tradingName || m.merchantProfile?.businessName || fullName(m);
+
+export default function MerchantsPage() {
   const [, navigate] = useLocation();
-  const { merchants, toggleStatus, refresh, loading } = useAdminMerchantsStore() as any;
-  const { showSuccess, showError } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'suspended'>('all');
+  const canVerify = useCan('merchants.verify');
+  const canSeeBalances = useCan('wallets.view');
+  const [f, setF] = useUrlState({ search: '', verified: '', isActive: '', page: '1' });
 
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  const filteredMerchants = useMemo(() => {
-    return merchants.filter((m: any) => {
-      const businessName = m.merchantProfile?.tradingName || m.merchantProfile?.businessName || m.firstName + ' ' + m.lastName;
-      const matchesSearch =
-        businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (m.phone && m.phone.includes(searchTerm));
-      const matchesStatus =
-        filterStatus === 'all' ||
-        (filterStatus === 'pending' && !m.merchantProfile?.verified) ||
-        (filterStatus === 'approved' && m.merchantProfile?.verified) ||
-        (filterStatus === 'suspended' && !m.isActive);
-      return matchesSearch && matchesStatus;
-    });
-  }, [merchants, searchTerm, filterStatus]);
-
-  const pendingCount = merchants.filter((m: any) => !m.merchantProfile?.verified).length;
-  const approvedCount = merchants.filter((m: any) => m.merchantProfile?.verified).length;
-  const suspendedCount = merchants.filter((m: any) => !m.isActive).length;
-
-  const handleApprove = async (e: React.MouseEvent, merchantId: string) => {
-    e.stopPropagation();
-    try {
-      await adminApiClient.verifyMerchant(merchantId);
-      showSuccess('Merchant approved successfully');
-      refresh();
-    } catch {
-      showError('Failed to approve merchant');
-    }
-  };
-
-  const handleToggleStatus = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    toggleStatus(id);
-    showSuccess('Merchant status updated');
-  };
-
-  const columns = useMemo<ColumnDef<any>[]>(
-    () => [
-      {
-        accessorKey: 'fullName',
-        header: 'Business Profile',
-        cell: ({ row }) => {
-          const m = row.original;
-          const businessName = m.merchantProfile?.tradingName || m.merchantProfile?.businessName || `${m.firstName} ${m.lastName}`;
-          const isVerified = m.merchantProfile?.verified;
-          return (
-            <div className="flex items-center gap-3">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-xl flex-shrink-0"
-                style={{
-                  background: isVerified ? 'rgba(111,232,214,0.12)' : 'rgba(251,191,36,0.12)',
-                  color: isVerified ? '#6fe8d6' : '#fbbf24',
-                  border: `1px solid ${isVerified ? 'rgba(111,232,214,0.2)' : 'rgba(251,191,36,0.2)'}`,
-                }}
-              >
-                <Store size={18} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm truncate" style={{ color: 'var(--ad-fg-strong)' }}>{businessName}</p>
-                <p className="text-xs font-medium mt-0.5 truncate" style={{ color: 'var(--ad-muted)' }}>
-                  {m.firstName} {m.lastName} · {m.email}
-                </p>
-              </div>
-              <ExternalLink size={15} className="text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-            </div>
-          );
-        },
-      },
-      {
-        id: 'business',
-        header: 'Business Type',
-        cell: ({ row }) => (
-          <div>
-            <p className="text-xs font-bold" style={{ color: 'var(--ad-fg-strong)' }}>{row.original.merchantProfile?.businessType || 'N/A'}</p>
-            <p className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--ad-muted)' }}>{row.original.merchantProfile?.category || '—'}</p>
-          </div>
-        ),
-      },
-      {
-        id: 'store',
-        header: 'Store',
-        cell: ({ row }) => {
-          const store = row.original.merchantProfile?.store;
-          return store ? (
-            <div className="flex items-center gap-1.5">
-              <Package size={13} style={{ color: '#6fe8d6' }} />
-              <div>
-                <p className="text-xs font-bold" style={{ color: 'var(--ad-fg-strong)' }}>{store._count?.products || 0} products</p>
-                <p className="text-[10px]" style={{ color: 'var(--ad-muted)' }}>{store._count?.orders || 0} orders</p>
-              </div>
-            </div>
-          ) : (
-            <span className="text-xs" style={{ color: 'var(--ad-muted)' }}>No store</span>
-          );
-        },
-      },
-      {
-        id: 'balance',
-        header: 'Merchant Wallet',
-        cell: ({ row }) => {
-          const balance = row.original.merchantProfile?.wallet?.balance ?? row.original.wallet?.balance ?? 0;
-          return (
-            <span className="font-black text-sm" style={{ color: '#6fe8d6' }}>
-              {formatCurrency(Number(balance))}
-            </span>
-          );
-        },
-      },
-      {
-        id: 'verification',
-        header: 'Verification',
-        cell: ({ row }) => {
-          const isVerified = row.original.merchantProfile?.verified;
-          return (
-            <span
-              className="rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wider"
-              style={{
-                background: isVerified ? 'rgba(52,211,153,0.12)' : 'rgba(251,191,36,0.12)',
-                color: isVerified ? '#34d399' : '#fbbf24',
-              }}
-            >
-              {isVerified ? 'Verified' : 'Pending'}
-            </span>
-          );
-        },
-      },
-      {
-        id: 'status',
-        header: 'Status',
-        cell: ({ row }) => (
-          <span
-            className="rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wider"
-            style={{
-              background: row.original.isActive ? 'rgba(52,211,153,0.1)' : 'rgba(248,113,113,0.1)',
-              color: row.original.isActive ? '#34d399' : '#f87171',
-            }}
-          >
-            {row.original.isActive ? 'Active' : 'Suspended'}
-          </span>
-        ),
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => {
-          const m = row.original;
-          const isVerified = m.merchantProfile?.verified;
-          return (
-            <div className="flex gap-2">
-              {!isVerified && (
-                <button
-                  onClick={(e) => handleApprove(e, m.id)}
-                  className="rounded-xl px-3 py-2 text-xs font-bold transition-all hover:-translate-y-0.5 flex items-center gap-1"
-                  style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}
-                  title="Approve Merchant"
-                >
-                  <Check size={13} /> Approve
-                </button>
-              )}
-              <button
-                onClick={(e) => handleToggleStatus(e, m.id)}
-                className="rounded-xl px-3 py-2 text-xs font-bold transition-all hover:-translate-y-0.5"
-                style={{
-                  background: m.isActive ? 'rgba(248,113,113,0.1)' : 'rgba(52,211,153,0.1)',
-                  color: m.isActive ? '#f87171' : '#34d399',
-                  border: `1px solid ${m.isActive ? 'rgba(248,113,113,0.2)' : 'rgba(52,211,153,0.2)'}`,
-                }}
-                title={m.isActive ? 'Suspend' : 'Activate'}
-              >
-                {m.isActive ? <X size={13} /> : <Check size={13} />}
-              </button>
-            </div>
-          );
-        },
-      },
-    ],
-    [filteredMerchants]
+  const { data, isLoading, isFetching, error, refetch } = useAdminQuery<{ merchants: MerchantRow[]; pagination: { page: number; pages: number; total: number } }>(
+    '/admin/merchants', { page: f.page, limit: 25, search: f.search, verified: f.verified, isActive: f.isActive },
   );
+  const { run, pending } = useAdminAction();
+  const { confirm, dialog } = useConfirmAction();
+
+  const verify = async (m: MerchantRow) => {
+    const ok = await confirm({
+      title: 'Verify this business?', tone: 'success', confirmLabel: 'Verify merchant',
+      description: <>Mark <b>{merchantName(m)}</b> ({humanize(m.merchantProfile.businessType)}) as a verified BadePay merchant. Check their registration documents first.</>,
+      requireNote: true, noteLabel: 'What did you check?', notePlaceholder: 'e.g. CAC RC1234567 matches business name and director',
+    });
+    if (!ok) return;
+    await run(`verify-${m.id}`, () => adminApiClient.post(`/admin/merchants/${m.id}/verify`, { note: ok.note }));
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
-            Business Registry
-          </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
-            Merchant Management
-          </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
-            {merchants.length} registered merchant{merchants.length !== 1 ? 's' : ''} · {pendingCount} pending approval
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {[
-            { label: 'Pending', count: pendingCount, color: '#fbbf24', bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.2)' },
-            { label: 'Verified', count: approvedCount, color: '#34d399', bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.2)' },
-            { label: 'Suspended', count: suspendedCount, color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="rounded-xl px-4 py-2.5 text-center min-w-[80px]"
-              style={{ background: s.bg, border: `1px solid ${s.border}` }}
-            >
-              <p className="text-lg font-black" style={{ color: s.color }}>{s.count}</p>
-              <p className="text-[9px] font-black uppercase tracking-wider" style={{ color: s.color + 'aa' }}>{s.label}</p>
-            </div>
-          ))}
-          <button
-            onClick={refresh}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all hover:-translate-y-0.5"
-            style={{ background: 'var(--ad-card)', border: '1px solid var(--ad-border)', color: 'var(--ad-fg-strong)' }}
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ad-muted-soft)' }} />
-          <input
-            type="text"
-            placeholder="Search by business name, owner name, email or phone…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium outline-none transition-all"
-            style={{ background: 'var(--ad-card)', border: '1px solid var(--ad-border)', color: 'var(--ad-fg-strong)' }}
-          />
-        </div>
-        <div className="flex gap-2">
-          {(['all', 'pending', 'approved', 'suspended'] as const).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setFilterStatus(filter)}
-              className="rounded-xl px-4 py-2.5 text-xs font-bold capitalize transition-all"
-              style={{
-                background: filterStatus === filter ? '#6fe8d6' : 'var(--ad-card)',
-                color: filterStatus === filter ? '#1a1a1a' : 'var(--ad-muted)',
-                border: filterStatus === filter ? '1px solid #6fe8d6' : '1px solid var(--ad-border)',
-              }}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="Customers"
+        title="Merchants"
+        description="Business accounts, their verification and payout state. Click a row for the store, settlements and payout controls."
+        actions={<Button icon={<RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />} onClick={() => refetch()}>Refresh</Button>}
+      />
+      <FilterPanel
+        search={f.search}
+        onSearch={(v) => setF({ search: v })}
+        searchPlaceholder="Business, owner, email or phone"
+        onClearAll={() => setF({ search: '', verified: '', isActive: '' })}
+        active={[
+          ...(f.verified ? [{ key: 'verified', label: f.verified === 'true' ? 'Verified' : 'Awaiting verification', onRemove: () => setF({ verified: '' }) }] : []),
+          ...(f.isActive ? [{ key: 'active', label: f.isActive === 'true' ? 'Active' : 'Suspended', onRemove: () => setF({ isActive: '' }) }] : []),
+        ]}
+      >
+        <FilterGroup label="Verification">
+          <FilterSelect label="Verification" value={f.verified} onChange={(v) => setF({ verified: v })}
+            options={[{ value: '', label: 'Verified & awaiting' }, { value: 'false', label: 'Awaiting verification' }, { value: 'true', label: 'Verified' }]} />
+        </FilterGroup>
+        <FilterGroup label="Account status">
+          <FilterSelect label="Account status" value={f.isActive} onChange={(v) => setF({ isActive: v })}
+            options={[{ value: '', label: 'Active & suspended' }, { value: 'true', label: 'Active' }, { value: 'false', label: 'Suspended' }]} />
+        </FilterGroup>
+      </FilterPanel>
 
       <DataTable
-        columns={columns}
-        data={filteredMerchants}
-        onRowClick={(row) => navigate('/admin/merchants/' + row.original.id)}
-        rowClassName="cursor-pointer hover:bg-white/5 transition-colors group"
+        rows={data?.merchants}
+        loading={isLoading || isFetching}
+        error={error}
+        onRetry={() => refetch()}
+        rowKey={(m) => m.id}
+        onRowClick={(m) => navigate(adminPath(`/merchants/${m.id}`))}
+        columns={[
+          {
+            key: 'name', header: 'Business', cell: (m) => (
+              <div className="min-w-0">
+                <p className="truncate font-medium text-(--ad-fg-strong)">{merchantName(m)}</p>
+                <p className="truncate text-xs text-(--ad-muted)">{fullName(m)} · {m.email}</p>
+              </div>
+            ),
+          },
+          { key: 'type', header: 'Type', hideOnMobile: true, cell: (m) => <span className="text-xs">{humanize(m.merchantProfile.businessType)}<br /><span className="text-(--ad-muted)">{humanize(m.merchantProfile.category)}</span></span> },
+          { key: 'verified', header: 'Verification', cell: (m) => <StatusBadge status={m.merchantProfile.verified ? 'verified' : 'pending'} label={m.merchantProfile.verified ? 'Verified' : 'Awaiting'} /> },
+          {
+            key: 'payouts', header: 'Payouts', cell: (m) => m.merchantProfile.payoutsPausedAt
+              ? <Badge tone="danger">Paused</Badge> : <span className="text-xs">{humanize(m.merchantProfile.payoutSchedule)}</span>,
+          },
+          ...(canSeeBalances ? [{ key: 'balance', header: 'Business wallet', align: 'right' as const, cell: (m: MerchantRow) => formatMoney(m.merchantProfile.wallet?.balance) }] : []),
+          { key: 'status', header: 'Account', cell: (m) => <StatusBadge status={m.isActive ? 'active' : 'suspended'} /> },
+          { key: 'joined', header: 'Joined', hideOnMobile: true, cell: (m) => <span className="text-xs text-(--ad-muted)">{formatDate(m.createdAt)}</span> },
+          ...(canVerify ? [{
+            key: 'actions', header: <span className="sr-only">Actions</span>, align: 'right' as const, cell: (m: MerchantRow) => !m.merchantProfile.verified && (
+              <Button size="sm" variant="success" loading={pending === `verify-${m.id}`} onClick={(e) => { e.stopPropagation(); void verify(m); }}>Verify</Button>
+            ),
+          }] : []),
+        ]}
+        footer={data && <Pagination page={data.pagination.page} pages={data.pagination.pages} total={data.pagination.total} label="merchants" onPage={(p) => setF({ page: String(p) })} />}
       />
+      {dialog}
     </div>
   );
 }

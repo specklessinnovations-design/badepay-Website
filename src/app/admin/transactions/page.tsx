@@ -1,215 +1,100 @@
+import React, { useState } from 'react';
+import { Download, RefreshCw } from 'lucide-react';
+import { PageHeader, DataTable, Pagination, StatusBadge, Button, Mono, Can } from '@/components/admin/ui';
+import { FilterPanel, FilterGroup, FilterSelect, DateGroup, dateRangeLabel } from '@/components/admin/filters';
+import { useAdminQuery, useAdminAction, useUrlState } from '@/components/admin/hooks';
+import { AdminTransaction, TransactionDrawer } from '@/components/admin/TransactionDrawer';
+import { adminDownload } from '@/lib/adminApiClient';
+import { formatDateTime, formatMoney, humanize, fullName, lagosDateToUtc } from '@/lib/adminFormat';
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { AdminTxRecord, useAdminTransactionsStore } from '@/store/useAdminTransactionsStore';
-import { DataTable } from '@/components/ui/data-table';
-import { ColumnDef } from '@tanstack/react-table';
-import { formatCurrency } from '@/utils/formatCurrency';
-import { ArrowRight, Search, RefreshCw } from 'lucide-react';
+export const TX_TYPES = ['transfer', 'withdrawal', 'funding', 'card_funding', 'bill_payment', 'qr_payment', 'store_order', 'card_withdrawal'];
+export const TX_STATUSES = ['success', 'pending', 'processing', 'failed', 'reversed', 'held', 'review'];
 
-export default function AdminTransactionsPage() {
-  const { transactions, refresh, loading } = useAdminTransactionsStore() as any;
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'pending' | 'failed'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'transfer' | 'bill' | 'topup' | 'withdrawal'>('all');
+export default function TransactionsPage() {
+  const [f, setF] = useUrlState({ search: '', type: '', status: '', from: '', to: '', page: '1' });
+  const [open, setOpen] = useState<AdminTransaction | null>(null);
+  const { run, pending } = useAdminAction();
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  const filters = {
+    search: f.search, type: f.type, status: f.status,
+    startDate: f.from ? lagosDateToUtc(f.from) : undefined, endDate: f.to ? lagosDateToUtc(f.to, true) : undefined,
+  };
+  const { data, isLoading, isFetching, error, refetch } = useAdminQuery<{
+    transactions: AdminTransaction[]; filteredVolume: number; pagination: { page: number; pages: number; total: number };
+  }>('/admin/transactions', { ...filters, page: f.page, limit: 25 });
 
-  const filtered = useMemo(() => {
-    return transactions.filter((t: any) => {
-      const searchMatch =
-        t.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.senderName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.senderEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.recipientName?.toLowerCase().includes(searchTerm.toLowerCase());
-      const statusMatch =
-        statusFilter === 'all' || t.status === statusFilter;
-      const typeMatch =
-        typeFilter === 'all' || t.type === typeFilter;
-      return searchMatch && statusMatch && typeMatch;
-    });
-  }, [transactions, searchTerm, statusFilter, typeFilter]);
-
-  const successCount = transactions.filter((t: any) => t.status === 'success').length;
-  const pendingCount = transactions.filter((t: any) => t.status === 'pending').length;
-  const failedCount = transactions.filter((t: any) => t.status === 'failed').length;
-
-  const columns = useMemo<ColumnDef<AdminTxRecord>[]>(
-    () => [
-      {
-        accessorKey: 'reference',
-        header: 'Reference',
-        cell: ({ row }) => (
-          <span
-            className="rounded-lg px-2.5 py-1 text-xs font-black tracking-tight"
-            style={{ background: 'rgba(111,232,214,0.08)', color: '#6fe8d6' }}
-          >
-            {row.original.reference}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'senderName',
-        header: 'Routing',
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <p className="font-bold text-sm" style={{ color: 'var(--ad-fg-strong)' }}>
-              {row.original.senderName}
-            </p>
-            <ArrowRight size={12} style={{ color: 'var(--ad-muted-soft)' }} />
-            <p className="text-xs font-bold" style={{ color: 'var(--ad-muted)' }}>
-              {row.original.recipientName}
-            </p>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'amount',
-        header: 'Amount',
-        cell: ({ row }) => (
-          <span className="text-base font-black" style={{ color: '#6fe8d6' }}>
-            {formatCurrency(row.original.amount)}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'type',
-        header: 'Category',
-        cell: ({ row }) => (
-          <span
-            className="capitalize rounded-lg px-3 py-1 text-xs font-black"
-            style={{
-              background: 'rgba(111,232,214,0.06)',
-              color: 'var(--ad-muted)',
-              border: '1px solid rgba(111,232,214,0.1)',
-            }}
-          >
-            {row.original.type}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: ({ row }) => {
-          const status = row.original.status;
-          const map: Record<string, { bg: string; color: string }> = {
-            success: { bg: 'rgba(52,211,153,0.12)', color: '#34d399' },
-            pending: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24' },
-            failed: { bg: 'rgba(248,113,113,0.12)', color: '#f87171' },
-          };
-          const s = map[status] ?? { bg: 'rgba(167,139,250,0.12)', color: '#a78bfa' };
-          return (
-            <span
-              className="rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wider"
-              style={{ background: s.bg, color: s.color }}
-            >
-              {status}
-            </span>
-          );
-        },
-      },
-    ],
-    []
-  );
+  const exportCsv = () => run('export', () => adminDownload('/admin/transactions/export', {
+    search: filters.search, type: filters.type, status: filters.status, from: filters.startDate, to: filters.endDate,
+  }), 'Export downloaded (recorded in the audit log)');
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--ad-muted-soft)' }}>
-            Platform Ledger
-          </p>
-          <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--ad-fg-strong)' }}>
-            Transactions
-          </h2>
-          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--ad-muted)' }}>
-            {transactions.length} platform transaction{transactions.length === 1 ? '' : 's'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {[
-            { label: 'Success', count: successCount, color: '#34d399', bg: 'rgba(52,211,153,0.1)' },
-            { label: 'Pending', count: pendingCount, color: '#fbbf24', bg: 'rgba(251,191,36,0.1)' },
-            { label: 'Failed', count: failedCount, color: '#f87171', bg: 'rgba(248,113,113,0.1)' },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="rounded-xl px-3 py-2 text-center"
-              style={{ background: s.bg, border: `1px solid ${s.color}30` }}
-            >
-              <p className="text-xs font-black" style={{ color: s.color }}>
-                {s.count}
-              </p>
-              <p className="text-[9px] font-bold uppercase" style={{ color: s.color + 'aa' }}>
-                {s.label}
-              </p>
-            </div>
-          ))}
-          <button
-            onClick={refresh}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all hover:-translate-y-0.5"
-            style={{ background: 'var(--ad-card)', border: '1px solid var(--ad-border)', color: 'var(--ad-fg-strong)' }}
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh
-          </button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="Money"
+        title="Transactions"
+        description="Each payment appears once (recipient mirror rows are hidden). Times are Lagos time."
+        actions={(
+          <>
+            <Button icon={<RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />} onClick={() => refetch()}>Refresh</Button>
+            <Can perm="transactions.export">
+              <Button icon={<Download size={14} />} loading={pending === 'export'} onClick={exportCsv}>Export CSV</Button>
+            </Can>
+          </>
+        )}
+      />
+      <FilterPanel
+        search={f.search}
+        onSearch={(v) => setF({ search: v })}
+        searchPlaceholder="Reference, description, customer name or email"
+        onClearAll={() => setF({ search: '', type: '', status: '', from: '', to: '' })}
+        active={[
+          ...(f.status ? [{ key: 'status', label: `Status: ${humanize(f.status)}`, onRemove: () => setF({ status: '' }) }] : []),
+          ...(f.type ? [{ key: 'type', label: `Type: ${humanize(f.type)}`, onRemove: () => setF({ type: '' }) }] : []),
+          ...(f.from || f.to ? [{ key: 'date', label: dateRangeLabel(f.from, f.to), onRemove: () => setF({ from: '', to: '' }) }] : []),
+        ]}
+      >
+        <FilterGroup label="Status">
+          <FilterSelect label="Status" value={f.status} onChange={(v) => setF({ status: v })}
+            options={[{ value: '', label: 'Any status' }, ...TX_STATUSES.map((s) => ({ value: s, label: humanize(s) }))]} />
+        </FilterGroup>
+        <FilterGroup label="Type">
+          <FilterSelect label="Type" value={f.type} onChange={(v) => setF({ type: v })}
+            options={[{ value: '', label: 'All types' }, ...TX_TYPES.map((t) => ({ value: t, label: humanize(t) }))]} />
+        </FilterGroup>
+        <DateGroup label="Date (Lagos)" from={f.from} to={f.to} onChange={(from, to) => setF({ from, to })} />
+      </FilterPanel>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--ad-muted-soft)' }} />
-          <input
-            type="text"
-            placeholder="Search by reference, sender, recipient…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium outline-none transition-all"
-            style={{
-              background: 'var(--ad-card)',
-              border: '1px solid var(--ad-border)',
-              color: 'var(--ad-fg-strong)',
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          {(['all', 'success', 'pending', 'failed'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className="rounded-xl px-4 py-2.5 text-xs font-bold capitalize transition-all"
-              style={{
-                background: statusFilter === s ? '#6fe8d6' : 'var(--ad-card)',
-                color: statusFilter === s ? '#1a1a1a' : 'var(--ad-muted)',
-                border: statusFilter === s ? '1px solid #6fe8d6' : '1px solid var(--ad-border)',
-              }}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          {(['all', 'transfer', 'bill', 'topup', 'withdrawal'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
-              className="rounded-xl px-4 py-2.5 text-xs font-bold capitalize transition-all"
-              style={{
-                background: typeFilter === t ? '#6fe8d6' : 'var(--ad-card)',
-                color: typeFilter === t ? '#1a1a1a' : 'var(--ad-muted)',
-                border: typeFilter === t ? '1px solid #6fe8d6' : '1px solid var(--ad-border)',
-              }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
+      {data && (
+        <p className="mb-2 text-xs text-(--ad-muted)">
+          {data.pagination.total.toLocaleString('en-NG')} transactions match · successful value <span className="font-semibold text-(--ad-fg-strong)">{formatMoney(data.filteredVolume)}</span>
+        </p>
+      )}
 
-      <DataTable columns={columns} data={filtered} />
+      <DataTable
+        rows={data?.transactions}
+        loading={isLoading || isFetching}
+        error={error}
+        onRetry={() => refetch()}
+        rowKey={(t) => t.id}
+        onRowClick={setOpen}
+        columns={[
+          { key: 'ref', header: 'Reference', cell: (t) => <Mono>{t.reference}</Mono> },
+          {
+            key: 'what', header: 'Description', cell: (t) => (
+              <div className="min-w-0 max-w-[280px]">
+                <p className="truncate text-(--ad-fg-strong)">{t.description || humanize(t.type)}</p>
+                <p className="truncate text-xs text-(--ad-muted)">{humanize(t.type)}{t.sender ? ` · from ${fullName(t.sender)}` : ''}{t.recipient ? ` → ${fullName(t.recipient)}` : ''}</p>
+              </div>
+            ),
+          },
+          { key: 'amount', header: 'Amount', align: 'right', cell: (t) => <span className="font-semibold">{formatMoney(t.amount)}</span> },
+          { key: 'fee', header: 'Fee', align: 'right', hideOnMobile: true, cell: (t) => <span className="text-xs text-(--ad-muted)">{Number(t.fee) ? formatMoney(t.fee) : '—'}</span> },
+          { key: 'status', header: 'Status', cell: (t) => <StatusBadge status={t.status} /> },
+          { key: 'time', header: 'Time (WAT)', hideOnMobile: true, cell: (t) => <span className="whitespace-nowrap text-xs text-(--ad-muted)">{formatDateTime(t.createdAt)}</span> },
+        ]}
+        footer={data && <Pagination page={data.pagination.page} pages={data.pagination.pages} total={data.pagination.total} label="transactions" onPage={(p) => setF({ page: String(p) })} />}
+      />
+      <TransactionDrawer tx={open} onClose={() => setOpen(null)} />
     </div>
   );
 }

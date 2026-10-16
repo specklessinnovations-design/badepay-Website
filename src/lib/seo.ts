@@ -26,6 +26,8 @@ export interface PageSeo {
 
 const PRIVATE_DESCRIPTION = "Sign in to your BadePay account to manage payments, transfers, and more.";
 const priv = (title: string): PageSeo => ({ title, description: PRIVATE_DESCRIPTION, noindex: true });
+/** A public page that search engines may index. */
+const pub = (title: string, description: string): PageSeo => ({ title, description });
 
 export const PAGE_SEO: Record<string, PageSeo> = {
   "/": {

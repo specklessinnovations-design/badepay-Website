@@ -193,7 +193,10 @@ export default function MarketplacePage() {
                         <span className="text-sm font-black" style={{ color: 'var(--text-primary)' }}>
                           ₦{price.toLocaleString('en-NG', { maximumFractionDigits: 2 })}
                         </span>
-                        {product.stock > 0 ? (
+                        {/* Stock only applies to physical goods; services can't sell out */}
+                        {(p.type ?? 'physical') !== 'physical' ? (
+                          <span className="text-[10px] font-bold" style={{ color: 'var(--text-tertiary)' }}>Service</span>
+                        ) : product.stock > 0 ? (
                           <span className="text-[10px] font-bold text-[#10B981]">In Stock</span>
                         ) : (
                           <span className="text-[10px] font-bold text-red-500">Out of Stock</span>

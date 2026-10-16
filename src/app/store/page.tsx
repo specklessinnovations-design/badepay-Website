@@ -20,13 +20,17 @@ interface Product {
 }
 interface CartLine { key: string; product: Product; variation?: Variation; quantity: number }
 
+/** Only physical goods have stock; services can't sell out (same rule as the backend). */
+const UNLIMITED = Number.POSITIVE_INFINITY;
+
 function toProduct(p: any): Product {
+  const unlimited = (p.type ?? 'physical') !== 'physical';
   const images = [...(p.images ?? [])].sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)).map((i: any) => i.imageUrl).filter(Boolean);
   return {
     id: p.id, name: p.name, description: p.description ?? '', category: p.category ?? 'Other', type: p.type ?? 'physical',
-    deliveryInfo: p.deliveryInfo, price: Number(p.price) || 0, discount: Number(p.discount) || 0, stock: Number(p.stock) || 0,
+    deliveryInfo: p.deliveryInfo, price: Number(p.price) || 0, discount: Number(p.discount) || 0, stock: unlimited ? UNLIMITED : Number(p.stock) || 0,
     images, imageUrl: images[0] ?? p.imageUrl,
-    variations: (p.variations ?? []).map((v: any) => ({ id: v.id, name: v.name, value: v.value, priceAdjust: Number(v.priceAdjust) || 0, stock: Number(v.stock) || 0 })),
+    variations: (p.variations ?? []).map((v: any) => ({ id: v.id, name: v.name, value: v.value, priceAdjust: Number(v.priceAdjust) || 0, stock: unlimited ? UNLIMITED : Number(v.stock) || 0 })),
   };
 }
 const inStock = (p: Product) => p.variations.length ? p.variations.some(v => v.stock > 0) : p.stock > 0;

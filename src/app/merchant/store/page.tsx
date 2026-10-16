@@ -2,7 +2,7 @@
 import { Link } from 'wouter';
 import {
   Store, Plus, Trash2, Package, RefreshCw, ExternalLink, Pencil, QrCode, HandHeart,
-  ShoppingBag, Check, ArrowLeft, Sparkles, Copy
+  ShoppingBag, Check, ArrowLeft, Sparkles, Copy, Link2, Share2
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMerchantStoreData } from '@/store/useMerchantStoreData';
@@ -107,11 +107,28 @@ export default function MerchantStorePage() {
     }
   };
 
-  const handleCopyLink = () => {
+  const storeLink = () => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://badepay.com';
-    const url = `${baseUrl}/store/${storeSlug}`;
-    navigator.clipboard.writeText(url);
-    toast.success('Store link copied to clipboard!');
+    return `${baseUrl}/store/${storeSlug || user?.merchantProfile?.qrSlug || ''}`;
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(storeLink());
+      toast.success('Store link copied');
+    } catch {
+      toast.error('Could not copy. Select the link and copy it.');
+    }
+  };
+
+  /** Phone share sheet where the browser has one (WhatsApp, Instagram…); otherwise copy the link. */
+  const handleShareLink = async () => {
+    const name = storeInfo?.name || user?.merchantProfile?.tradingName || 'my store';
+    const data = { title: name, text: `Shop ${name} on BadePay`, url: storeLink() };
+    if (typeof navigator.share === 'function' && (!navigator.canShare || navigator.canShare(data))) {
+      try { await navigator.share(data); return; } catch (e) { if ((e as Error)?.name === 'AbortError') return; }
+    }
+    await handleCopyLink();
   };
 
   const handleDeleteProduct = async (productId: string) => {
@@ -176,6 +193,26 @@ export default function MerchantStorePage() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* The link people open to shop the store (no app needed) */}
+      <div className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}><Link2 size={15} /> Your store link</p>
+            <p className="mt-0.5 text-xs" style={{ color: 'var(--text-secondary)' }}>Share it on WhatsApp, Instagram or anywhere. People can browse and pay, even without the app.</p>
+          </div>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <button onClick={handleCopyLink} className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-semibold sm:flex-none"
+              style={{ border: '1px solid var(--border)', color: 'var(--text-primary)' }}><Copy size={13} /> Copy link</button>
+            <button onClick={handleShareLink} className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-bold sm:flex-none"
+              style={{ background: '#6fe8d6', color: '#1a1a1a' }}><Share2 size={13} /> Share</button>
+          </div>
+        </div>
+        <p className="mt-3 truncate rounded-xl px-3 py-2 font-mono text-xs" style={{ background: 'var(--surface-secondary)', color: 'var(--text-tertiary)' }}>{storeUrl}</p>
+        {!isPublished && (
+          <p className="mt-2 text-xs" style={{ color: 'var(--warning-text)' }}>Your store is hidden, so the link won’t open for customers until you publish it.</p>
+        )}
       </div>
 
       {/* Tab navigation */}
@@ -356,21 +393,6 @@ export default function MerchantStorePage() {
       {/* Settings tab */}
       {activeTab === 'settings' && (
         <div className="space-y-4">
-          <div className="rounded-2xl p-4" style={{ background: 'rgba(111,232,214,0.05)', border: '1px solid rgba(111,232,214,0.15)' }}>
-            <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--accent-text)' }}>
-              <Sparkles size={16} /> Live storefront link
-            </div>
-            <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-              Share this link with customers to let them shop your store, build orders, and pay with their BadePay wallets or linked bank accounts.
-            </p>
-            <div className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: 'var(--background)', border: '1px solid var(--border)' }}>
-              <span className="text-xs font-mono truncate flex-1" style={{ color: 'var(--text-tertiary)' }}>{storeUrl}</span>
-              <button onClick={handleCopyLink} className="p-1.5 rounded-lg" style={{ color: 'var(--accent-text)' }}>
-                <Copy size={14} />
-              </button>
-            </div>
-          </div>
-
           {/* Logo and banner side by side (banner gets more room); stacked on phones */}
           <div
             className="grid grid-cols-2 gap-4 rounded-2xl p-4"

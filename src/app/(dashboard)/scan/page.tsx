@@ -1,6 +1,6 @@
 ﻿import React, { useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
-import { ArrowLeft, ShieldCheck, X, AlertTriangle, CheckCircle2, Store, UserCircle2, Lock, ChevronRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, X, AlertTriangle, CheckCircle2, Store, UserCircle2, Lock, ChevronRight, Loader2, Image as ImageIcon, Keyboard } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { authService } from '@/services/authService';
 import toast from 'react-hot-toast';
@@ -32,8 +32,26 @@ interface ScanResult {
   preFilledAmount?: number | null;
   dynamicReference?: string | null;
   isDynamic?: boolean;
+  amountLocked?: boolean;
   fee?: number;
+  /** What the payer can choose to pay for (tithe, offering, a service…) */
+  items?: QrItem[];
 }
+
+interface QrItem {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'physical' | 'service' | 'donation';
+  pricing: 'fixed' | 'open';
+  price: number;
+  minAmount: number | null;
+  imageUrl: string | null;
+}
+
+const naira = (n: number) => `₦${n.toLocaleString('en-NG')}`;
+const itemPriceLabel = (i: QrItem) =>
+  i.pricing === 'fixed' ? naira(i.price) : i.minAmount ? `Any amount from ${naira(i.minAmount)}` : 'Any amount';
 
 export default function ScanPayPage() {
   const [, navigate] = useLocation();
@@ -49,14 +67,32 @@ export default function ScanPayPage() {
   const [loading, setLoading] = useState(false);
   const [paymentRef, setPaymentRef] = useState('');
   const [pin, setPin] = useState('');
+  const [itemId, setItemId] = useState<string>('');
+  const [note, setNote] = useState('');
+  const [scannedCode, setScannedCode] = useState<string | undefined>();
   const scanLockRef = useRef(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualCode, setManualCode] = useState('');
 
   const userBalance = user?.balance ?? 0;
   const fee = scannedData?.fee ?? 0;
   const payAmt = parseFloat(amount) || 0;
   const totalDebit = payAmt + fee;
   const isDynamic = scannedData?.isDynamic || !!scannedData?.dynamicReference;
-  const amountLocked = isDynamic && !!scannedData?.preFilledAmount;
+  const items = scannedData?.items ?? [];
+  const selectedItem = items.find((i) => i.id === itemId) ?? null;
+  const amountLocked = (isDynamic || !!scannedData?.amountLocked) && !!scannedData?.preFilledAmount
+    || selectedItem?.pricing === 'fixed';
+  const itemMin = selectedItem?.pricing === 'open' ? Math.max(10, selectedItem.minAmount ?? 0) : 10;
+
+  const chooseItem = (id: string) => {
+    setItemId(id);
+    const item = items.find((i) => i.id === id);
+    if (item?.pricing === 'fixed') setAmount(String(item.price));
+    else if (item && item.price > 0) setAmount(String(item.price));
+    setPinError('');
+  };
 
   const recipientName = recipientType === 'merchant'
     ? (scannedData?.merchant?.tradingName || scannedData?.merchant?.businessName || '')
@@ -82,6 +118,9 @@ export default function ScanPayPage() {
     try {
       const scanResult: ScanResult = await authService.scanQrCode(code);
       setScannedData(scanResult);
+      setScannedCode(/\/payments\/pay\//.test(code) ? code : undefined);
+      setItemId('');
+      setNote('');
       setRecipientType(scanResult.type);
 
       if (scanResult.preFilledAmount) {
@@ -99,14 +138,33 @@ export default function ScanPayPage() {
     }
   }, [loading, step]);
 
+  /** Reads a QR code from a photo or screenshot. */
+  const handleQrImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const { Html5Qrcode } = await import('html5-qrcode');
+      const reader = new Html5Qrcode('qr-file-reader');
+      const code = await reader.scanFile(file, false);
+      await handleScanCode(code);
+    } catch {
+      setScanError('No QR code found in that image. Try a clearer photo.');
+    }
+  };
+
   const handleContinueToConfirm = () => {
     if (!user?.hasPinSet) {
       toast.error('Please set your transaction PIN first');
       navigate('/profile/change-pin');
       return;
     }
-    if (payAmt < 10) {
-      setPinError('Minimum payment is ₦10.');
+    if (items.length && !itemId && itemId !== 'general') {
+      setPinError('Choose what you are paying for.');
+      return;
+    }
+    if (payAmt < itemMin) {
+      setPinError(`Minimum ${selectedItem ? `for ${selectedItem.name} ` : ''}is ${naira(itemMin)}.`);
       return;
     }
     if (totalDebit > userBalance) {
@@ -151,10 +209,13 @@ export default function ScanPayPage() {
         idempotencyKey: scannedData.dynamicReference
           ? `qr-${scannedData.dynamicReference}`
           : undefined,
+        payLink: scannedCode,
+        productId: selectedItem?.id,
+        note: note.trim() || undefined,
       });
 
       setPaymentRef(result?.reference || result?.data?.reference || '');
-      setSuccessMsg(`₦${payAmt.toLocaleString()} sent to ${recipientName} successfully.`);
+      setSuccessMsg(`₦${payAmt.toLocaleString()} ${selectedItem ? `for ${selectedItem.name} ` : ''}sent to ${recipientName} successfully.`);
       setStep('success');
     } catch (err: any) {
       setPinError(err?.message || 'Payment failed. Please check your PIN and try again.');
@@ -173,6 +234,9 @@ export default function ScanPayPage() {
     setPaymentRef('');
     setRecipientType('merchant');
     setPin('');
+    setItemId('');
+    setNote('');
+    setScannedCode(undefined);
     scanLockRef.current = false;
   };
 
@@ -250,8 +314,29 @@ export default function ScanPayPage() {
                 Point your camera at a BadePay personal or merchant QR code.
               </p>
             </div>
+
           </>
         )}
+        {/* No camera? Read a photo of the code, or type/paste it (same as the mobile app). */}
+            <div className="mt-6 grid w-full max-w-[280px] grid-cols-2 gap-2">
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={loading}
+                className="flex items-center justify-center gap-1.5 rounded-2xl bg-white/10 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-50">
+                <ImageIcon size={14} /> Upload image
+              </button>
+              <button type="button" onClick={() => setManualOpen((v) => !v)}
+                className="flex items-center justify-center gap-1.5 rounded-2xl bg-white/10 px-3 py-2.5 text-xs font-semibold text-white">
+                <Keyboard size={14} /> Enter code
+              </button>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleQrImage} />
+            <div id="qr-file-reader" className="hidden" />
+            {manualOpen && (
+              <form className="mt-3 flex w-full max-w-[280px] gap-2" onSubmit={(e) => { e.preventDefault(); if (manualCode.trim()) void handleScanCode(manualCode); }}>
+                <input value={manualCode} onChange={(e) => setManualCode(e.target.value)} placeholder="QR link or account number" aria-label="QR code or account number"
+                  className="min-w-0 flex-1 rounded-xl bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/40" />
+                <button type="submit" className="rounded-xl bg-[#6fe8d6] px-3 text-sm font-semibold text-[#1a1a1a]">Go</button>
+              </form>
+            )}
       </div>
 
       <div className="px-6 pb-10">
@@ -262,7 +347,7 @@ export default function ScanPayPage() {
 
       {/* Step: Enter amount */}
       {showModal && step === 'pay' && scannedData && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
           <div className="w-full max-w-[420px] rounded-t-3xl bg-background border border-border-strong overflow-hidden">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
               <p className="text-sm font-semibold">{isDynamic ? 'Review Payment' : 'Send Payment'}</p>
@@ -289,6 +374,35 @@ export default function ScanPayPage() {
                   </div>
                 )}
 
+                {items.length > 0 && (
+                  <fieldset>
+                    <legend className="text-xs uppercase tracking-widest text-muted-foreground mb-2">What are you paying for?</legend>
+                    <div className="flex flex-col gap-2" role="radiogroup">
+                      {[...items, { id: 'general', name: 'Something else', pricing: 'open', price: 0, minAmount: null, imageUrl: null, type: 'donation' } as QrItem].map((i) => {
+                        const on = itemId === i.id;
+                        return (
+                          <button
+                            key={i.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            onClick={() => chooseItem(i.id)}
+                            className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${on ? 'border-[#6fe8d6] bg-[#6fe8d6]/10' : 'border-border surface-2'}`}
+                          >
+                            {i.imageUrl
+                              ? <img src={i.imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                              : <span className={`h-4 w-4 rounded-full border-2 ${on ? 'border-[#6fe8d6] bg-[#6fe8d6]' : 'border-muted-foreground'}`} />}
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold truncate">{i.name}</span>
+                              <span className="block text-xs text-muted-foreground">{i.id === 'general' ? 'Any amount' : itemPriceLabel(i)}</span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                )}
+
                 <div>
                   <label className="text-xs uppercase tracking-widest text-muted-foreground block mb-2">
                     {isDynamic ? 'Amount' : 'Amount to send'}
@@ -306,8 +420,23 @@ export default function ScanPayPage() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1.5">
                     Available balance: ₦{userBalance.toLocaleString()}
+                    {selectedItem?.pricing === 'open' && selectedItem.minAmount ? ` · minimum ${naira(selectedItem.minAmount)}` : ''}
                   </p>
                 </div>
+
+                {recipientType === 'merchant' && !isDynamic && (
+                  <div>
+                    <label htmlFor="pay-note" className="text-xs uppercase tracking-widest text-muted-foreground block mb-2">Note <span className="normal-case tracking-normal">(optional)</span></label>
+                    <input
+                      id="pay-note"
+                      value={note}
+                      maxLength={140}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="e.g. member name or envelope number"
+                      className="w-full rounded-xl surface-2 border border-border px-4 py-3 text-sm outline-none"
+                    />
+                  </div>
+                )}
 
                 {pinError && (
                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 flex items-center gap-1.5">
@@ -330,7 +459,7 @@ export default function ScanPayPage() {
 
       {/* Step: Confirm */}
       {showModal && step === 'confirm' && scannedData && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
           <div className="w-full max-w-[420px] rounded-t-3xl bg-background border border-border-strong overflow-hidden">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
               <p className="text-sm font-semibold">Confirm Payment</p>
@@ -349,6 +478,18 @@ export default function ScanPayPage() {
                     <span className="text-xs text-muted-foreground">Account</span>
                     <span className="text-sm font-mono">{recipientAccount}</span>
                   </div>
+                  {selectedItem && (
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <span className="text-xs text-muted-foreground">For</span>
+                      <span className="text-sm font-semibold text-right max-w-[180px] truncate">{selectedItem.name}</span>
+                    </div>
+                  )}
+                  {note.trim() && (
+                    <div className="flex items-center justify-between gap-3 px-4 py-3">
+                      <span className="text-xs text-muted-foreground">Note</span>
+                      <span className="text-sm text-right max-w-[200px] truncate">{note.trim()}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between px-4 py-3">
                     <span className="text-xs text-muted-foreground">Amount</span>
                     <span className="text-sm font-semibold">₦{payAmt.toLocaleString()}</span>
@@ -383,7 +524,7 @@ export default function ScanPayPage() {
 
       {/* Step: PIN */}
       {showModal && step === 'pin' && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
           <div className="w-full max-w-[420px] rounded-t-3xl bg-background border border-border-strong overflow-hidden">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
               <p className="text-sm font-semibold">Authorize Payment</p>
@@ -420,7 +561,7 @@ export default function ScanPayPage() {
 
       {/* Step: Success */}
       {showModal && step === 'success' && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
           <div className="w-full max-w-[420px] rounded-t-3xl bg-background border border-border-strong overflow-hidden">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
               <p className="text-sm font-semibold">Payment Successful</p>

@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Search, CheckCircle2, Clock, AlertCircle, QrCode, CreditCard, ArrowLeftRight, X } from 'lucide-react';
 import { formatNGN, formatDate } from '@/utils/formatting';
 import { useMerchantStore } from '@/store/useMerchantStore';
+import { CollectionsByItem } from '@/components/merchant/CollectionsByItem';
 
 type Status = 'all' | 'completed' | 'pending' | 'failed';
 type Method = 'qr' | 'transfer' | 'card';
@@ -21,6 +22,9 @@ const METHOD_CONFIG: Record<Method, { label: string; color: string; icon: React.
 
 export default function PaymentsPage() {
   const storePayments = useMerchantStore((s) => s.payments);
+  const fetchPayments = useMerchantStore((s) => s.fetchPayments);
+  // Load when this page opens (not only via the dashboard).
+  useEffect(() => { void fetchPayments(); }, [fetchPayments]);
   const payments = useMemo(() =>
     storePayments.map((p) => ({
       id: p.id, customer: p.customerName, amount: p.amount, date: new Date(p.createdAt),
@@ -45,6 +49,8 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-5">
+
+      <CollectionsByItem />
 
       {/* ── Stats ── */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}

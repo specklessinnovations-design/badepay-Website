@@ -8,6 +8,8 @@ export function isMerchantOnboardingComplete(user: User | null | undefined): boo
 
 export function getPostAuthPath(user: User | null | undefined, loginType: 'personal' | 'merchant' = 'personal'): string {
   if (!user) return '/login';
+  // Same as the mobile app: nothing works before the BVN is verified (KYC level 1).
+  if ((user.kycLevel ?? 0) < 1) return loginType === 'merchant' ? '/verify-bvn?then=merchant' : '/verify-bvn';
   
   // If user selected merchant login, redirect to merchant dashboard
   if (loginType === 'merchant') {

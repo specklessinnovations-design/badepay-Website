@@ -6,8 +6,8 @@ export interface MerchantProfile {
   businessName: string;
   tradingName: string;
   address: string;
-  rcNumber: string;
-  taxId: string;
+  rcNumber?: string;
+  taxId?: string;
   supportPhone: string;
   category: string;
   payoutPreference: PayoutPreference;
@@ -36,6 +36,8 @@ export const MERCHANT_CATEGORIES = [
   'Health',
   'Services',
   'Digital products',
+  'Religious organisation',
+  'Non-profit / NGO',
   'Other',
 ];
 

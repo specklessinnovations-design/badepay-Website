@@ -12,6 +12,29 @@
   --color-info: #3B82F6;
 }
 
+/* Names used by shared components (bg-background, text-muted-foreground, border-border…), mapped to
+   this site's theme variables so they follow light/dark mode. Without these, those classes did nothing
+   (e.g. sheets rendered transparent). */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--text-primary);
+  --color-muted: var(--surface-secondary);
+  --color-muted-foreground: var(--text-secondary);
+  --color-border: var(--border);
+  --color-border-strong: var(--border);
+  --color-surface-2: var(--surface-secondary);
+  --color-surface-3: var(--surface-tertiary);
+  --color-destructive: var(--error);
+  --color-primary-foreground: #1a1a1a;
+}
+
+@utility surface-2 {
+  background-color: var(--surface-secondary);
+}
+@utility gradient-primary {
+  background-image: linear-gradient(135deg, #6fe8d6 0%, #3fd1bd 100%);
+}
+
 /* ─── Dark mode (default) ─────────────────────────────────────────────────── */
 :root {
   /* Surfaces */

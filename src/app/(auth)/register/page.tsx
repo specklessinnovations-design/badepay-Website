@@ -5,10 +5,11 @@ import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail, Lock, User, Eye, EyeOff, ArrowRight, ArrowLeft,
-  Check, AlertCircle, ShieldCheck, Calendar, Globe, MapPin, ChevronDown, Search,
+  Check, AlertCircle, ShieldCheck, Globe, MapPin, ChevronDown, Search, Phone,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import authService from '@/services/authService';
+import apiClient from '@/lib/apiClient';
 import { PremiumInput } from '@/components/ui/premium-input';
 import { PremiumButton } from '@/components/ui/premium-button';
 import { bpToast } from '@/lib/bpToast';
@@ -16,16 +17,35 @@ import { getPostAuthPath } from '@/lib/authRouting';
 import { PrivacyPolicyModal } from '@/components/ui/privacy-policy-modal';
 import { ConsentModal } from '@/components/ui/consent-modal';
 
-const STEPS = ['Email', 'Profile', 'Age', 'Location', 'Verify', 'Secure PIN'];
+const STEPS = ['Email', 'Verify', 'Profile', 'Location', 'Secure PIN'];
+// The email is proven before anything else and the account is created last. The date of birth is
+// not asked here: it's entered with the BVN, checked against the BVN record and saved from it.
+const S = { email: 0, verify: 1, profile: 2, location: 3, pin: 4 } as const;
+
+/** Same rules as the backend's password check. */
+const PASSWORD_RULES: { label: string; test: (p: string) => boolean }[] = [
+  { label: '8+ characters', test: p => p.length >= 8 },
+  { label: 'Upper & lower case', test: p => /[A-Z]/.test(p) && /[a-z]/.test(p) },
+  { label: 'A number', test: p => /[0-9]/.test(p) },
+  { label: 'A symbol', test: p => /[^A-Za-z0-9]/.test(p) },
+];
+
+/** PINs that are too easy to guess (repeated digits, runs like 1234 / 4321). */
+function weakPin(pin: string): boolean {
+  if (/^(\d)\1{3}$/.test(pin)) return true;
+  const d = pin.split('').map(Number);
+  const steps = d.slice(1).map((x, i) => x - d[i]);
+  return steps.every(x => x === 1) || steps.every(x => x === -1);
+}
 
 interface SignupData {
   email: string;
   otp: string[];
   firstName: string;
   lastName: string;
+  phone: string;
   password: string;
   confirmPassword: string;
-  dob: string;
   pin: string;
   confirmPin: string;
   location: string;
@@ -68,7 +88,16 @@ const StepBubbles = ({ current }: { current: number }) => (
 function RegisterForm() {
   const [, navigate] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
-  const { register, setPin, verifyOtp, isLoading: authLoading } = useAuthStore();
+  // From "Register your business": a personal account first (same as the app), then the business setup.
+  const isMerchant = searchParams.get('role') === 'merchant';
+  const { register, isLoading: authLoading } = useAuthStore();
+  /** Proof the email was verified (from the emailed code); the backend won't create the account without it. */
+  const [emailProof, setEmailProof] = useState('');
+  const [pilotMessage, setPilotMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    authService.pilot().then(p => { if (p.inviteOnly) setPilotMessage(p.message ?? 'BadePay is invite-only during our pilot.'); }).catch(() => {});
+  }, []);
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -84,8 +113,8 @@ function RegisterForm() {
 
   const [data, setData] = useState<SignupData>({
     email: '', otp: ['', '', '', '', '', ''],
-    firstName: '', lastName: '',
-    password: '', confirmPassword: '', dob: '', pin: '', confirmPin: '',
+    firstName: '', lastName: '', phone: '',
+    password: '', confirmPassword: '', pin: '', confirmPin: '',
     location: '',
   });
 
@@ -106,34 +135,23 @@ function RegisterForm() {
   const [stateSearch, setStateSearch] = useState('');
   const [placeSearch, setPlaceSearch] = useState('');
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
   const otpInputs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Load countries when reaching the Location step
   useEffect(() => {
-    if (step === 3 && resendTimer > 0) {
-      const interval = setInterval(() => setResendTimer(t => t - 1), 1000);
-      return () => clearInterval(interval);
-    }
-    return undefined;
-  }, [step, resendTimer]);
-
-  // Load countries when reaching Location step (step 3)
-  useEffect(() => {
-    if (step === 3 && countries.length === 0) {
+    if (step === S.location && countries.length === 0) {
       setLoadingCountries(true);
-      fetch(`${API_BASE}/location/countries`)
-        .then(r => r.json())
-        .then(d => setCountries(d?.countries || []))
+      apiClient.get('/location/countries')
+        .then(d => setCountries(d?.data?.countries || []))
         .catch(() => setError('Failed to load countries. Check your connection.'))
         .finally(() => setLoadingCountries(false));
     }
   }, [step]);
 
-  // Load countries for location step (step 3)
-  // Note: resend timer still handles step 4 (OTP)
+  // Resend countdown on the email code step
   useEffect(() => {
-    if (step === 4 && resendTimer > 0) {
+    if (step === S.verify && resendTimer > 0) {
       const interval = setInterval(() => setResendTimer(t => t - 1), 1000);
       return () => clearInterval(interval);
     }
@@ -149,9 +167,8 @@ function RegisterForm() {
     setCountrySearch('');
     if (!countryCode) return;
     setLoadingStates(true);
-    fetch(`${API_BASE}/location/countries/${countryCode}/states`)
-      .then(r => r.json())
-      .then(d => setStates(d?.states || []))
+    apiClient.get(`/location/countries/${countryCode}/states`)
+      .then(d => setStates(d?.data?.states || []))
       .catch(() => setError('Failed to load states.'))
       .finally(() => setLoadingStates(false));
   };
@@ -163,9 +180,8 @@ function RegisterForm() {
     setStateSearch('');
     if (!stateCode || !selectedCountry) return;
     setLoadingPlaces(true);
-    fetch(`${API_BASE}/location/countries/${selectedCountry}/states/${stateCode}/places`)
-      .then(r => r.json())
-      .then(d => setPlaces(d?.places || []))
+    apiClient.get(`/location/countries/${selectedCountry}/states/${stateCode}/places`)
+      .then(d => setPlaces(d?.data?.places || []))
       .catch(() => setError('Failed to load cities.'))
       .finally(() => setLoadingPlaces(false));
   };
@@ -197,89 +213,111 @@ function RegisterForm() {
   };
 
   const pwReqs = [
-    { label: '6+ characters', ok: data.password.length >= 6 },
+    ...PASSWORD_RULES.map(r => ({ label: r.label, ok: r.test(data.password) })),
     { label: 'Passwords match', ok: data.password.length > 0 && data.password === data.confirmPassword },
   ];
+  const email = data.email.trim().toLowerCase();
 
-  const handleNext = async () => {
+  /** Step 1: the email must be new; then a 6-digit code is emailed. */
+  const sendCode = async () => {
     setError('');
     setLoading(true);
     try {
-      if (step === 0) {
-        if (!data.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-          setError('Enter a valid email address');
-          return;
-        }
-        if (!privacyAccepted) {
-          setShowPrivacy(true);
-          setLoading(false);
-          return;
-        }
-        if (!consentAccepted) {
-          setShowConsent(true);
-          setLoading(false);
-          return;
-        }
-      } else if (step === 1) {
-        if (!data.firstName.trim()) { setError('First name is required'); return; }
-        if (!data.lastName.trim()) { setError('Last name is required'); return; }
-        if (data.password.length < 6) { setError('Password needs at least 6 characters'); return; }
-        if (data.password !== data.confirmPassword) { setError("Passwords don't match"); return; }
-      } else if (step === 2) {
-        if (!data.dob) { setError('Please enter your date of birth'); return; }
-        // Proper 18+ check using exact date (not just year)
-        const birthDate = new Date(data.dob);
-        const today = new Date();
-        const eighteenYearsAgo = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-        if (birthDate > eighteenYearsAgo) {
-          setError('You must be 18 years or older to open an account');
-          return;
-        }
-        // Just advance to location step
-      } else if (step === 3) {
-        // Location step — validate selection
-        if (!selectedCountry) { setError('Please select a country'); return; }
-        if (!selectedState) { setError('Please select a state / region'); return; }
-        if (!selectedPlace) { setError('Please select a city'); return; }
-        const countryObj = countries.find(c => c.code === selectedCountry);
-        const stateObj = states.find(s => s.code === selectedState);
-        const locationStr = `${selectedPlace}, ${stateObj?.name || selectedState}, ${countryObj?.name || selectedCountry} ${countryObj?.flag || ''}`;
-        setData(p => ({ ...p, location: locationStr }));
-        // Now register
-        await register({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email.trim().toLowerCase(),
-          password: data.password,
-          userType: 'consumer',
-          location: locationStr,
-        });
-        setResendTimer(42);
-        bpToast.success('Account created! Check your email for a verification code.');
-      } else if (step === 4) {
-        const code = data.otp.join('');
-        if (code.length !== 6) { setError('Enter all 6 digits'); return; }
-        await verifyOtp(code);
-      } else if (step === 5) {
-        if (!data.pin || data.pin.length !== 4) { setError('PIN must be exactly 4 digits'); return; }
-        if (data.pin !== data.confirmPin) { setError("PINs don't match"); return; }
-        try {
-          await setPin(data.pin);
-          bpToast.success(`Welcome to BadePay, ${data.firstName}! 🎉`);
-          // Default to personal dashboard after registration
-          navigate('/dashboard');
-        } catch (err: any) {
-          setError(err?.message || 'Failed to set PIN');
-          return;
-        }
+      if (await authService.checkEmail(email)) {
+        setError('This email is already registered. Please sign in instead.');
         return;
       }
-      await new Promise(r => setTimeout(r, 400));
-      setStep(s => s + 1);
+      setEmailProof(''); // a new email needs its own verification
+      await authService.sendOTP(email);
+      setData(p => ({ ...p, otp: ['', '', '', '', '', ''] }));
+      setResendTimer(42);
+      setStep(S.verify);
     } catch (err: any) {
-      setError(err?.message || 'Something went wrong. Try again.');
+      setError(err?.message || 'We could not send a code. Try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** Last step: create the account (with the PIN) and sign in. */
+  const createAccount = async (pin: string) => {
+    setError('');
+    setLoading(true);
+    try {
+      await register({
+        firstName: data.firstName.trim(),
+        lastName: data.lastName.trim(),
+        email,
+        phone: data.phone.replace(/\s/g, ''),
+        password: data.password,
+        userType: 'consumer',
+        location: data.location,
+        pin,
+        emailVerificationToken: emailProof,
+      });
+      bpToast.success(`Welcome to BadePay, ${data.firstName.trim()}!`);
+      // Remember the business sign-up through BVN verification (the flag in the URL can be lost on redirects).
+      try { if (isMerchant) sessionStorage.setItem('bp_then_merchant', '1'); } catch { /* storage blocked */ }
+      navigate(isMerchant ? '/verify-bvn?then=merchant' : '/verify-bvn');
+    } catch (err: any) {
+      const message = err?.message || 'Could not create your account. Try again.';
+      // The email proof lasts 30 minutes: if it lapsed, send a fresh code and ask for it again.
+      if (/verif/i.test(message)) {
+        setEmailProof('');
+        setData(p => ({ ...p, pin: '', confirmPin: '', otp: ['', '', '', '', '', ''] }));
+        setPinStep('enter');
+        await authService.sendOTP(email).catch(() => {});
+        setResendTimer(42);
+        setStep(S.verify);
+        setError('Your email verification expired. We sent a new code. Enter it to finish.');
+      } else {
+        setData(p => ({ ...p, pin: '', confirmPin: '' }));
+        setPinStep('enter');
+        setError(message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNext = async () => {
+    setError('');
+    if (step === S.email) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Enter a valid email address'); return; }
+      if (!privacyAccepted) { setShowPrivacy(true); return; }
+      if (!consentAccepted) { setShowConsent(true); return; }
+      await sendCode();
+    } else if (step === S.verify) {
+      const code = data.otp.join('');
+      if (code.length !== 6) { setError('Enter all 6 digits'); return; }
+      setLoading(true);
+      try {
+        setEmailProof(await authService.confirmSignupEmail(email, code));
+        setStep(S.profile);
+      } catch (err: any) {
+        setError(err?.message || 'That code didn’t work. Check it or request a new one.');
+      } finally {
+        setLoading(false);
+      }
+    } else if (step === S.profile) {
+      if (data.firstName.trim().length < 2) { setError('First name is required'); return; }
+      if (data.lastName.trim().length < 2) { setError('Last name is required'); return; }
+      if (data.phone.replace(/\D/g, '').length < 10) { setError('Enter your phone number'); return; }
+      const broken = PASSWORD_RULES.find(r => !r.test(data.password));
+      if (broken) { setError(`Password needs: ${broken.label.toLowerCase()}`); return; }
+      if (data.password !== data.confirmPassword) { setError("Passwords don't match"); return; }
+      setStep(S.location);
+    } else if (step === S.location) {
+      if (!selectedCountry) { setError('Please select a country'); return; }
+      if (!selectedState) { setError('Please select a state / region'); return; }
+      if (!selectedPlace) { setError('Please select a city'); return; }
+      const countryObj = countries.find(c => c.code === selectedCountry);
+      const stateObj = states.find(s => s.code === selectedState);
+      setData(p => ({ ...p, location: `${selectedPlace}, ${stateObj?.name || selectedState}, ${countryObj?.name || selectedCountry}` }));
+      setStep(S.pin);
+    } else if (step === S.pin) {
+      if (data.pin.length !== 4 || data.pin !== data.confirmPin) { setError("PINs don't match"); return; }
+      await createAccount(data.pin);
     }
   };
 
@@ -293,9 +331,16 @@ function RegisterForm() {
       setData(p => ({ ...p, [field]: next }));
       if (next.length === 4) {
         if (field === 'pin') {
+          if (weakPin(next)) {
+            setError('Choose a less obvious PIN');
+            setTimeout(() => setData(p => ({ ...p, pin: '' })), 600);
+            return;
+          }
           setTimeout(() => setPinStep('confirm'), 300);
         } else {
-          if (data.pin !== next) {
+          if (data.pin === next) {
+            void createAccount(next);
+          } else {
             setError("PINs don't match — try again");
             setTimeout(() => {
               setData(p => ({ ...p, confirmPin: '', pin: '' }));
@@ -329,8 +374,7 @@ function RegisterForm() {
     setConsentAccepted(true);
     setShowConsent(false);
     await new Promise(r => setTimeout(r, 120));
-    await new Promise(r => setTimeout(r, 400));
-    setStep(s => s + 1);
+    await sendCode();
   };
 
   const handleConsentDecline = () => {
@@ -345,8 +389,8 @@ function RegisterForm() {
 
       {/* Back link */}
       <div className="mb-6 flex items-center justify-between">
-        {step > 0 && step !== 4 ? (
-          <button onClick={() => { setError(''); if (step === 5) { setPinStep('enter'); setData(p => ({ ...p, pin: '', confirmPin: '' })); } setStep(s => s - 1); }}
+        {step > 0 ? (
+          <button onClick={() => { setError(''); if (step === S.pin) { setPinStep('enter'); setData(p => ({ ...p, pin: '', confirmPin: '' })); } setStep(s => (s === S.profile ? S.email : s - 1)); }}
             className="flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-80" style={{ color: 'var(--text-secondary)' }}>
             <ArrowLeft size={15} /> Back
           </button>
@@ -382,8 +426,12 @@ function RegisterForm() {
           {/* ─── Step 0: Email ─── */}
           {step === 0 && (
             <div>
-              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Your email address</h1>
+              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">{isMerchant ? 'Register your business' : 'Your email address'}</h1>
+              {isMerchant && <p className="text-sm text-[var(--text-secondary)] mb-2">First your own account (you’ll sign in with it), then your business details.</p>}
               <p className="text-sm text-[var(--text-secondary)] mb-7">We'll send a verification code to this email.</p>
+              {pilotMessage && (
+                <p className="mb-5 rounded-2xl px-4 py-3 text-xs" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{pilotMessage}</p>
+              )}
               <PremiumInput
                 label="Email address"
                 type="email"
@@ -396,8 +444,8 @@ function RegisterForm() {
             </div>
           )}
 
-          {/* ─── Step 1: Profile ─── */}
-          {step === 1 && (
+          {/* ─── Profile ─── */}
+          {step === S.profile && (
             <div>
               <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Create your profile</h1>
               <p className="text-sm text-[var(--text-secondary)] mb-6">Use details matching your official ID.</p>
@@ -409,6 +457,9 @@ function RegisterForm() {
                   <PremiumInput label="Last name" placeholder="Adeyemi" icon={<User size={15} />}
                     value={data.lastName} onChange={e => setData(p => ({ ...p, lastName: e.target.value }))} />
                 </div>
+
+                <PremiumInput label="Phone number" type="tel" placeholder="080 1234 5678" icon={<Phone size={15} />}
+                  autoComplete="tel" value={data.phone} onChange={e => setData(p => ({ ...p, phone: e.target.value }))} />
 
                 <PremiumInput label="Password" type={showPassword ? 'text' : 'password'} placeholder="Create a strong password"
                   icon={<Lock size={15} />}
@@ -449,39 +500,8 @@ function RegisterForm() {
             </div>
           )}
 
-          {/* ─── Step 2: Age Verification ─── */}
-          {step === 2 && (
-            <div>
-              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Age Verification</h1>
-              <p className="text-sm text-[var(--text-secondary)] mb-6">Please enter your date of birth to verify you're 18 or older.</p>
-
-              <div className="space-y-4">
-                <PremiumInput
-                  label="Date of birth"
-                  type="date"
-                  icon={<Calendar size={15} />}
-                  value={data.dob}
-                  onChange={e => setData(p => ({ ...p, dob: e.target.value }))}
-                  max={(() => {
-                    const d = new Date();
-                    d.setFullYear(d.getFullYear() - 18);
-                    return d.toISOString().split('T')[0];
-                  })()}
-                />
-
-                <div className="flex items-start gap-3 p-4 rounded-2xl"
-                  style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
-                  <ShieldCheck size={16} className="text-[#6fe8d6] shrink-0 mt-0.5" />
-                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                    You must be at least 18 years old to use BadePay. Your date of birth is used for age verification only.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ─── Step 3: Location Selection ─── */}
-          {step === 3 && (
+          {/* ─── Location Selection ─── */}
+          {step === S.location && (
             <div>
               <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Where are you located?</h1>
               <p className="text-sm text-[var(--text-secondary)] mb-6">
@@ -759,12 +779,12 @@ function RegisterForm() {
             </div>
           )}
 
-          {/* ─── Step 4: OTP ─── */}
-          {step === 4 && (
+          {/* ─── Email code ─── */}
+          {step === S.verify && (
             <div>
               <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Verify your email</h1>
               <p className="text-sm text-[var(--text-secondary)] mb-6">
-                We sent a welcome email and 6-digit code to{' '}
+                We sent a 6-digit code to{' '}
                 <span className="font-semibold text-[var(--text-primary)]">{data.email}</span>
               </p>
 
@@ -791,7 +811,7 @@ function RegisterForm() {
                   onClick={async () => {
                     setResendTimer(42);
                     try {
-                      await authService.resendOTP(data.email);
+                      await authService.resendOTP(email);
                       bpToast.success('New code sent to your email!');
                     } catch {
                       bpToast.error('Failed to resend code');
@@ -805,8 +825,8 @@ function RegisterForm() {
             </div>
           )}
 
-          {/* ─── Step 5: PIN ─── */}
-          {step === 5 && (
+          {/* ─── PIN ─── */}
+          {step === S.pin && (
             <div>
               <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">
                 {pinStep === 'enter' ? 'Create transaction PIN' : 'Confirm your PIN'}
@@ -866,19 +886,19 @@ function RegisterForm() {
       </AnimatePresence>
 
       {/* Next button — hidden on pin step (uses numpad) */}
-      {step < 5 && (
+      {step < S.pin && (
         <div className="mt-8">
           <PremiumButton type="button" fullWidth size="lg" onClick={handleNext} isLoading={isLoading} disabled={isLoading}>
-            {!isLoading && <>{step === 1 ? 'Continue' : step === 2 ? 'Verify Age' : step === 3 ? 'Continue' : step === 4 ? 'Verify email' : 'Continue'} <ArrowRight size={17} /></>}
+            {!isLoading && <>{step === S.email ? 'Send code' : step === S.verify ? 'Verify email' : 'Continue'} <ArrowRight size={17} /></>}
           </PremiumButton>
         </div>
       )}
 
-      {step === 5 && (
+      {step === S.pin && (
         <PremiumButton type="button" fullWidth size="lg" className="mt-8"
           onClick={handleNext} isLoading={isLoading}
           disabled={isLoading || data.pin.length !== 4 || data.confirmPin.length !== 4}>
-          {!isLoading && <>Finish setup <ArrowRight size={17} /></>}
+          {!isLoading && <>Create account <ArrowRight size={17} /></>}
         </PremiumButton>
       )}
 

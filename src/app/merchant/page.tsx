@@ -148,7 +148,7 @@ export default function MerchantDashboard() {
               style={{ background: 'rgba(111,232,214,0.1)', border: '1px solid rgba(111,232,214,0.2)', color: '#6fe8d6' }}>
               Payments <ArrowRight size={12} />
             </Link>
-            <Link href="/merchant/settlements"
+            <Link href="/merchant/payouts"
               className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black transition-all active:scale-95"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.65)' }}>
               Settlements

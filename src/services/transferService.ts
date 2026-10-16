@@ -17,7 +17,9 @@ export interface TransferRequest {
   recipientAccountNumber?: string;
   accountNumber?: string;
   bankCode?: string;
+  bankName?: string;
   narration?: string;
+  saveBeneficiary?: boolean;
 }
 
 export interface Transaction {

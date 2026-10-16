@@ -32,7 +32,7 @@ interface TransactionState {
   addTransaction: (tx: Omit<Transaction, 'id' | 'date' | 'status'>) => Transaction;
 }
 
-function mapTransaction(t: any): Transaction {
+export function mapTransaction(t: any): Transaction {
   const isCredit =
     t.type === 'credit' ||
     t.type === 'funding' ||

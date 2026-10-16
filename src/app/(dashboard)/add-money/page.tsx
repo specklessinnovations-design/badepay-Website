@@ -4,6 +4,7 @@ import { useLocation } from 'wouter';
 import { useWalletStore } from '@/store/useWalletStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatNGN } from '@/utils/formatting';
+import { ensureVirtualAccount, type VirtualAccount } from '@/services/virtualAccount';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Copy, Share2, Building2, CreditCard, QrCode, Check, ChevronRight, Sparkles, ShieldCheck, PhoneCall, ChevronDown } from 'lucide-react';
 
@@ -36,8 +37,15 @@ export default function AddMoneyPage() {
   const [ussdAmount, setUssdAmount] = useState('5000');
   const [ussdCopied, setUssdCopied] = useState(false);
 
-  const rawAccountNumber = user?.accountNumber || '';
-  const accountName = user ? `${user.firstName} ${user.lastName}` : 'BadePay User';
+  // The wallet's real bank account (same as the app): money sent to it from any Nigerian bank lands in the wallet.
+  const [va, setVa] = useState<VirtualAccount | null>(null);
+  const [vaError, setVaError] = useState('');
+  useEffect(() => {
+    ensureVirtualAccount('personal').then(setVa).catch((e) => setVaError(e?.message || 'Your account number isn’t ready yet.'));
+  }, []);
+  const rawAccountNumber = va?.accountNumber || '';
+  const bankLabel = va?.bankName || 'BadePay';
+  const accountName = va?.accountName || (user ? `${user.firstName} ${user.lastName}` : 'BadePay User');
 
   const formatAccountNumber = (num: string) => {
     const cleaned = num.replace(/\D/g, '');
@@ -54,14 +62,14 @@ export default function AddMoneyPage() {
   };
 
   const handleCopyAll = () => {
-    const text = `Bank: BadePay\nAccount Number: ${formatAccountNumber(rawAccountNumber)}\nAccount Name: BadePay / ${accountName}`;
+    const text = `Bank: ${bankLabel}\nAccount Number: ${rawAccountNumber}\nAccount Name: ${accountName}`;
     navigator.clipboard.writeText(text);
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2000);
   };
 
   const handleShare = async () => {
-    const text = `My BadePay account details:\nBank: BadePay\nAccount Number: ${formatAccountNumber(rawAccountNumber)}\nAccount Name: BadePay / ${accountName}`;
+    const text = `My BadePay account details:\nBank: ${bankLabel}\nAccount Number: ${rawAccountNumber}\nAccount Name: ${accountName}`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -88,11 +96,10 @@ export default function AddMoneyPage() {
     if (isNaN(numAmt) || numAmt <= 0) return;
     setLoading(true);
     try {
-      const callbackUrl = `${window.location.origin}/paystack-callback`;
       const result = await deposit(numAmt);
       if (result.authorizationUrl) {
         try {
-          sessionStorage.setItem("paystack_reference", result.reference || '');
+          sessionStorage.setItem("card_funding_reference", result.reference || '');
         } catch { }
         window.location.href = result.authorizationUrl;
       } else {
@@ -150,7 +157,7 @@ export default function AddMoneyPage() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <div className="text-[10px] uppercase tracking-[0.2em] text-[rgba(111,232,214,0.55)]">Partner bank</div>
-              <div className="text-[14px] font-semibold mt-0.5 text-white">BadePay</div>
+              <div className="text-[14px] font-semibold mt-0.5 text-white">{bankLabel}</div>
             </div>
             <div className="h-10 w-10 rounded-xl flex items-center justify-center"
               style={{ background: 'rgba(111,232,214,0.15)' }}>
@@ -161,7 +168,7 @@ export default function AddMoneyPage() {
           <div className="pt-5 border-t border-[rgba(111,232,214,0.2)]">
             <div className="text-[10px] uppercase tracking-[0.2em] text-[rgba(111,232,214,0.55)]">Account number</div>
             <div className="mt-1 flex items-center justify-between">
-              <span className="font-display text-[28px] font-semibold tracking-wide tabular text-white">{formatAccountNumber(rawAccountNumber) || '--- --- ----'}</span>
+              <span className="font-display text-[28px] font-semibold tracking-wide tabular text-white">{formatAccountNumber(rawAccountNumber) || (vaError ? 'Not ready yet' : '--- --- ----')}</span>
               <button
                 onClick={handleCopyNum}
                 className="h-9 w-9 rounded-xl flex items-center justify-center transition-all active:scale-[0.95]"
@@ -171,7 +178,7 @@ export default function AddMoneyPage() {
                 {copiedNum ? <Check size={16} className="text-[#6fe8d6] animate-pulse" /> : <Copy size={16} className="text-[#6fe8d6]" />}
               </button>
             </div>
-            <div className="mt-1 text-[12px] text-[rgba(111,232,214,0.55)]">{accountName} · BadePay</div>
+            <div className="mt-1 text-[12px] text-[rgba(111,232,214,0.55)]">{vaError || accountName}</div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -338,7 +345,7 @@ export default function AddMoneyPage() {
                 </div>
                 <div className="text-center">
                   <span className="font-display text-[15px] font-bold text-[var(--text-primary)]">{accountName}</span>
-                  <p className="text-[11.5px] text-[var(--text-secondary)] mt-0.5">BadePay · {formatAccountNumber(rawAccountNumber)}</p>
+                  <p className="text-[11.5px] text-[var(--text-secondary)] mt-0.5">{bankLabel} · {formatAccountNumber(rawAccountNumber)}</p>
                 </div>
                 <div className="flex gap-3 w-full mt-2">
                   <button onClick={closeModal} className="flex-1 h-12 rounded-2xl text-[13.5px] font-medium" style={{ background: 'var(--surface-secondary)', color: 'var(--text-primary)' }}>Close</button>

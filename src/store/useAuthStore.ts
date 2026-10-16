@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import authService from '@/services/authService';
+import authService, { type LoginChallenge, type SignInResult } from '@/services/authService';
 import apiClient from '@/lib/apiClient';
 import { toPublicUser } from '@/lib/authMappers';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
@@ -19,7 +19,7 @@ export interface User {
   bankName?: string;
   accountName?: string;
   kycLevel: KYCLevel;
-  kycStatus?: 'pending' | 'approved' | 'rejected';
+  kycStatus?: 'unsubmitted' | 'pending' | 'approved' | 'rejected';
   bvnVerified?: boolean;
   ninVerified?: boolean;
   selfieVerified?: boolean;
@@ -36,6 +36,8 @@ export interface User {
   deviceId?: string;
   merchantProfile?: MerchantProfile;
   kycSubmittedAt?: string;
+  /** YYYY-MM-DD, set from the verified BVN. */
+  dateOfBirth?: string;
   isActive?: boolean;
   avatar?: string;
 }
@@ -55,7 +57,10 @@ export interface AuthState {
   lastLoginTime?: string;
 
   // Auth actions
-  login: (email: string, password: string, rememberDevice?: boolean) => Promise<void>;
+  /** Resolves with the next step when the backend needs one (emailed code / 2FA), otherwise null once signed in. */
+  login: (email: string, password: string, rememberDevice?: boolean) => Promise<LoginChallenge | null>;
+  /** Answers a sign-in step with its code; may return another step (e.g. 2FA after a device code). */
+  completeLoginStep: (challenge: LoginChallenge, code: string) => Promise<LoginChallenge | null>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   verifyOtp: (otp: string) => Promise<void>;
@@ -87,9 +92,33 @@ export interface RegisterData {
   password: string;
   userType: UserType;
   location?: string;
+  pin?: string;
+  /** From the sign-up email code (authService.confirmSignupEmail). */
+  emailVerificationToken: string;
 }
 
-export const useAuthStore = create<AuthState>()((set, get) => ({
+export const useAuthStore = create<AuthState>()((set, get) => {
+  /** Stores the session once sign-in has finished; passes any further step back to the page. */
+  const signIn = async (result: SignInResult, rememberDevice: boolean): Promise<LoginChallenge | null> => {
+    if ('challenge' in result) return result.challenge;
+    const response = result.signedIn;
+    usePreferencesStore.getState().recordLogin(getDeviceLabel());
+    // Sign-in returns a minimal user (no KYC level, balance…); load the full profile before routing on it.
+    const full = await authService.getProfile().catch(() => null);
+    set({
+      user: toPublicUser(full?.id ? full : response.user),
+      isAuthenticated: true,
+      authSetupComplete: true,
+      sessionToken: response.token,
+      refreshToken: response.refreshToken,
+      deviceVerified: rememberDevice,
+      suspiciousLoginAttempts: 0,
+      lastLoginTime: new Date().toISOString(),
+    });
+    return null;
+  };
+
+  return {
       user: null,
       isAuthenticated: false,
       isLoading: false,
@@ -104,23 +133,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       login: async (email: string, password: string, rememberDevice = false) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await authService.login(email, password);
-
-          usePreferencesStore.getState().recordLogin(getDeviceLabel());
-          authService.updateUserProfile({
-            lastLogin: new Date().toISOString(),
-          }).catch(() => {});
-
-          set({
-            user: toPublicUser(response.user),
-            isAuthenticated: true,
-            authSetupComplete: true,
-            sessionToken: response.token,
-            refreshToken: response.refreshToken,
-            deviceVerified: rememberDevice,
-            suspiciousLoginAttempts: 0,
-            lastLoginTime: new Date().toISOString(),
-          });
+          return await signIn(await authService.login(email, password), rememberDevice);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Login failed';
           set({
@@ -133,9 +146,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         }
       },
 
-      /**
-       * Register a new user
-       */
+      completeLoginStep: async (challenge: LoginChallenge, code: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const result =
+            challenge.kind === 'twoFactor' ? await authService.completeTwoFactor(challenge.challengeToken, code)
+            : challenge.kind === 'verifyDevice' ? await authService.verifyDevice(challenge.email, code, challenge.pinId)
+            : await authService.verifyEmailLogin(challenge.email, code, challenge.pinId);
+          return await signIn(result, true);
+        } catch (error) {
+          set({ error: error instanceof Error ? error.message : 'Verification failed' });
+          throw error;
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
       register: async (data: RegisterData) => {
         set({ isLoading: true, error: null });
         try {
@@ -147,12 +173,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             password: data.password,
             userType: data.userType,
             location: data.location,
+            pin: data.pin,
+            emailVerificationToken: data.emailVerificationToken,
           });
+          if (!response.token) throw new Error('Your account was created, but we could not sign you in. Please sign in.');
 
           set({
             user: toPublicUser(response.user),
             isAuthenticated: true,
-            authSetupComplete: false,
+            authSetupComplete: !!data.pin,
             sessionToken: response.token,
             refreshToken: response.refreshToken,
           });
@@ -559,8 +588,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           error: null,
         });
       },
-    })
-);
+    };
+});
 
 function getDeviceLabel(): string {
   if (typeof navigator === 'undefined') return 'This device';

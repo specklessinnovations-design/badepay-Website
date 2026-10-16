@@ -5,14 +5,16 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useRequireMerchant } from '@/hooks/useAuthProtection';
 import { ThemeContext } from '@/contexts/ThemeContext';
 import { AppShell } from '@/components/ui/app-shell';
-import { BarChart3, CreditCard, QrCode, DollarSign, LogOut, Menu, X, Moon, Sun, Store, ShoppingBag, Package, User } from 'lucide-react';
+import { Users, BarChart3, CreditCard, QrCode, DollarSign, LogOut, Menu, X, Moon, Sun, Store, ShoppingBag, Package, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const NAV = [
   { icon: BarChart3,   label: 'Dashboard',   href: '/merchant' },
   { icon: CreditCard,  label: 'Payments',    href: '/merchant/payments' },
   { icon: QrCode,      label: 'QR Codes',    href: '/merchant/qr' },
-  { icon: DollarSign,  label: 'Settlements', href: '/merchant/settlements' },
+  { icon: DollarSign,  label: 'Payouts', href: '/merchant/payouts' },
+  { icon: Users,       label: 'Customers', href: '/merchant/customers' },
+  { icon: BarChart3,   label: 'Analytics', href: '/merchant/analytics' },
   { icon: Package,     label: 'My Store',    href: '/merchant/store' },
   { icon: ShoppingBag, label: 'Orders',      href: '/merchant/orders' },
 ];

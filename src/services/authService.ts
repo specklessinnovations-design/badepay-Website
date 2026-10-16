@@ -26,7 +26,7 @@ export interface StoredUser {
   hasPinSet?: boolean;
   pinRequirement?: 'always' | 'above_20k';
   kycLevel: 0 | 1 | 2 | 3;
-  kycStatus?: 'pending' | 'approved' | 'rejected';
+  kycStatus?: 'unsubmitted' | 'pending' | 'approved' | 'rejected';
   biometricEnabled?: boolean;
   username?: string;
   twoFactorEnabled?: boolean;
@@ -37,6 +37,8 @@ export interface StoredUser {
   bvnVerified?: boolean;
   ninVerified?: boolean;
   kycSubmittedAt?: string;
+  /** YYYY-MM-DD, set from the verified BVN. */
+  dateOfBirth?: string;
 }
 
 export interface AuthResponse {
@@ -44,6 +46,19 @@ export interface AuthResponse {
   token: string;
   refreshToken: string;
 }
+
+/**
+ * Sign-in can need one more step before there's a session (same as the mobile app):
+ * - verifyEmail: older account with an unverified email; a code was emailed
+ * - verifyDevice: first sign-in from this browser; a code was emailed
+ * - twoFactor: 2FA is on; enter the authenticator code
+ */
+export type LoginChallenge =
+  | { kind: 'verifyEmail'; email: string; pinId?: string }
+  | { kind: 'verifyDevice'; email: string; pinId?: string }
+  | { kind: 'twoFactor'; challengeToken: string };
+
+export type SignInResult = { signedIn: AuthResponse } | { challenge: LoginChallenge };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,7 +76,7 @@ function mapBackendUser(raw: any): StoredUser {
     accountName: raw.accountName || `${raw.firstName || ''} ${raw.lastName || ''}`.trim(),
     balance: Number(raw.balance ?? raw.wallet?.balance ?? 0),
     kycLevel: (raw.kycLevel ?? 0) as 0 | 1 | 2 | 3,
-    kycStatus: raw.kycStatus || 'pending',
+    kycStatus: raw.kycStatus || undefined, // unknown, not 'pending' (that means under review)
     bvnVerified: raw.bvnVerified || false,
     ninVerified: raw.ninVerified || false,
     twoFactorEnabled: raw.twoFactorEnabled || false,
@@ -69,6 +84,7 @@ function mapBackendUser(raw: any): StoredUser {
     avatar: raw.avatar || undefined,
     lastLogin: raw.lastLogin || undefined,
     kycSubmittedAt: raw.kycSubmittedAt || undefined,
+    dateOfBirth: raw.dateOfBirth ? String(raw.dateOfBirth).slice(0, 10) : undefined,
     hasPinSet: raw.hasPinSet ?? !!raw.transactionPin,
     pinRequirement: raw.pinRequirement || 'always',
     merchantProfile: raw.merchantProfile
@@ -76,6 +92,19 @@ function mapBackendUser(raw: any): StoredUser {
       : undefined,
   };
 }
+
+/** Stable id for this browser, so the backend can recognise it as a trusted device. */
+export function deviceId(): string {
+  const KEY = 'bp_device_id';
+  try {
+    let id = localStorage.getItem(KEY);
+    if (!id) { id = `web-${crypto.randomUUID()}`; localStorage.setItem(KEY, id); }
+    return id;
+  } catch {
+    return 'web-unknown-device';
+  }
+}
+const device = () => ({ deviceId: deviceId(), deviceName: 'BadePay Web' });
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -101,6 +130,17 @@ function extractUser(resp: any): any {
   return resp?.data?.user || resp?.user || resp?.data || {};
 }
 
+function signInResult(resp: any, email: string): SignInResult {
+  const d = resp?.data ?? {};
+  if (d.requiresTwoFactor && d.challengeToken) return { challenge: { kind: 'twoFactor', challengeToken: d.challengeToken } };
+  if (d.requiresEmailVerification) return { challenge: { kind: 'verifyEmail', email, pinId: d.pinId } };
+  if (d.requiresDeviceVerification) return { challenge: { kind: 'verifyDevice', email, pinId: d.pinId } };
+  const { token, refreshToken } = extractTokens(resp);
+  if (!token) throw new Error(resp?.message || 'Sign-in failed. Please try again.');
+  apiClient.setTokens(token, refreshToken);
+  return { signedIn: { user: mapBackendUser(extractUser(resp)), token, refreshToken } };
+}
+
 // ─── Auth Service ─────────────────────────────────────────────────────────────
 
 export const authService = {
@@ -108,11 +148,38 @@ export const authService = {
    * Login with email + password.
    * Backend endpoint: POST /auth/login
    */
-  login: async (email: string, password: string): Promise<AuthResponse> => {
-    const resp = await apiClient.post('/auth/login', { email: normalizeEmail(email), password });
-    const { token, refreshToken } = extractTokens(resp);
-    if (token) apiClient.setTokens(token, refreshToken);
-    return { user: mapBackendUser(extractUser(resp)), token, refreshToken };
+  login: async (email: string, password: string): Promise<SignInResult> =>
+    signInResult(await apiClient.post('/auth/login', { email: normalizeEmail(email), password, ...device() }), normalizeEmail(email)),
+
+  /** Unverified email at sign-in: the emailed code verifies it and signs in. */
+  verifyEmailLogin: async (email: string, otp: string, pinId?: string): Promise<SignInResult> =>
+    signInResult(await apiClient.post('/auth/login/verify-email', { email: normalizeEmail(email), otp, pinId, ...device() }), normalizeEmail(email)),
+
+  /** New browser: the emailed code trusts it and signs in. */
+  verifyDevice: async (email: string, otp: string, pinId?: string): Promise<SignInResult> =>
+    signInResult(await apiClient.post('/auth/login/verify-device', { email: normalizeEmail(email), otp, pinId, ...device() }), normalizeEmail(email)),
+
+  completeTwoFactor: async (challengeToken: string, code: string): Promise<SignInResult> =>
+    signInResult(await apiClient.post('/auth/login/2fa', { challengeToken, code }), ''),
+
+  /** Sign-up step 1: is this email free? */
+  checkEmail: async (email: string): Promise<boolean> => {
+    const resp = await apiClient.post('/auth/check-email', { email: normalizeEmail(email) });
+    return !!resp?.data?.exists;
+  },
+
+  /** Sign-up step 2: the emailed code proves the email; returns the proof `register` needs (valid 30 minutes). */
+  confirmSignupEmail: async (email: string, otp: string): Promise<string> => {
+    const resp = await apiClient.post('/auth/otp/verify', { email: normalizeEmail(email), otp, ...device() });
+    const proof = resp?.data?.emailVerificationToken;
+    if (!proof) throw new Error('That code didn’t work. Request a new one and try again.');
+    return proof;
+  },
+
+  /** Whether sign-up is invite-only right now (private pilot). */
+  pilot: async (): Promise<{ inviteOnly: boolean; message: string | null }> => {
+    const resp = await apiClient.get('/auth/pilot');
+    return resp?.data ?? { inviteOnly: false, message: null };
   },
 
   /**
@@ -132,10 +199,13 @@ export const authService = {
     category?: string;
     address?: string;
     location?: string;
+    pin?: string;
+    emailVerificationToken: string;
   }): Promise<AuthResponse & { pinId?: string }> => {
     const resp = await apiClient.post('/auth/register', {
       ...data,
       email: normalizeEmail(data.email),
+      ...device(),
     });
     const { token, refreshToken } = extractTokens(resp);
     if (token) apiClient.setTokens(token, refreshToken);
@@ -356,7 +426,10 @@ export const authService = {
     supportPhone?: string;
     payoutPreference?: string;
   }): Promise<StoredUser> => {
-    const resp = await apiClient.post('/auth/merchant/onboard', data);
+    // The backend re-issues the session as a merchant (merchant routes check the token).
+    const resp = await apiClient.post('/auth/merchant/onboard', { ...data, refreshToken: apiClient.getRefreshToken() ?? undefined });
+    const { token, refreshToken } = extractTokens(resp);
+    if (token) apiClient.setTokens(token, refreshToken || apiClient.getRefreshToken());
     const rawUser = resp?.data?.user || resp?.data || {};
     return mapBackendUser(rawUser);
   },
@@ -415,6 +488,11 @@ export const authService = {
     recipientType: 'merchant' | 'personal';
     dynamicReference?: string;
     idempotencyKey?: string;
+    /** The scanned pay link (the server enforces its recipient and set amount) */
+    payLink?: string;
+    /** What it's for: one of the merchant's QR items */
+    productId?: string;
+    note?: string;
   }): Promise<any> => {
     const resp = await apiClient.post('/qr/pay', payload);
     return resp?.data || resp;
@@ -445,7 +523,7 @@ export async function getUserById(_id: string) {
       createdAt: rawUser.createdAt || new Date().toISOString(),
       balance: Number(rawUser.balance ?? rawUser.wallet?.balance ?? 0),
       kycLevel: (rawUser.kycLevel ?? 0) as 0 | 1 | 2 | 3,
-      kycStatus: rawUser.kycStatus || 'pending',
+      kycStatus: rawUser.kycStatus || undefined,
       isActive: rawUser.isActive !== false,
     };
   } catch {

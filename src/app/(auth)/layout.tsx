@@ -89,9 +89,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       useAuthStore.setState({ user: null, isAuthenticated: false, sessionToken: undefined, refreshToken: undefined, lastLoginTime: undefined });
       return;
     }
-    // Default to personal dashboard for authenticated users on auth pages
-    // Users can navigate to merchant dashboard manually if they have merchant access
-    navigate('/dashboard');
+    // Signed in already: go to where they should be (BVN verification first, then the personal dashboard)
+    navigate(getPostAuthPath(user));
   }, [isAuthenticated, user, navigate, checkSessionValidity, authSetupComplete]);
 
   return (

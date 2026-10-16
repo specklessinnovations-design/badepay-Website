@@ -1,12 +1,15 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import {
-  Store, Plus, Trash2, Package, RefreshCw, ExternalLink,
+  Store, Plus, Trash2, Package, RefreshCw, ExternalLink, Pencil, QrCode, HandHeart,
   ShoppingBag, Check, ArrowLeft, Sparkles, Copy
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMerchantStoreData } from '@/store/useMerchantStoreData';
 import toast from 'react-hot-toast';
+import { FileUpload } from '@/components/ui/file-upload';
+import { ProductEditor, MerchantProduct, PRODUCT_TYPES, priceLabel, productImage } from '@/components/merchant/ProductEditor';
+import { merchantService } from '@/services/merchantService';
 
 const GRADIENTS = [
   'from-pink-500 to-rose-500',
@@ -33,6 +36,34 @@ export default function MerchantStorePage() {
   const [isPublished, setIsPublished] = useState(!!storeInfo?.isPublished);
   const [storeSlug, setStoreSlug] = useState(storeInfo?.slug || user?.merchantProfile?.qrSlug || '');
   const [storeDesc, setStoreDesc] = useState(storeInfo?.description || '');
+  const [logoUrl, setLogoUrl] = useState(storeInfo?.logoUrl || '');
+  const [bannerUrl, setBannerUrl] = useState(storeInfo?.bannerUrl || '');
+  const [uploadsBusy, setUploadsBusy] = useState(0);
+  const [editing, setEditing] = useState<{ product: MerchantProduct | null; type?: 'donation' } | null>(null);
+  const isGivingOrg = /religious|non-profit|ngo/i.test(user?.merchantProfile?.category ?? '');
+
+  // The store loads after the first render: fill the settings form once it arrives.
+  useEffect(() => {
+    if (!storeInfo) return;
+    setStoreDesc(storeInfo.description || '');
+    setLogoUrl(storeInfo.logoUrl || '');
+    setBannerUrl(storeInfo.bannerUrl || '');
+    setIsPublished(!!storeInfo.isPublished);
+  }, [storeInfo?.id, storeInfo?.description, storeInfo?.logoUrl, storeInfo?.bannerUrl, storeInfo?.isPublished]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      const updated = await merchantService.updateMyStore({ description: storeDesc, logoUrl, bannerUrl });
+      if (!updated) throw new Error('save failed');
+      await fetchStore(merchantId);
+      toast.success('Store settings saved');
+    } catch {
+      toast.error('Could not save your store settings. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const activeOrders = storeOrders.filter(o => !['completed', 'cancelled'].includes(o.status));
   const completedOrders = storeOrders.filter(o => o.status === 'completed');
@@ -165,9 +196,14 @@ export default function MerchantStorePage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-widest font-semibold" style={{ color: 'var(--text-tertiary)' }}>Catalog</span>
-            <button className="h-9 px-3 rounded-xl text-xs font-semibold flex items-center gap-1" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
-              <Plus size={14} /> Add Product
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setEditing({ product: null, type: 'donation' })} className="h-9 px-3 rounded-xl text-xs font-semibold flex items-center gap-1" style={{ border: '1px solid #6fe8d6', color: '#6fe8d6' }}>
+                <HandHeart size={14} /> {isGivingOrg ? 'Add giving item' : 'Add donation'}
+              </button>
+              <button onClick={() => setEditing({ product: null })} className="h-9 px-3 rounded-xl text-xs font-semibold flex items-center gap-1" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
+                <Plus size={14} /> Add product
+              </button>
+            </div>
           </div>
 
           {storeProducts.length === 0 ? (
@@ -180,16 +216,17 @@ export default function MerchantStorePage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {storeProducts.map(p => {
-                const outOfStock = p.stock === 0;
+              {(storeProducts as unknown as MerchantProduct[]).map(p => {
+                const outOfStock = p.type === 'physical' && p.stock === 0;
+                const typeLabel = PRODUCT_TYPES.find((t) => t.value === p.type)?.label ?? 'Physical item';
                 return (
                   <div key={p.id} className="rounded-2xl overflow-hidden flex flex-col" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                     <div className="h-28 relative" style={{ background: 'var(--surface-secondary)' }}>
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                      {productImage(p) ? (
+                        <img src={productImage(p)} alt={p.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className={`h-full w-full flex items-center justify-center bg-gradient-to-br ${GRADIENTS[0]}`}>
-                          📦
+                          {p.type === 'donation' ? '🙏' : p.type === 'service' ? '🛠️' : '📦'}
                         </div>
                       )}
                       {outOfStock && (
@@ -199,7 +236,15 @@ export default function MerchantStorePage() {
                           </span>
                         </div>
                       )}
-                      {p.stock > 0 && p.stock <= 5 && (
+                      {p.showOnQr && (
+                        <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/70 text-white font-bold text-[10px] px-1.5 py-0.5 rounded">
+                          <QrCode size={10} /> On QR
+                        </div>
+                      )}
+                      {!p.isActive && (
+                        <div className="absolute bottom-2 left-2 bg-black/70 text-white font-bold text-[10px] uppercase px-1.5 py-0.5 rounded">Hidden</div>
+                      )}
+                      {p.type === 'physical' && p.stock > 0 && p.stock <= 5 && (
                         <div className="absolute top-2 left-2 bg-[#FF8C00] text-white font-bold text-xs uppercase tracking-wider px-1.5 py-0.5 rounded shadow">
                           Only {p.stock} left
                         </div>
@@ -208,18 +253,23 @@ export default function MerchantStorePage() {
 
                     <div className="p-3 flex-1 flex flex-col justify-between">
                       <div>
-                        <div className="text-xs uppercase font-bold" style={{ color: '#6fe8d6' }}>{p.category}</div>
+                        <div className="text-xs uppercase font-bold" style={{ color: '#6fe8d6' }}>{typeLabel} · {p.category}</div>
                         <div className="text-sm font-semibold mt-0.5 line-clamp-1" style={{ color: 'var(--text-primary)' }}>{p.name}</div>
                         <div className="text-xs font-bold mt-1" style={{ color: 'var(--text-primary)' }}>
-                          ₦ {p.price.toLocaleString()}
+                          {priceLabel(p)}
                         </div>
                       </div>
 
                       <div className="mt-3 flex items-center justify-between pt-2 text-xs" style={{ borderTop: '1px solid var(--border)', color: 'var(--text-tertiary)' }}>
-                        <span>Stock: {p.stock}</span>
-                        <button onClick={() => handleDeleteProduct(p.id)} className="p-1" style={{ color: 'var(--text-secondary)' }}>
-                          <Trash2 size={14} />
-                        </button>
+                        <span>{p.type === 'physical' ? `Stock: ${p.stock}` : p.type === 'donation' ? 'Paid via QR' : 'Service'}</span>
+                        <span className="flex gap-1">
+                          <button onClick={() => setEditing({ product: p })} aria-label={`Edit ${p.name}`} className="p-1" style={{ color: 'var(--text-secondary)' }}>
+                            <Pencil size={14} />
+                          </button>
+                          <button onClick={() => handleDeleteProduct(p.id)} aria-label={`Delete ${p.name}`} className="p-1" style={{ color: 'var(--text-secondary)' }}>
+                            <Trash2 size={14} />
+                          </button>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -322,14 +372,27 @@ export default function MerchantStorePage() {
             </div>
           </div>
 
+          <div className="rounded-2xl p-4 space-y-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+            <FileUpload kind="store_logo" label="Store logo" shape="square" value={logoUrl} onChange={setLogoUrl} onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))} />
+            <FileUpload kind="store_banner" label="Store banner" shape="wide" value={bannerUrl} onChange={setBannerUrl} onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))} />
+          </div>
+
           <div className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
             <div className="text-xs font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Store Description</div>
             <textarea value={storeDesc} onChange={e => setStoreDesc(e.target.value)} rows={3} placeholder="Describe your store..." className="w-full rounded-xl px-3 py-2.5 text-sm outline-none resize-none" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <button onClick={() => toast.success('Settings saved!')} className="w-full mt-3 rounded-xl py-2.5 text-sm font-black" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
-              Save Settings
+            <button onClick={handleSaveSettings} disabled={isSaving || uploadsBusy > 0} className="w-full mt-3 rounded-xl py-2.5 text-sm font-black disabled:opacity-60" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
+              {uploadsBusy > 0 ? 'Uploading…' : isSaving ? 'Saving…' : 'Save Settings'}
             </button>
           </div>
         </div>
+      )}
+      {editing && (
+        <ProductEditor
+          product={editing.product}
+          defaultType={editing.type}
+          onClose={() => setEditing(null)}
+          onSaved={async () => { setEditing(null); await fetchProducts(merchantId); toast.success('Saved'); }}
+        />
       )}
     </div>
   );

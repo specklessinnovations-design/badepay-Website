@@ -1,39 +1,35 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTransactionStore } from '@/store/useTransactionStore';
 import { formatNGN } from '@/utils/formatting';
-import { ArrowLeft, User, Building2, ChevronDown, Check, Star, Search, AlertCircle } from 'lucide-react';
-import { NIGERIAN_BANKS } from '@/data/providers';
+import { ArrowLeft, ChevronDown, Check, Star, AlertCircle, X } from 'lucide-react';
 import { TransactionPinModal } from '@/components/auth/TransactionPinModal';
-import transferService from '@/services/transferService';
+import transferService, { type Bank } from '@/services/transferService';
+import apiClient from '@/lib/apiClient';
 import toast from 'react-hot-toast';
 
-const bankNameToCode: Record<string, string> = {
-  "BadePay": "badepay",
-  "Access Bank": "044",
-  "GTBank": "058",
-  "Zenith Bank": "057",
-  "UBA": "033",
-  "Wema Bank": "035",
-  "First Bank": "011",
-};
-
 type TransferType = 'badepay' | 'bank';
+
+/** A saved recipient (GET /beneficiaries), same list as the mobile app. */
+interface Beneficiary {
+  id: string; type: 'badepay' | 'bank'; accountNumber: string; bankCode: string; bankName: string;
+  accountName: string; nickname?: string | null;
+}
+
+/** Pseudo bank code the backend treats as an internal BadePay account. */
+const BADEPAY = 'badepay';
 
 export default function TransferPage() {
   const [, navigate] = useLocation();
   const balance = useAuthStore((s) => s.user?.balance ?? 0);
   const user = useAuthStore((s) => s.user);
-  const transactions = useTransactionStore((s) => s.transactions);
   const fetchTransactions = useTransactionStore((s) => s.fetchTransactions);
   const [transferType, setTransferType] = useState<TransferType>('badepay');
-  const [recipient, setRecipient] = useState('');
-  const [bankName, setBankName] = useState('BadePay');
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [fee, setFee] = useState(0);
+  const [bankCode, setBankCode] = useState(BADEPAY);
   const [accountNumber, setAccountNumber] = useState('');
-  const [accountName, setAccountName] = useState('');
   const [amount, setAmount] = useState('5000');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,114 +37,81 @@ export default function TransferPage() {
   const [resolvingName, setResolvingName] = useState(false);
   const [resolvedName, setResolvedName] = useState('');
   const [error, setError] = useState('');
-  const [beneficiaries, setBeneficiaries] = useState<Array<{ n: string; bn: string; b: string; a: string }>>([]);
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [saveBeneficiary, setSaveBeneficiary] = useState(true);
 
   useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+    apiClient.get('/transfers/banks').then((r) => {
+      setBanks(r?.data?.banks ?? []);
+      setFee(Number(r?.data?.transferFee) || 0);
+    }).catch(() => setBanks([]));
+    apiClient.get('/beneficiaries').then((r) => setBeneficiaries(r?.data?.beneficiaries ?? [])).catch(() => setBeneficiaries([]));
+  }, []);
 
-  useEffect(() => {
-    const loadBeneficiaries = async () => {
-      const seen = new Set<string>();
-      const beneficiaryMap: Record<string, { n: string; bn: string; b: string; a: string }> = {};
+  const bankName = bankCode === BADEPAY ? 'BadePay' : banks.find((b) => b.code === bankCode)?.name ?? '';
+  const alreadySaved = beneficiaries.some((b) => b.accountNumber === accountNumber && b.bankCode === bankCode);
+  const chargedFee = transferType === 'bank' ? fee : 0;
 
-      transactions.forEach((tx: any) => {
-        const isRecipient = tx.recipientName && tx.recipientId !== user?.id;
-        const isSender = tx.senderName && tx.senderId !== user?.id;
+  const getCleanAmount = () => parseFloat(amount.replace(/,/g, '')) || 0;
 
-        if (isRecipient && tx.recipientName) {
-          const key = `${tx.recipientName}-badepay`;
-          if (!seen.has(key)) {
-            beneficiaryMap[key] = {
-              n: tx.recipientName,
-              bn: "BadePay",
-              b: "badepay",
-              a: tx.recipientAccountNumber || tx.accountNumber || '',
-            };
-            seen.add(key);
-          }
-        }
-        if (isSender && tx.senderName) {
-          const key = `${tx.senderName}-${tx.bankCode || 'badepay'}`;
-          if (!seen.has(key)) {
-            beneficiaryMap[key] = {
-              n: tx.senderName,
-              bn: tx.bankName || "Bank Transfer",
-              b: tx.bankCode || "badepay",
-              a: tx.accountNumber || '',
-            };
-            seen.add(key);
-          }
-        }
-      });
+  const handleQuickAdd = (val: number) => setAmount(String(val));
 
-      setBeneficiaries(Object.values(beneficiaryMap).slice(0, 5));
-    };
-
-    loadBeneficiaries();
-  }, [transactions, user?.id]);
-
-  const getCleanAmount = () => {
-    const clean = amount.replace(/,/g, "");
-    return parseFloat(clean) || 0;
-  };
-
-  const handleQuickAdd = (val: number) => {
-    const current = getCleanAmount();
-    setAmount(String(current + val));
-  };
-
-  const handleAccountNumberChange = async (val: string) => {
-    const cleanVal = val.replace(/\D/g, "").slice(0, 10);
-    setAccountNumber(cleanVal);
-    setError('');
-    setResolvedName('');
-    setAccountName('');
-    if (cleanVal.length === 10) {
-      setResolvingName(true);
-      try {
-        const bankCode = transferType === 'badepay' ? 'badepay' : (bankNameToCode[bankName] || bankName);
-
-        if (transferType === 'badepay' && cleanVal === user?.accountNumber) {
-          setError('You cannot send money to yourself.');
-          setResolvingName(false);
-          return;
-        }
-
-        const result = await transferService.resolveAccount(cleanVal, bankCode);
-        const name = result?.accountName || '';
-        if (name) {
-          setResolvedName(name);
-          setAccountName(name);
-        } else {
-          setError('Account not found. Please check the account details.');
-        }
-      } catch {
-        setError('Could not resolve account. Please check the number and try again.');
-      } finally {
-        setResolvingName(false);
-      }
+  const resolve = async (acct: string, code: string) => {
+    setError(''); setResolvedName('');
+    if (acct.length !== 10) return;
+    if (!code) { setError('Choose a bank first.'); return; }
+    if (code === BADEPAY && acct === user?.accountNumber) { setError('You cannot send money to yourself.'); return; }
+    setResolvingName(true);
+    try {
+      const result = await transferService.resolveAccount(acct, code);
+      if (result?.accountName) setResolvedName(result.accountName);
+      else setError('Account not found. Please check the account details.');
+    } catch {
+      setError('Could not resolve account. Please check the number and try again.');
+    } finally {
+      setResolvingName(false);
     }
   };
 
-  const handleSelectBeneficiary = (b: typeof beneficiaries[0]) => {
-    setAccountNumber(b.a);
-    setBankName(b.b);
-    setRecipient(b.n);
-    setResolvedName(b.n);
-    setAccountName(b.n);
-    setTransferType(b.b === "BadePay" ? 'badepay' : 'bank');
+  const handleAccountNumberChange = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 10);
+    setAccountNumber(clean);
+    void resolve(clean, bankCode);
+  };
+
+  const switchType = (t: TransferType) => {
+    setTransferType(t);
+    const code = t === 'badepay' ? BADEPAY : '';
+    setBankCode(code);
+    setResolvedName(''); setError('');
+    if (t === 'badepay') void resolve(accountNumber, code);
+  };
+
+  const handleSelectBeneficiary = (b: Beneficiary) => {
+    setTransferType(b.type === 'badepay' ? 'badepay' : 'bank');
+    setBankCode(b.type === 'badepay' ? BADEPAY : b.bankCode);
+    setAccountNumber(b.accountNumber);
+    setResolvedName(b.accountName);
     setError('');
+  };
+
+  const removeBeneficiary = async (b: Beneficiary) => {
+    if (!window.confirm(`Remove ${b.nickname || b.accountName} from saved recipients?`)) return;
+    try {
+      await apiClient.delete(`/beneficiaries/${b.id}`);
+      setBeneficiaries((list) => list.filter((x) => x.id !== b.id));
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not remove it');
+    }
   };
 
   const handleReview = () => {
     setError('');
     const value = getCleanAmount();
-    if (value <= 0) { setError("Please enter a valid amount."); return; }
-    if (value > balance) { setError("Insufficient balance."); return; }
-    if (accountNumber.length < 10) { setError("Enter a valid 10-digit account number."); return; }
-    if (!resolvedName) { setError("Recipient name could not be resolved. Check the account details."); return; }
-
+    if (value <= 0) { setError('Please enter a valid amount.'); return; }
+    if (value + chargedFee > balance) { setError(chargedFee ? `Insufficient balance (includes the ${formatNGN(chargedFee)} fee).` : 'Insufficient balance.'); return; }
+    if (accountNumber.length < 10) { setError('Enter a valid 10-digit account number.'); return; }
+    if (!resolvedName) { setError('Recipient name could not be resolved. Check the account details.'); return; }
     setShowPinModal(true);
   };
 
@@ -156,19 +119,21 @@ export default function TransferPage() {
     const value = getCleanAmount();
     setLoading(true);
     try {
-      const bankCode = transferType === 'badepay' ? 'badepay' : (bankNameToCode[bankName] || bankName);
-      const result = await transferService.initiateTransfer({
+      const res: any = await transferService.initiateTransfer({
         type: transferType === 'badepay' ? 'p2p' : 'bank',
         amount: value,
         pin,
         recipientAccountNumber: transferType === 'badepay' ? accountNumber : undefined,
         accountNumber: transferType === 'bank' ? accountNumber : undefined,
         bankCode: transferType === 'bank' ? bankCode : undefined,
+        bankName: transferType === 'bank' ? bankName : undefined,
         narration: note || `Transfer to ${resolvedName}`,
+        saveBeneficiary: saveBeneficiary && !alreadySaved,
       });
-      
       await fetchTransactions();
-      toast.success('Transfer successful');
+      if (res?.status === 'held') toast('For your security, this transfer is being reviewed. We will notify you when it is sent.', { duration: 6000 });
+      else if (res?.status === 'pending' || res?.status === 'processing') toast.success('Transfer sent. It will show as complete once the bank confirms.');
+      else toast.success('Transfer successful');
       navigate('/dashboard');
     } catch (err: any) {
       toast.error(err?.message || 'Transfer failed. Please try again.');
@@ -201,14 +166,14 @@ export default function TransferPage() {
         <div className="p-1 rounded-xl grid grid-cols-2 gap-1" style={{ background: 'var(--surface-secondary)' }}>
           <button
             type="button"
-            onClick={() => { setTransferType('badepay'); setBankName('BadePay'); setError(''); setResolvedName(''); setAccountName(''); }}
+            onClick={() => switchType('badepay')}
             className={`h-8 rounded-lg text-[12px] font-semibold transition-all ${transferType === 'badepay' ? 'bg-[#6fe8d6] text-[#081a18]' : 'text-[var(--text-secondary)]'}`}
           >
             BadePay user
           </button>
           <button
             type="button"
-            onClick={() => { setTransferType('bank'); setBankName(NIGERIAN_BANKS[0]); setError(''); setResolvedName(''); setAccountName(''); }}
+            onClick={() => switchType('bank')}
             className={`h-8 rounded-lg text-[12px] font-semibold transition-all ${transferType === 'bank' ? 'bg-[#6fe8d6] text-[#081a18]' : 'text-[var(--text-secondary)]'}`}
           >
             Nigerian bank
@@ -221,12 +186,13 @@ export default function TransferPage() {
           <label className="mb-3 block text-sm font-bold text-[var(--text-primary)]">Bank</label>
           <div className="relative">
             <select
-              value={bankName}
-              onChange={(e) => { setBankName(e.target.value); setResolvedName(''); setAccountName(''); }}
+              value={bankCode}
+              onChange={(e) => { setBankCode(e.target.value); void resolve(accountNumber, e.target.value); }}
               className="w-full appearance-none rounded-2xl border-2 border-[var(--border)] bg-[var(--surface-secondary)] px-6 py-4 text-base font-medium text-[var(--text-primary)] focus:border-[#6fe8d6] focus:outline-none focus:ring-2 focus:ring-[#6fe8d6]/20 transition-all duration-200 cursor-pointer"
             >
-              {NIGERIAN_BANKS.map((bank) => (
-                <option key={bank} value={bank}>{bank}</option>
+              <option value="" disabled>{banks.length ? 'Choose a bank' : 'Loading banks…'}</option>
+              {banks.map((bank) => (
+                <option key={bank.code} value={bank.code}>{bank.name}</option>
               ))}
             </select>
             <ChevronDown size={20} className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-tertiary)]" />
@@ -309,29 +275,50 @@ export default function TransferPage() {
         />
       </div>
 
-      {/* Recent beneficiaries */}
+      {/* Saved recipients */}
       {beneficiaries.length > 0 && (
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-tertiary)] mb-3 flex items-center gap-1.5">
-            <Star size={12} className="text-[#6fe8d6]" /> Recent beneficiaries
+            <Star size={12} className="text-[#6fe8d6]" /> Saved recipients
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
-            {beneficiaries.map((b) => (
-              <button
-                key={b.a}
-                type="button"
-                onClick={() => handleSelectBeneficiary(b)}
-                className="shrink-0 w-16 flex flex-col items-center gap-1.5 transition-transform hover:scale-105"
-              >
-                <div className="h-11 w-11 rounded-full flex items-center justify-center font-semibold text-[12px]" style={{ background: 'var(--surface-secondary)' }}>
-                  {b.n.split(" ").map((x) => x[0]).join("")}
+            {beneficiaries.map((b) => {
+              const name = b.nickname || b.accountName;
+              const selected = b.accountNumber === accountNumber && (b.type === 'badepay' ? bankCode === BADEPAY : bankCode === b.bankCode);
+              return (
+                <div key={b.id} className="group relative shrink-0 w-[72px]">
+                  <button type="button" onClick={() => handleSelectBeneficiary(b)} title={`${b.accountName} · ${b.bankName} ${b.accountNumber}`}
+                    className="flex w-full flex-col items-center gap-1.5">
+                    <div className="h-11 w-11 rounded-full flex items-center justify-center font-semibold text-[12px] text-[var(--text-primary)]"
+                      style={{ background: 'var(--surface-secondary)', boxShadow: selected ? '0 0 0 2px #6fe8d6' : undefined }}>
+                      {name.split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()}
+                    </div>
+                    <div className="text-[10px] font-medium leading-tight text-center truncate w-full text-[var(--text-primary)]">{name.split(' ')[0]}</div>
+                    <div className="text-[9px] text-[var(--text-tertiary)] truncate w-full text-center">{b.type === 'badepay' ? 'BadePay' : b.bankName}</div>
+                  </button>
+                  <button type="button" onClick={() => removeBeneficiary(b)} aria-label={`Remove ${name}`}
+                    className="absolute right-1 top-0 hidden h-5 w-5 items-center justify-center rounded-full group-hover:flex focus:flex"
+                    style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text-tertiary)' }}>
+                    <X size={11} />
+                  </button>
                 </div>
-                <div className="text-[10px] font-medium leading-tight text-center truncate w-full text-[var(--text-primary)]">{b.n.split(" ")[0]}</div>
-                <div className="text-[9px] text-[var(--text-tertiary)] truncate w-full text-center">{b.bn}</div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
+      )}
+
+      {resolvedName && !alreadySaved && (
+        <label className="flex items-center gap-2.5 text-sm text-[var(--text-primary)] cursor-pointer">
+          <input type="checkbox" checked={saveBeneficiary} onChange={(e) => setSaveBeneficiary(e.target.checked)} className="h-4 w-4 accent-[#0b7367]" />
+          Save {resolvedName.split(' ')[0]} as a recipient
+        </label>
+      )}
+
+      {chargedFee > 0 && (
+        <p className="text-[12px] text-[var(--text-secondary)]">
+          Bank transfer fee: {formatNGN(chargedFee)} · total {formatNGN(getCleanAmount() + chargedFee)}
+        </p>
       )}
 
       <button

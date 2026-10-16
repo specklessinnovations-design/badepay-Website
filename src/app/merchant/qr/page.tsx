@@ -8,6 +8,7 @@ import { merchantService } from '@/services/merchantService';
 import { useMerchantStore } from '@/store/useMerchantStore';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
+import { MerchantProduct, priceLabel } from '@/components/merchant/ProductEditor';
 
 export default function MerchantQrPage() {
   const profile = useAuthStore((s) => s.user?.merchantProfile);
@@ -24,6 +25,14 @@ export default function MerchantQrPage() {
   const [qrPayload, setQrPayload] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [dynamicQrDataUrl, setDynamicQrDataUrl] = useState<string>('');
+  const [qrItems, setQrItems] = useState<MerchantProduct[]>([]);
+
+  // What people can choose when they scan (tithe, offering, a service…).
+  useEffect(() => {
+    merchantService.getMyProducts()
+      .then((ps) => setQrItems((ps as unknown as MerchantProduct[]).filter((p) => p.showOnQr && p.isActive)))
+      .catch(() => setQrItems([]));
+  }, []);
 
   const businessName = profile?.tradingName || profile?.businessName || 'My Business';
   const tradingSlug = profile?.qrSlug || (profile?.tradingName || businessName).toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -39,8 +48,10 @@ export default function MerchantQrPage() {
   useEffect(() => {
     async function fetchQr() {
       try {
-        const data = await merchantService.generateQrCode();
-        const payload = data?.qrCode || (profile ? buildMerchantQrPayload(profile) : '');
+        // The pay link works for both: the BadePay app pays from the wallet; any phone camera opens a card page.
+        const link = await merchantService.getMerchantPayLink();
+        const data = link ? null : await merchantService.generateQrCode();
+        const payload = link?.url || data?.qrCode || (profile ? buildMerchantQrPayload(profile) : '');
         setQrPayload(payload);
       } catch {
         if (profile) {
@@ -286,6 +297,28 @@ export default function MerchantQrPage() {
             </div>
             <ChevronRight size={20} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
           </button>
+
+          {/* What payers can choose */}
+          <div className="w-full rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>What people can pay for</div>
+              <Link href="/merchant/store" className="text-xs font-semibold" style={{ color: '#6fe8d6' }}>Manage</Link>
+            </div>
+            {qrItems.length === 0 ? (
+              <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                Nothing yet — people just enter an amount. Add items like Tithe, Offering or a service in your store, and turn on “Show when people scan my QR code”.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-1.5">
+                {qrItems.map((i) => (
+                  <li key={i.id} className="flex items-center justify-between text-xs">
+                    <span style={{ color: 'var(--text-primary)' }}>{i.name}</span>
+                    <span style={{ color: 'var(--text-tertiary)' }}>{priceLabel(i)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           {/* Printable QR Card */}
           <button onClick={() => setShowFullscreenQR(true)} className="w-full rounded-2xl p-4 flex items-start gap-4 text-left transition-all" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>

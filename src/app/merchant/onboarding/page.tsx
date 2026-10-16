@@ -70,16 +70,16 @@ export default function MerchantOnboardingPage() {
         businessName: businessName.trim(),
         tradingName: tradingName.trim() || businessName.trim(),
         address: businessAddress.trim(),
-        rcNumber: rcNumber.trim() || 'N/A',
-        taxId: taxId.trim() || 'N/A',
+        rcNumber: rcNumber.trim() || undefined,
+        taxId: taxId.trim() || undefined,
         supportPhone: supportPhone.trim(),
         category,
         payoutPreference: payout,
       });
       bpToast.success('Merchant account ready!');
       navigate('/merchant');
-    } catch {
-      bpToast.error('Could not complete onboarding');
+    } catch (err) {
+      bpToast.error(err instanceof Error ? err.message : 'Could not complete onboarding');
     }
   };
 

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNotificationStore } from '@/store/useNotificationStore';
-import { usePreferencesStore } from '@/store/usePreferencesStore';
+import apiClient from '@/lib/apiClient';
 import { formatTimeAgo } from '@/utils/formatting';
 import { Bell, Check, Trash2, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -162,17 +162,23 @@ function NotificationItem({
   );
 }
 
+/** The one notification setting the backend keeps (same as the app): SMS alerts. In-app and email alerts are always on. */
 function NotificationPreferences({ onBack }: { onBack: () => void }) {
-  const {
-    pushNotifications,
-    smsNotifications,
-    emailNotifications,
-    setPushNotifications,
-    setSmsNotifications,
-    setEmailNotifications,
-  } = usePreferencesStore();
+  const [prefs, setPrefs] = useState<{ smsAlerts: boolean; hasPhone: boolean } | null>(null);
+  useEffect(() => {
+    apiClient.get('/users/me/notification-preferences').then((r) => setPrefs(r?.data ?? null)).catch(() => toast.error('Could not load your preferences'));
+  }, []);
 
-  const save = (message: string) => toast.success(message);
+  const toggleSms = async () => {
+    if (!prefs) return;
+    try {
+      const r = await apiClient.patch('/users/me/notification-preferences', { smsAlerts: !prefs.smsAlerts });
+      setPrefs({ ...prefs, smsAlerts: !!r?.data?.smsAlerts });
+      toast.success('SMS alerts updated');
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not update SMS alerts');
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -185,34 +191,18 @@ function NotificationPreferences({ onBack }: { onBack: () => void }) {
       </button>
       <h2 className="text-lg font-semibold text-[var(--text-primary)]">Notification preferences</h2>
       <div className="divide-y divide-[var(--border)] rounded-2xl border border-[var(--border)] bg-[var(--card)] overflow-hidden">
-        <Toggle
-          title="Push notifications"
-          subtitle="Alerts in the BadePay app"
-          enabled={pushNotifications}
-          onToggle={() => {
-            setPushNotifications(!pushNotifications);
-            save('Push preference saved');
-          }}
-        />
-        <Toggle
-          title="SMS notifications"
-          subtitle="Texts for transfers and security"
-          enabled={smsNotifications}
-          onToggle={() => {
-            setSmsNotifications(!smsNotifications);
-            save('SMS preference saved');
-          }}
-        />
-        <Toggle
-          title="Email notifications"
-          subtitle="Receipts and account updates"
-          enabled={emailNotifications}
-          onToggle={() => {
-            setEmailNotifications(!emailNotifications);
-            save('Email preference saved');
-          }}
-        />
+        {prefs?.hasPhone === false ? (
+          <p className="px-4 py-4 text-sm text-[var(--text-secondary)]">Add a phone number to your profile to get SMS alerts.</p>
+        ) : (
+          <Toggle
+            title="SMS alerts"
+            subtitle="A text for every debit and credit"
+            enabled={!!prefs?.smsAlerts}
+            onToggle={toggleSms}
+          />
+        )}
       </div>
+      <p className="text-xs text-[var(--text-tertiary)]">In-app and email alerts are always on, so you never miss money moving in or out.</p>
     </div>
   );
 }

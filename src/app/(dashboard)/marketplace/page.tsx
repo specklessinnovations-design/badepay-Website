@@ -165,14 +165,18 @@ export default function MarketplacePage() {
               variants={staggerParent}
               className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
             >
-              {products.map(product => (
+              {products.map(product => {
+                const p = product as any;
+                const image: string | undefined = p.images?.[0]?.imageUrl ?? product.imageUrl;
+                const price = Number(product.price) * (1 - (Number(product.discount) || 0) / 100);
+                return (
                 <motion.div key={product.id} variants={riseIn}
                   className="rounded-2xl overflow-hidden flex flex-col group cursor-pointer"
                   style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-                  <Link href={`/store/${product.storeId}`}>
+                  <Link href={`/store/${p.store?.slug ?? ''}?product=${product.id}`}>
                     <div className="relative aspect-square w-full overflow-hidden bg-muted">
-                      {product.imageUrl ? (
-                        <img src={product.imageUrl} alt={product.name}
+                      {image ? (
+                        <img src={image} alt={product.name}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'var(--surface-secondary)' }}>
@@ -183,11 +187,11 @@ export default function MarketplacePage() {
                     <div className="p-3.5 flex-1 flex flex-col justify-between">
                       <div>
                         <h3 className="font-bold text-xs line-clamp-2" style={{ color: 'var(--text-primary)' }}>{product.name}</h3>
-                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>In Store</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{p.store?.name ?? 'In store'}</p>
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <span className="text-sm font-black" style={{ color: 'var(--text-primary)' }}>
-                          ₦{Number(product.price).toLocaleString()}
+                          ₦{price.toLocaleString('en-NG', { maximumFractionDigits: 2 })}
                         </span>
                         {product.stock > 0 ? (
                           <span className="text-[10px] font-bold text-[#10B981]">In Stock</span>
@@ -198,7 +202,8 @@ export default function MarketplacePage() {
                     </div>
                   </Link>
                 </motion.div>
-              ))}
+                );
+              })}
             </motion.div>
           )
         ) : (

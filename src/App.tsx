@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from "react";
 import { ADMIN_BASE } from "@/lib/adminPaths";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -25,6 +25,8 @@ import ResetPasswordPage from "@/app/(auth)/reset-password/page";
 import VerifyOtpPage from "@/app/(auth)/verify-otp/page";
 import SetPinPage from "@/app/(auth)/set-pin/page";
 import AuthLayout from "@/app/(auth)/layout";
+import VerifyBvnPage from "@/app/(auth)/verify-bvn/page";
+import AccountReadyPage from "@/app/(auth)/account-ready/page";
 
 import DashboardPage from "@/app/(dashboard)/dashboard/page";
 import ActivityPage from "@/app/(dashboard)/activity/page";
@@ -42,20 +44,25 @@ import ProfilePage from "@/app/(dashboard)/profile/page";
 import ProfileEditPage from "@/app/(dashboard)/profile/edit/page";
 import ProfileSecurityPage from "@/app/(dashboard)/profile/security/page";
 import ProfileKycPage from "@/app/(dashboard)/profile/kyc/page";
-import ProfileDevicesPage from "@/app/(dashboard)/profile/devices/page";
 import ProfileNotificationsPage from "@/app/(dashboard)/profile/notifications/page";
 import ProfileSupportPage from "@/app/(dashboard)/profile/support/page";
+import DisputesPage from "@/app/(dashboard)/profile/disputes/page";
+import OrdersPage from "@/app/(dashboard)/orders/page";
+import FundingCallbackPage from "@/app/(dashboard)/wallet/callback-page";
+import OrderDetailPage from "@/app/(dashboard)/orders/detail-page";
+import NewDisputePage from "@/app/(dashboard)/profile/disputes/new-page";
+import DisputeDetailPage from "@/app/(dashboard)/profile/disputes/detail-page";
 import ProfileStatementsPage from "@/app/(dashboard)/profile/statements/page";
 import ChangePinPage from "@/app/(dashboard)/profile/change-pin/page";
 import ChangePasswordPage from "@/app/(dashboard)/profile/change-password/page";
 import ProfileMyQrPage from "@/app/(dashboard)/profile/my-qr/page";
 import AIAssistantPage from "@/app/(dashboard)/ai/page";
-import ExploreNigeriaPage from "@/app/(dashboard)/explore-nigeria/page";
 import VideoPage from "@/app/(dashboard)/video/page";
 import InsightsPage from "@/app/(dashboard)/insights/page";
 import MarketplacePage from "@/app/(dashboard)/marketplace/page";
 import SavingsPage from "@/app/(dashboard)/savings/page";
 import NewsPage from "@/app/(dashboard)/news/page";
+import NewsArticlePage from "@/app/(dashboard)/news/article-page";
 import DashboardLayout from "@/app/(dashboard)/layout";
 
 
@@ -63,7 +70,9 @@ import MerchantPage from "@/app/merchant/page";
 import MerchantOnboardingPage from "@/app/merchant/onboarding/page";
 import MerchantPaymentsPage from "@/app/merchant/payments/page";
 import MerchantQrPage from "@/app/merchant/qr/page";
-import MerchantSettlementsPage from "@/app/merchant/settlements/page";
+import MerchantPayoutsPage from "@/app/merchant/payouts/page";
+import MerchantCustomersPage from "@/app/merchant/customers/page";
+import MerchantAnalyticsPage from "@/app/merchant/analytics/page";
 import MerchantStorePage from "@/app/merchant/store/page";
 import MerchantOrdersPage from "@/app/merchant/orders/page";
 import MerchantLayout from "@/app/merchant/layout";
@@ -97,6 +106,8 @@ function Router() {
       <Route path="/login">
         <AuthLayout><LoginPage /></AuthLayout>
       </Route>
+      <Route path="/verify-bvn"><VerifyBvnPage /></Route>
+      <Route path="/account-ready"><AccountReadyPage /></Route>
       <Route path="/register">
         <AuthLayout><RegisterPage /></AuthLayout>
       </Route>
@@ -159,11 +170,30 @@ function Router() {
       <Route path="/profile/kyc">
         <DashboardLayout><ProfileKycPage /></DashboardLayout>
       </Route>
-      <Route path="/profile/devices">
-        <DashboardLayout><ProfileDevicesPage /></DashboardLayout>
-      </Route>
+      <Route path="/profile/devices"><Redirect to="/profile/security" /></Route>
       <Route path="/profile/notifications">
         <DashboardLayout><ProfileNotificationsPage /></DashboardLayout>
+      </Route>
+      <Route path="/wallet/callback">
+        <DashboardLayout><FundingCallbackPage /></DashboardLayout>
+      </Route>
+      <Route path="/orders/callback">
+        <Redirect to="/orders" replace />
+      </Route>
+      <Route path="/orders/:id">
+        <DashboardLayout><OrderDetailPage /></DashboardLayout>
+      </Route>
+      <Route path="/orders">
+        <DashboardLayout><OrdersPage /></DashboardLayout>
+      </Route>
+      <Route path="/profile/disputes/new">
+        <DashboardLayout><NewDisputePage /></DashboardLayout>
+      </Route>
+      <Route path="/profile/disputes/:id">
+        <DashboardLayout><DisputeDetailPage /></DashboardLayout>
+      </Route>
+      <Route path="/profile/disputes">
+        <DashboardLayout><DisputesPage /></DashboardLayout>
       </Route>
       <Route path="/profile/support">
         <DashboardLayout><ProfileSupportPage /></DashboardLayout>
@@ -183,9 +213,7 @@ function Router() {
       <Route path="/ai">
         <DashboardLayout><AIAssistantPage /></DashboardLayout>
       </Route>
-      <Route path="/explore-nigeria">
-        <DashboardLayout><ExploreNigeriaPage /></DashboardLayout>
-      </Route>
+      <Route path="/explore-nigeria"><Redirect to="/news" /></Route>
       <Route path="/video">
         <DashboardLayout><VideoPage /></DashboardLayout>
       </Route>
@@ -197,6 +225,9 @@ function Router() {
       </Route>
       <Route path="/savings">
         <DashboardLayout><SavingsPage /></DashboardLayout>
+      </Route>
+      <Route path="/news/:slug">
+        {(params: any) => <DashboardLayout><NewsArticlePage slug={params?.slug} /></DashboardLayout>}
       </Route>
       <Route path="/news">
         <DashboardLayout><NewsPage /></DashboardLayout>
@@ -223,8 +254,17 @@ function Router() {
       <Route path="/merchant/qr">
         <MerchantLayout><MerchantQrPage /></MerchantLayout>
       </Route>
+      <Route path="/merchant/analytics">
+        <MerchantLayout><MerchantAnalyticsPage /></MerchantLayout>
+      </Route>
+      <Route path="/merchant/customers">
+        <MerchantLayout><MerchantCustomersPage /></MerchantLayout>
+      </Route>
+      <Route path="/merchant/payouts">
+        <MerchantLayout><MerchantPayoutsPage /></MerchantLayout>
+      </Route>
       <Route path="/merchant/settlements">
-        <MerchantLayout><MerchantSettlementsPage /></MerchantLayout>
+        <Redirect to="/merchant/payouts" replace />
       </Route>
       <Route path="/merchant/store">
         <MerchantLayout><MerchantStorePage /></MerchantLayout>

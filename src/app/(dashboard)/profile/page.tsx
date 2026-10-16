@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
+import { Package, Flag,
   ChevronRight, Shield, KeyRound,
   FileCheck, FileText, Store, Bell, Moon, HelpCircle, LogOut,
   Camera, Sun, Wallet, Eye, EyeOff, Copy, Check, Plus, Send, PiggyBank, ShieldCheck, QrCode
@@ -11,6 +11,8 @@ import { useCardStore } from '@/store/useCardStore';
 import { ThemeContext } from '@/contexts/ThemeContext';
 import { bpToast } from '@/lib/bpToast';
 import apiClient from '@/lib/apiClient';
+import { uploadFile } from '@/lib/uploads';
+import { resizeImage } from '@/lib/resizeImage';
 import walletService from '@/services/walletService';
 
 export default function ProfilePage() {
@@ -57,60 +59,24 @@ export default function ProfilePage() {
     user?.firstName === 'BadePay' ||
     user?.lastName === 'User';
 
+  /** Shrinks the photo to at most 400px (JPEG), uploads it as a file and saves the returned URL. */
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { bpToast.error('Image must be under 5MB'); return; }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { bpToast.error('Choose a JPG, PNG or WebP photo'); return; }
+    if (file.size > 10 * 1024 * 1024) { bpToast.error('Photo must be under 10 MB'); return; }
     setUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const img = new Image();
-          img.onload = async () => {
-            const canvas = document.createElement('canvas');
-            const maxDim = 400;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-              if (width > maxDim) {
-                height = (height * maxDim) / width;
-                width = maxDim;
-              }
-            } else {
-              if (height > maxDim) {
-                width = (width * maxDim) / height;
-                height = maxDim;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, width, height);
-
-            const base64 = canvas.toDataURL('image/jpeg', 0.8);
-            const resp = await apiClient.patch('/users/me/avatar', { avatar: base64 });
-            const avatarUrl = resp?.data?.avatarUrl || resp?.avatarUrl;
-            if (avatarUrl) {
-              await updateProfile({ avatar: avatarUrl });
-              bpToast.success('Profile photo updated!');
-            }
-          };
-          img.onerror = () => {
-            bpToast.error('Failed to process image');
-            setUploading(false);
-          };
-          img.src = reader.result as string;
-        } catch (err) {
-          bpToast.error('Failed to upload image');
-          setUploading(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      bpToast.error('Could not update photo');
+      const resized = await resizeImage(file, 400);
+      const uploaded = await uploadFile('avatar', resized);
+      const resp = await apiClient.patch('/users/me/avatar', { avatar: uploaded.url });
+      const avatarUrl = resp?.data?.avatarUrl || resp?.avatarUrl || uploaded.url;
+      await updateProfile({ avatar: avatarUrl });
+      bpToast.success('Profile photo updated!');
+    } catch (err) {
+      bpToast.error((err as Error)?.message || 'Could not update photo');
+    } finally {
       setUploading(false);
     }
   };
@@ -130,7 +96,7 @@ export default function ProfilePage() {
 
   return (
     <div className="pb-24 lg:pb-8">
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
 
       {/* ── Cover + Avatar hero ── */}
       <div className="relative -mx-4 lg:-mx-0 lg:rounded-3xl overflow-hidden mb-16"
@@ -326,7 +292,9 @@ export default function ProfilePage() {
         <ToggleRow icon={theme === 'dark' ? Moon : Sun} label="Theme"
           sub={theme === 'dark' ? 'Dark mode active' : 'Light mode active'}
           on={theme === 'dark'} onToggle={toggleTheme} />
-        <NavRow href="/profile/support" icon={HelpCircle} label="Help & support" sub="24/7 chat with a banker" />
+        <NavRow href="/profile/support" icon={HelpCircle} label="Help & support" sub="Answers to common questions" />
+        <NavRow href="/orders" icon={Package} label="My orders" sub="Marketplace purchases and their status" />
+        <NavRow href="/profile/disputes" icon={Flag} label="My disputes" sub="Problems you reported and replies from support" />
       </div>
 
       {/* ── Sign out ── */}

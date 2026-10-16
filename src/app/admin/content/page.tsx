@@ -6,12 +6,12 @@ import { useConfirmAction } from '@/components/admin/ConfirmActionDialog';
 import adminApiClient from '@/lib/adminApiClient';
 import { formatDateTime, humanize } from '@/lib/adminFormat';
 import { useCan } from '@/store/useAdminAuthStore';
+import { FileUpload } from '@/components/ui/file-upload';
 
 interface Post { id: string; title: string; slug: string; content: string; excerpt: string | null; coverImageUrl: string | null; category: string; tags: string[]; isPublished: boolean; featured: boolean; publishedAt: string | null; updatedAt: string }
 interface Video { id: string; title: string; description: string; videoUrl: string; thumbnailUrl: string | null; category: string; location: string | null; duration: number | null; isPublished: boolean; featured: boolean; publishedAt: string | null; updatedAt: string }
 type Kind = 'news' | 'videos';
 
-const safeUrl = (u: string) => !u || /^https:\/\/[^\s]+$/i.test(u);
 
 export default function ContentPage() {
   const canManage = useCan('content.manage');
@@ -100,9 +100,9 @@ function ContentEditor({ kind, item, onClose }: { kind: Kind; item: Post | Video
     duration: video?.duration ? String(video.duration) : '',
   });
   const [preview, setPreview] = useState(false);
+  const [uploading, setUploading] = useState(0);
   const { run, pending } = useAdminAction();
-  const urlsOk = kind === 'news' ? safeUrl(f.coverImageUrl) : safeUrl(f.videoUrl) && !!f.videoUrl && safeUrl(f.thumbnailUrl);
-  const valid = f.title.trim() && f.category.trim() && (kind === 'news' ? f.content.trim() : f.description.trim()) && urlsOk;
+  const valid = f.title.trim() && f.category.trim() && (kind === 'news' ? f.content.trim() : f.description.trim() && f.videoUrl) && uploading === 0;
 
   const save = async () => {
     const body = kind === 'news'
@@ -114,11 +114,11 @@ function ContentEditor({ kind, item, onClose }: { kind: Kind; item: Post | Video
 
   return (
     <Drawer open onClose={onClose} width="max-w-2xl" title={`${item ? 'Edit' : 'New'} ${kind === 'news' ? 'article' : 'video'}`}
-      footer={<><Button onClick={() => setPreview(!preview)} className="mr-auto">{preview ? 'Edit' : 'Preview'}</Button><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!valid} loading={pending === 'save'} onClick={save}>{f.isPublished ? 'Save & publish' : 'Save draft'}</Button></>}>
+      footer={<><Button onClick={() => setPreview(!preview)} className="mr-auto">{preview ? 'Edit' : 'Preview'}</Button><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!valid} loading={pending === 'save'} onClick={save}>{uploading ? 'Uploading…' : f.isPublished ? 'Save & publish' : 'Save draft'}</Button></>}>
       {preview ? (
         <article className="space-y-3">
-          {kind === 'news' && f.coverImageUrl && safeUrl(f.coverImageUrl) && <img src={f.coverImageUrl} alt="" className="max-h-60 w-full rounded-lg object-cover" />}
-          {kind === 'videos' && f.thumbnailUrl && safeUrl(f.thumbnailUrl) && <img src={f.thumbnailUrl} alt="" className="max-h-60 w-full rounded-lg object-cover" />}
+          {kind === 'news' && f.coverImageUrl && <img src={f.coverImageUrl} alt="" className="max-h-60 w-full rounded-lg object-cover" />}
+          {kind === 'videos' && f.thumbnailUrl && <img src={f.thumbnailUrl} alt="" className="max-h-60 w-full rounded-lg object-cover" />}
           <p className="text-xs uppercase text-(--ad-muted)">{f.category}</p>
           <h2 className="text-xl font-bold">{f.title || 'Untitled'}</h2>
           {kind === 'news' && f.excerpt && <p className="text-sm text-(--ad-muted)">{f.excerpt}</p>}
@@ -132,14 +132,14 @@ function ContentEditor({ kind, item, onClose }: { kind: Kind; item: Post | Video
             <>
               <Field label="Excerpt">{(id) => <TextArea id={id} rows={2} value={f.excerpt} onChange={(e) => setF({ ...f, excerpt: e.target.value })} />}</Field>
               <Field label="Content" required>{(id) => <TextArea id={id} rows={12} value={f.content} onChange={(e) => setF({ ...f, content: e.target.value })} />}</Field>
-              <Field label="Cover image URL" hint="https:// only" error={safeUrl(f.coverImageUrl) ? null : 'Use an https:// link'}>{(id) => <TextInput id={id} value={f.coverImageUrl} onChange={(e) => setF({ ...f, coverImageUrl: e.target.value.trim() })} />}</Field>
+              <FileUpload kind="content_image" label="Cover image" shape="wide" value={f.coverImageUrl} onChange={(url) => setF({ ...f, coverImageUrl: url })} onBusyChange={(b) => setUploading((n) => n + (b ? 1 : -1))} />
               <Field label="Tags" hint="Comma-separated">{(id) => <TextInput id={id} value={f.tags} onChange={(e) => setF({ ...f, tags: e.target.value })} />}</Field>
             </>
           ) : (
             <>
               <Field label="Description" required>{(id) => <TextArea id={id} rows={6} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />}</Field>
-              <Field label="Video URL" required hint="https:// only" error={safeUrl(f.videoUrl) ? null : 'Use an https:// link'}>{(id) => <TextInput id={id} value={f.videoUrl} onChange={(e) => setF({ ...f, videoUrl: e.target.value.trim() })} />}</Field>
-              <Field label="Thumbnail URL" error={safeUrl(f.thumbnailUrl) ? null : 'Use an https:// link'}>{(id) => <TextInput id={id} value={f.thumbnailUrl} onChange={(e) => setF({ ...f, thumbnailUrl: e.target.value.trim() })} />}</Field>
+              <FileUpload kind="content_video" label="Video file *" shape="video" value={f.videoUrl} onChange={(url) => setF({ ...f, videoUrl: url })} onBusyChange={(b) => setUploading((n) => n + (b ? 1 : -1))} />
+              <FileUpload kind="content_image" label="Thumbnail" shape="wide" value={f.thumbnailUrl} onChange={(url) => setF({ ...f, thumbnailUrl: url })} onBusyChange={(b) => setUploading((n) => n + (b ? 1 : -1))} />
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Location">{(id) => <TextInput id={id} value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} />}</Field>
                 <Field label="Duration (seconds)">{(id) => <TextInput id={id} type="number" min={0} value={f.duration} onChange={(e) => setF({ ...f, duration: e.target.value })} />}</Field>

@@ -64,6 +64,10 @@ export interface MerchantSettlement {
   createdAt: string;
 }
 
+/** Query string without empty values (URLSearchParams would send `search=undefined`). */
+const toQuery = (params: Record<string, unknown>) =>
+  new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => [k, String(v)])).toString();
+
 export const merchantService = {
   /**
    * Get all stores (marketplace)
@@ -71,7 +75,7 @@ export const merchantService = {
    */
   getPublicStores: async (params?: { search?: string; category?: string; limit?: number; offset?: number }): Promise<any> => {
     try {
-      const queryString = params ? new URLSearchParams(params as any).toString() : '';
+      const queryString = params ? toQuery(params) : '';
       const path = queryString ? `/stores?${queryString}` : '/stores';
       const resp = await apiClient.get(path);
       return resp?.data || {};
@@ -86,7 +90,7 @@ export const merchantService = {
    */
   getAllProducts: async (params?: { search?: string; category?: string; minPrice?: number; maxPrice?: number; limit?: number; offset?: number }): Promise<any> => {
     try {
-      const queryString = params ? new URLSearchParams(params as any).toString() : '';
+      const queryString = params ? toQuery(params) : '';
       const path = queryString ? `/stores/products?${queryString}` : '/stores/products';
       const resp = await apiClient.get(path);
       return resp?.data || {};
@@ -273,6 +277,30 @@ export const merchantService = {
    * Generate QR code for merchant.
    * Backend: GET /api/v1/qr/generate
    */
+  /**
+   * The merchant's reusable pay link (what the QR shows). The BadePay app pays it from the wallet;
+   * any phone camera opens a page to pay by card, transfer or USSD — and pick what it's for.
+   * Backend: POST /api/v1/qr/merchant/link
+   */
+  getMerchantPayLink: async (amount?: number): Promise<{ url: string; amount: number | null; displayName: string } | null> => {
+    try {
+      const resp = await apiClient.post('/qr/merchant/link', amount ? { amount } : {});
+      return resp?.data || null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Money received through the QR, totalled per item (tithe, offering…), with each payment and note.
+   * Backend: GET /api/v1/merchants/store/collections
+   */
+  getCollections: async (params: { from?: string; to?: string; productId?: string; page?: number; limit?: number } = {}): Promise<any> => {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])).toString();
+    const resp = await apiClient.get(`/merchants/store/collections${qs ? `?${qs}` : ''}`);
+    return resp?.data ?? resp;
+  },
+
   generateQrCode: async (): Promise<{ qrCode: string; qrSlug: string } | null> => {
     try {
       const resp = await apiClient.get('/qr/generate');
@@ -300,55 +328,41 @@ export const merchantService = {
    * Backend: GET /transactions?type=qr_payment
    */
   getPayments: async (): Promise<MerchantPayment[]> => {
+    // Money coming in (QR, store orders, transfers to the business account), like the mobile app's list.
     try {
-      const resp = await apiClient.get('/transactions?type=qr_payment');
-      const txs = resp?.data?.transactions || resp?.data || [];
-      return txs.map((t: any) => ({
-        id: t.id,
-        amount: Number(t.amount),
-        customerName: t.senderName || t.recipientName || 'Customer',
-        status: t.status === 'completed' ? 'success' : (t.status || 'pending'),
-        reference: t.reference || '',
-        createdAt: t.createdAt || new Date().toISOString(),
-      }));
+      const resp = await apiClient.get('/transactions?limit=100');
+      const txs: any[] = resp?.data?.transactions || resp?.data || [];
+      return txs
+        .filter((t) => t.direction === 'in')
+        .map((t) => ({
+          id: t.id,
+          amount: Number(t.amount),
+          customerName: t.metadata?.payerName || t.counterparty?.name || t.description || 'Customer',
+          status: (['success', 'completed'].includes(t.status) ? 'success' : t.status === 'failed' || t.status === 'reversed' ? 'failed' : 'pending') as MerchantPayment['status'],
+          reference: String(t.reference || '').replace(/-REC$/, ''),
+          createdAt: t.createdAt || new Date().toISOString(),
+        }));
     } catch {
       return [];
     }
   },
 
   /**
-   * Get merchant settlements.
-   * Backend: Derived from transactions if dedicated endpoint doesn't exist
+   * Payouts from the business wallet to the bank (real payout records, newest first).
+   * Backend: GET /api/v1/merchants/payouts
    */
   getSettlements: async (): Promise<MerchantSettlement[]> => {
     try {
-      const paymentsResp = await apiClient.get('/transactions?type=qr_payment');
-      const transactions = paymentsResp?.data?.transactions || paymentsResp?.data || [];
-      
-      // Group transactions by date to create settlement records
-      const settlementsByDate = new Map<string, MerchantSettlement>();
-      
-      transactions.forEach((t: any) => {
-        if (t.status === 'completed' || t.status === 'success') {
-          const date = new Date(t.createdAt || Date.now());
-          const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-          
-          if (!settlementsByDate.has(dateKey)) {
-            settlementsByDate.set(dateKey, {
-              id: `settle_${dateKey}`,
-              amount: 0,
-              status: 'completed',
-              reference: `SETTLE-${dateKey}`,
-              createdAt: t.createdAt || new Date().toISOString(),
-            });
-          }
-          
-          const settlement = settlementsByDate.get(dateKey)!;
-          settlement.amount += t.amount || 0;
-        }
-      });
-      
-      return Array.from(settlementsByDate.values());
+      const resp = await apiClient.get('/merchants/payouts?limit=50');
+      const payouts: any[] = resp?.data?.payouts ?? [];
+      return payouts.map((p) => ({
+        id: p.id,
+        amount: Number(p.amount),
+        // pending/held/review → still on its way; success → completed; failed/reversed are left out of "pending"
+        status: (p.status === 'success' ? 'completed' : ['pending', 'held', 'review'].includes(p.status) ? 'pending' : 'processing') as MerchantSettlement['status'],
+        reference: p.reference,
+        createdAt: p.createdAt,
+      }));
     } catch {
       return [];
     }

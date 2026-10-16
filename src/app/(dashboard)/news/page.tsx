@@ -5,13 +5,14 @@ import {
   Globe, Zap, Heart, ShoppingBag, Plane, Trophy, RefreshCw,
   ExternalLink
 } from 'lucide-react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import apiClient from '@/lib/apiClient';
 
 type NewsCategory = 'all' | 'business' | 'tech' | 'nigeria' | 'sports' | 'travel';
 
 type Article = {
   id: string;
+  slug: string;
   title: string;
   excerpt: string;
   category: string;
@@ -67,11 +68,13 @@ function getTimeAgo(dateString: string): string {
 }
 
 function FeaturedCard({ article }: { article: Article }) {
+  const [, navigate] = useLocation();
+  const open = () => navigate(`/news/${article.slug}`);
   const categoryKey = (article.category?.toLowerCase() || 'all') as NewsCategory;
   const timeAgo = getTimeAgo(article.publishedAt || article.createdAt);
 
   return (
-    <motion.div variants={riseIn}
+    <motion.div variants={riseIn} role="link" tabIndex={0} onClick={open} onKeyDown={(e) => e.key === 'Enter' && open()}
       className="relative rounded-3xl overflow-hidden h-[240px] flex items-end cursor-pointer hover:scale-[1.01] transition-transform"
       style={{ boxShadow: '0 12px 40px -10px rgba(0,0,0,0.4)' }}>
       <img src={article.coverImageUrl || 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format'} alt={article.title} className="absolute inset-0 w-full h-full object-cover" />
@@ -101,13 +104,15 @@ function FeaturedCard({ article }: { article: Article }) {
 }
 
 function ArticleCard({ article }: { article: Article }) {
+  const [, navigate] = useLocation();
+  const open = () => navigate(`/news/${article.slug}`);
   const [saved, setSaved] = useState(false);
   const categoryKey = (article.category?.toLowerCase() || 'all') as NewsCategory;
   const color = CAT_COLORS[categoryKey];
   const timeAgo = getTimeAgo(article.publishedAt || article.createdAt);
 
   return (
-    <motion.div variants={riseIn}
+    <motion.div variants={riseIn} role="link" tabIndex={0} onClick={open} onKeyDown={(e) => e.key === 'Enter' && open()}
       className="flex gap-3 p-3 rounded-2xl group cursor-pointer transition-colors"
       style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
       <div className="relative h-[80px] w-[80px] shrink-0 rounded-xl overflow-hidden">

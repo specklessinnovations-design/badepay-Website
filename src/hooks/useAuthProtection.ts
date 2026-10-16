@@ -76,6 +76,12 @@ export function useAuthProtection() {
       return;
     }
 
+    // Same as the mobile app: nothing works before the BVN is verified (KYC level 1).
+    if (isAuthenticated && user && (user.kycLevel ?? 0) < 1 && PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
+      navigate('/verify-bvn');
+      return;
+    }
+
     if (isAuthenticated && user) {
       // Only restrict merchant routes to non-merchants who DON'T have a merchant profile
       if (!user.merchantProfile && MERCHANT_ROUTES.some((route) => pathname.startsWith(route))) {
@@ -153,8 +159,15 @@ export function useRequireMerchant(options?: { allowOnboarding?: boolean }) {
 
     }
 
-    // Only restrict merchant routes to users who DON'T have a merchant profile at all
-    if (!user?.merchantProfile && user?.userType !== 'merchant') {
+    // BVN first (same as the app), then business setup
+    if ((user?.kycLevel ?? 0) < 1) {
+      navigate('/verify-bvn?then=merchant');
+      return;
+    }
+
+    // Only restrict merchant routes to users who DON'T have a merchant profile at all.
+    // Anyone may open onboarding: that's how a personal account becomes a business.
+    if (!onOnboarding && !user?.merchantProfile && user?.userType !== 'merchant') {
 
       navigate('/dashboard');
 

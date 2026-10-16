@@ -117,11 +117,7 @@ const riseIn = {
   show: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] as any } },
 };
 
-type ExploreItem = {
-  id: string; title: string; description: string;
-  mediaType: 'image' | 'video'; mediaUrl: string;
-  location: string; category: string; createdAt: string;
-};
+type NewsItem = { id: string; slug: string; title: string; category: string; coverImageUrl?: string | null };
 type ChatMessage = { role: 'assistant' | 'user'; content: string };
 
 export default function DashboardHome() {
@@ -138,7 +134,7 @@ export default function DashboardHome() {
   const [activeModal, setActiveModal] = useState<HomeModalType | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(user?.balance || 0);
   const [activeCategory, setActiveCategory] = useState('regular');
-  const [exploreItems, setExploreItems] = useState<ExploreItem[]>([]);
+  const [exploreItems, setExploreItems] = useState<NewsItem[]>([]);
   const [isExploreLoading, setIsExploreLoading] = useState(true);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [aiMessages, setAiMessages] = useState<ChatMessage[]>([
@@ -170,8 +166,8 @@ export default function DashboardHome() {
     let cancelled = false;
     const loadExplore = async () => {
       try {
-        const res = await apiClient.get('/explore-nigeria');
-        if (!cancelled) setExploreItems(res?.data?.items || []);
+        const res = await apiClient.get('/news?limit=6');
+        if (!cancelled) setExploreItems(res?.data?.posts || []);
       } catch {
         if (!cancelled) setExploreItems([]);
       } finally {
@@ -410,41 +406,33 @@ export default function DashboardHome() {
           </div>
         </motion.div>
 
-        {/* Explore Nigeria */}
+        {/* Latest news (the app's home shows the same) */}
+        {(isExploreLoading || exploreItems.length > 0) && (
         <motion.div {...fadeUp(0.16)}>
-          <div className="px-4 flex items-center justify-between mb-3">
-            <h2 className="text-[17px] font-black" style={{ color: 'var(--text-primary)' }}>Explore Nigeria</h2>
+          <Link href="/news" className="px-4 flex items-center justify-between mb-3">
+            <h2 className="text-[17px] font-black" style={{ color: 'var(--text-primary)' }}>Latest news</h2>
             <ChevronRight size={18} style={{ color: 'var(--text-tertiary)' }} />
-          </div>
+          </Link>
           <div className="pl-4 flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {isExploreLoading ? (
-              <div className="w-full rounded-2xl px-4 py-5 text-sm"
-                style={{ border: '1px dashed var(--border)', background: 'var(--surface-secondary)', color: 'var(--text-secondary)' }}>
-                Loading Explore Nigeria content...
-              </div>
-            ) : exploreItems.length === 0 ? (
-              <div className="w-full rounded-2xl px-4 py-5 text-sm"
-                style={{ border: '1px dashed var(--border)', background: 'var(--surface-secondary)', color: 'var(--text-secondary)' }}>
-                No Explore Nigeria content yet.
-              </div>
+              [0, 1, 2].map(i => <div key={i} className="shrink-0 w-[150px] h-[190px] rounded-2xl animate-pulse" style={{ background: 'var(--surface-secondary)' }} />)
             ) : (
               exploreItems.map(item => (
-                <div key={item.id}
-                  className="relative shrink-0 w-[150px] h-[190px] rounded-2xl overflow-hidden flex items-end p-3 cursor-pointer transition-transform hover:scale-[1.02]">
-                  {item.mediaType === 'video'
-                    ? <video src={item.mediaUrl} muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />
-                    : <img src={item.mediaUrl} alt={item.title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-                  }
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                <Link key={item.id} href={`/news/${item.slug}`}
+                  className="relative shrink-0 w-[150px] h-[190px] rounded-2xl overflow-hidden flex items-end p-3 transition-transform hover:scale-[1.02]"
+                  style={{ background: 'var(--surface-secondary)' }}>
+                  {item.coverImageUrl && <img src={item.coverImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
                   <div className="relative flex flex-col gap-1">
-                    <span className="text-white font-bold text-[16px] leading-tight">{item.title}</span>
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/80">{item.location}</span>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-white/80">{item.category}</span>
+                    <span className="text-white font-bold text-[14px] leading-tight line-clamp-3">{item.title}</span>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>
         </motion.div>
+        )}
 
         {/* Recent Activity */}
         <motion.section {...fadeUp(0.19)} className="px-4">

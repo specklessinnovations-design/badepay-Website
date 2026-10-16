@@ -50,12 +50,18 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+/** Sign-in calls: a 401 there means wrong credentials, never an expired session. */
+const NO_REFRESH = ["/auth/login", "/auth/register", "/auth/otp", "/auth/refresh", "/auth/check-email", "/auth/forgot-password", "/auth/reset-password"];
+/** The backend's messages for a missing or ended session (middleware/auth.ts). */
+const SESSION_401 = /sign in|session/i;
+
 async function request<T = any>(
   method: string,
   path: string,
   body?: any,
   isFormData = false,
   retried = false,
+  extraHeaders?: Record<string, string>,
 ): Promise<T> {
   const url = `${BASE_URL}${path.startsWith("/") ? path : "/" + path}`;
   const token = getAccessToken();
@@ -63,6 +69,7 @@ async function request<T = any>(
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
   if (!isFormData) headers["Content-Type"] = "application/json";
+  if (extraHeaders) Object.assign(headers, extraHeaders);
 
   const init: RequestInit = {
     method,
@@ -72,11 +79,14 @@ async function request<T = any>(
 
   const res = await fetch(url, init);
 
-  // If 401 and not already retried, attempt token refresh
-  if (res.status === 401 && !retried) {
+  // A 401 is either an expired session (refresh once and retry) or a wrong PIN / password / code.
+  // Retrying those would resend the same wrong PIN (one more failed attempt) or report a wrong
+  // password as "session expired", so only session errors are retried.
+  if (res.status === 401 && !retried && !NO_REFRESH.some((p) => path.startsWith(p))
+      && SESSION_401.test(String((await res.clone().json().catch(() => ({})))?.message ?? ''))) {
     const newToken = await refreshAccessToken();
     if (newToken) {
-      return request<T>(method, path, body, isFormData, true);
+      return request<T>(method, path, body, isFormData, true, extraHeaders);
     }
     setTokens(null, null);
     if (typeof window !== "undefined") {
@@ -103,9 +113,12 @@ async function request<T = any>(
 const apiClient = {
   get: <T = any>(path: string) => request<T>("GET", path),
   post: <T = any>(path: string, body?: any) => request<T>("POST", path, body),
+  /** Money actions: retries with the same key can never run twice (server Idempotency-Key). */
+  postIdempotent: <T = any>(path: string, body: any, idempotencyKey: string) =>
+    request<T>("POST", path, body, false, false, { "Idempotency-Key": idempotencyKey }),
   put: <T = any>(path: string, body?: any) => request<T>("PUT", path, body),
   patch: <T = any>(path: string, body?: any) => request<T>("PATCH", path, body),
-  delete: <T = any>(path: string) => request<T>("DELETE", path),
+  delete: <T = any>(path: string, body?: any) => request<T>("DELETE", path, body),
   del: <T = any>(path: string) => request<T>("DELETE", path),
   postForm: <T = any>(path: string, formData: FormData) => request<T>("POST", path, formData, true),
 
@@ -127,5 +140,5 @@ export async function apiRequest<T = any>(
   return request<T>(opts.method || "GET", path, opts.body);
 }
 
-export { apiClient };
+export { apiClient, getAccessToken, refreshAccessToken };
 export default apiClient;

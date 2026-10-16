@@ -8,12 +8,20 @@ import { getPostAuthPath } from '@/lib/authRouting';
 import { PremiumInput } from '@/components/ui/premium-input';
 import { PremiumButton } from '@/components/ui/premium-button';
 import { bpToast } from '@/lib/bpToast';
+import type { LoginChallenge } from '@/services/authService';
 
 function LoginForm() {
   const [, navigate] = useLocation();
   const search = useSearch();
   const accountType = new URLSearchParams(search).get('type') === 'merchant' ? 'merchant' : 'personal';
-  const { login, isLoading, error } = useAuthStore();
+  // Where to go after logging in (e.g. back to a store's checkout); same-site paths only.
+  const nextParam = new URLSearchParams(search).get('next');
+  const nextPath = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null;
+  const { login, completeLoginStep, isLoading, error } = useAuthStore();
+  /** A further sign-in step the backend asked for (emailed code or 2FA). */
+  const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
+  const [code, setCode] = useState('');
+  const [codeError, setCodeError] = useState('');
 
   const [formData, setFormData] = useState({ email: '', password: '', rememberDevice: false });
   const [showPassword, setShowPassword] = useState(false);
@@ -27,27 +35,55 @@ function LoginForm() {
       errors.email = 'Enter a valid email address';
     }
     if (!formData.password) errors.password = 'Password is required';
-    else if (formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const finish = () => {
+    const user = useAuthStore.getState().user;
+    // Merchant sign-in without a business yet: set one up (signed in either way).
+    if (accountType === 'merchant' && !user?.merchantProfile?.businessName) {
+      bpToast.success('Signed in. Set up your business to use the merchant portal.');
+    } else {
+      bpToast.success('Welcome back!');
+    }
+    const home = getPostAuthPath(user, accountType);
+    navigate(nextPath && accountType === 'personal' && home === '/dashboard' ? nextPath : home);
+  };
+
+  const submitCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!challenge) return;
+    if (!/^\d{6}$/.test(code.trim())) { setCodeError('Enter the 6-digit code'); return; }
+    setCodeError('');
+    try {
+      const nextStep = await completeLoginStep(challenge, code.trim());
+      setCode('');
+      if (nextStep) { setChallenge(nextStep); return; }
+      finish();
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : 'That code didn’t work. Try again.');
+    }
+  };
+
+  const resendCode = async () => {
+    // Signing in again re-sends the emailed code.
+    try {
+      const again = await login(formData.email.trim().toLowerCase(), formData.password, formData.rememberDevice);
+      if (again) setChallenge(again);
+      bpToast.success('We sent a new code to your email.');
+    } catch (err) {
+      bpToast.error(err instanceof Error ? err.message : 'Could not send a new code');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
     try {
-      await login(formData.email.trim().toLowerCase(), formData.password, formData.rememberDevice);
-      
-      const user = useAuthStore.getState().user;
-      
-      // If merchant login selected but user doesn't have merchant profile
-      if (accountType === 'merchant' && !user?.merchantProfile?.businessName) {
-        bpToast.error('No merchant account found. Please complete merchant onboarding or use personal login.');
-        return;
-      }
-      
-      bpToast.success('Welcome back!');
-      navigate(getPostAuthPath(user, accountType));
+      const nextStep = await login(formData.email.trim().toLowerCase(), formData.password, formData.rememberDevice);
+      if (nextStep) { setChallenge(nextStep); setCode(''); setCodeError(''); return; }
+      finish();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed. Check your credentials.';
       
@@ -100,6 +136,39 @@ function LoginForm() {
         ))}
       </div>
 
+      {challenge ? (
+        <form onSubmit={submitCode} className="space-y-4">
+          <div className="rounded-2xl p-4 text-sm" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+            {challenge.kind === 'twoFactor'
+              ? 'Enter the 6-digit code from your authenticator app.'
+              : challenge.kind === 'verifyDevice'
+                ? <>This is a new browser for your account. We emailed a 6-digit code to <b style={{ color: 'var(--text-primary)' }}>{challenge.email}</b> to confirm it’s you.</>
+                : <>Verify your email to continue. We sent a 6-digit code to <b style={{ color: 'var(--text-primary)' }}>{challenge.email}</b>.</>}
+          </div>
+          <PremiumInput
+            label={challenge.kind === 'twoFactor' ? 'Authenticator code' : 'Email code'}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="123456"
+            maxLength={6}
+            icon={<ShieldCheck size={17} />}
+            value={code}
+            onChange={e => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setCodeError(''); }}
+            error={codeError}
+            disabled={isLoading}
+            autoFocus
+          />
+          <PremiumButton type="submit" fullWidth size="lg" isLoading={isLoading} disabled={isLoading}>
+            {!isLoading && <>Continue <ArrowRight size={17} /></>}
+          </PremiumButton>
+          <div className="flex items-center justify-between text-sm">
+            <button type="button" onClick={() => { setChallenge(null); setCode(''); }} className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Back</button>
+            {challenge.kind !== 'twoFactor' && (
+              <button type="button" onClick={resendCode} disabled={isLoading} className="font-semibold" style={{ color: 'var(--accent-text)' }}>Send a new code</button>
+            )}
+          </div>
+        </form>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         <PremiumInput
           label="Email address"
@@ -163,6 +232,7 @@ function LoginForm() {
           </PremiumButton>
         </div>
       </form>
+      )}
 
       <p className="mt-7 text-center text-sm text-[var(--text-secondary)]">
         New to BadePay?{' '}

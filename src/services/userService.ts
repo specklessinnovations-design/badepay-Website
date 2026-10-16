@@ -107,44 +107,6 @@ export const notificationService = {
   },
 };
 
-export const kycService = {
-  /**
-   * Get KYC status.
-   * Backend: GET /kyc/status
-   */
-  getStatus: async () => {
-    const resp = await apiClient.get('/kyc/status');
-    return resp?.data || { kycLevel: 0, kycStatus: 'pending' };
-  },
-
-  /**
-   * Submit BVN (KYC Tier 1/2).
-   * Backend: POST /kyc/bvn
-   */
-  submitBvn: async (bvn: string) => {
-    const resp = await apiClient.post('/kyc/bvn', { bvn });
-    return resp?.data || null;
-  },
-
-  /**
-   * Submit NIN (KYC Tier 3).
-   * Backend: POST /kyc/nin
-   */
-  submitNin: async (nin: string) => {
-    const resp = await apiClient.post('/kyc/nin', { nin });
-    return resp?.data || null;
-  },
-
-  /**
-   * Generic submit (maps to BVN by default).
-   */
-  submit: async (data: any) => {
-    if (data?.bvn) return kycService.submitBvn(data.bvn);
-    if (data?.nin) return kycService.submitNin(data.nin);
-    return { status: 'pending' };
-  },
-};
-
 export const qrService = {
   /**
    * Generate a QR code for merchant.

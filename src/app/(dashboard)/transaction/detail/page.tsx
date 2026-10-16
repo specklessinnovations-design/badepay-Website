@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import {
   CheckCircle2, Clock, XCircle, Copy, ArrowUpRight, ArrowDownLeft,
-  Zap, FileText, RefreshCw, Home, Download,
+  Zap, FileText, RefreshCw, Home, Download, Flag,
 } from 'lucide-react';
-import { useTransactionStore } from '@/store/useTransactionStore';
+import { useTransactionStore, mapTransaction } from '@/store/useTransactionStore';
+import { transactionService } from '@/services/transactionService';
 import type { Transaction } from '@/store/useTransactionStore';
 import { formatNGN, formatDate } from '@/utils/formatting';
 import { bpToast } from '@/lib/bpToast';
@@ -61,7 +62,20 @@ export default function TransactionDetailPage() {
   const transactions = useTransactionStore(s => s.transactions);
   const [copied, setCopied] = useState(false);
 
-  const tx: Transaction | undefined = transactions.find(t => t.id === txId);
+  const fromList: Transaction | undefined = transactions.find(t => t.id === txId);
+  // Opened from a link or after a refresh: load it from the server (like the mobile app).
+  const [fetched, setFetched] = useState<Transaction | null>(null);
+  const [loadingTx, setLoadingTx] = useState(!fromList && !!txId);
+  useEffect(() => {
+    if (fromList || !txId) return;
+    let live = true;
+    transactionService.getById(txId)
+      .then((t) => { if (live && t) setFetched(mapTransaction(t)); })
+      .catch(() => {})
+      .finally(() => live && setLoadingTx(false));
+    return () => { live = false; };
+  }, [fromList, txId]);
+  const tx: Transaction | undefined = fromList ?? fetched ?? undefined;
 
   const copy = (text: string, label = 'Copied!') => {
     navigator.clipboard.writeText(text);
@@ -69,6 +83,10 @@ export default function TransactionDetailPage() {
     bpToast.success(label);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  if (!tx && loadingTx) {
+    return <div className="flex min-h-[60vh] items-center justify-center text-sm" style={{ color: 'var(--text-tertiary)' }}>Loading…</div>;
+  }
 
   if (!tx) {
     return (
@@ -204,6 +222,13 @@ export default function TransactionDetailPage() {
           <Home size={13} /> Home
         </Link>
       </motion.div>
+
+      {/* Something wrong with this payment? File a dispute about it (support replies in My disputes). */}
+      <Link href={`/profile/disputes/new?tx=${encodeURIComponent(tx.id)}&amount=${tx.amount}`}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-xs font-black transition-all active:scale-97"
+        style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+        <Flag size={13} /> Report an issue with this payment
+      </Link>
 
       {tx.status === 'failed' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>

@@ -1,16 +1,38 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingCart, Search, Plus, Minus, X, CheckCircle2, ArrowLeft,
-  Store, Package, Star, Wallet, Shield, ChevronRight, Loader2
+  Store, Package, Star, Wallet, Shield, ChevronRight, Loader2, CreditCard, Truck
 } from 'lucide-react';
-import { useMerchantStoreData, type CartItem } from '@/store/useMerchantStoreData';
-import { useMerchantStore } from '@/store/useMerchantStore';
-import { merchantService, type Product } from '@/services/merchantService';
+import { merchantService } from '@/services/merchantService';
+import { useAuthStore } from '@/store/useAuthStore';
+import apiClient from '@/lib/apiClient';
 import { formatNGN } from '@/utils/formatting';
 import toast from 'react-hot-toast';
 
-const PRODUCT_CATEGORIES = ['All', 'Clothing', 'Food & Drinks', 'Electronics', 'Beauty', 'Home & Living', 'Books', 'Health', 'Services', 'Digital', 'Other'];
+interface Variation { id: string; name: string; value: string; priceAdjust: number; stock: number }
+/** A store product as the public API returns it, with numbers parsed (prices come back as decimal strings). */
+interface Product {
+  id: string; name: string; description: string; category: string; type: string; deliveryInfo?: string | null;
+  price: number; discount: number; stock: number; imageUrl?: string; images: string[]; variations: Variation[];
+}
+interface CartLine { key: string; product: Product; variation?: Variation; quantity: number }
+
+function toProduct(p: any): Product {
+  const images = [...(p.images ?? [])].sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)).map((i: any) => i.imageUrl).filter(Boolean);
+  return {
+    id: p.id, name: p.name, description: p.description ?? '', category: p.category ?? 'Other', type: p.type ?? 'physical',
+    deliveryInfo: p.deliveryInfo, price: Number(p.price) || 0, discount: Number(p.discount) || 0, stock: Number(p.stock) || 0,
+    images, imageUrl: images[0] ?? p.imageUrl,
+    variations: (p.variations ?? []).map((v: any) => ({ id: v.id, name: v.name, value: v.value, priceAdjust: Number(v.priceAdjust) || 0, stock: Number(v.stock) || 0 })),
+  };
+}
+const inStock = (p: Product) => p.variations.length ? p.variations.some(v => v.stock > 0) : p.stock > 0;
+/** Same as the backend: discount on the base price, plus the option's price adjustment. */
+const unitPrice = (p: Product, v?: Variation) => p.price * (1 - p.discount / 100) + (v?.priceAdjust ?? 0);
+const lineKey = (p: Product, v?: Variation) => (v ? `${p.id}:${v.id}` : p.id);
 
 type CheckoutStep = 'browse' | 'cart' | 'details' | 'payment' | 'pin' | 'success';
 
@@ -45,7 +67,9 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
   const [storeInfo, setStoreInfo] = useState<any>(null);
   const [storeProducts, setStoreProducts] = useState<Product[]>([]);
   const [loadingStore, setLoadingStore] = useState(true);
-  const recordPayment = useMerchantStore(s => s.recordPayment);
+  const [, navigate] = useLocation();
+  const user = useAuthStore(s => s.user);
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +97,11 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
           else if ('products' in productsRes) productsList = productsRes.products;
           else if ('data' in productsRes && 'products' in productsRes.data) productsList = productsRes.data.products;
         }
-        setStoreProducts(productsList.filter((p: any) => p.isActive && p.stock > 0));
+        const list = productsList.map(toProduct).filter(inStock);
+        setStoreProducts(list);
+        // Opened from the marketplace: /store/:slug?product=<id> shows that product straight away.
+        const wanted = new URLSearchParams(window.location.search).get('product');
+        if (wanted) setViewing(list.find(p => p.id === wanted) ?? null);
       } catch (err) {
         console.error('Failed to load store:', err);
       } finally {
@@ -87,16 +115,33 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
   const isLive = storeInfo?.isPublished !== false;
 
   const [step, setStep] = useState<CheckoutStep>('browse');
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [viewing, setViewing] = useState<Product | null>(null);
   const [filterCat, setFilterCat] = useState('All');
   const [search, setSearch] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'wallet'>('wallet');
+  const [delivery, setDelivery] = useState(true);
+  const [address1, setAddress1] = useState('');
+  const [city, setCity] = useState('');
+  const [region, setRegion] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'card'>('wallet');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
-  const [completedOrder, setCompletedOrder] = useState<string | null>(null);
+  const [completedOrder, setCompletedOrder] = useState<{ id: string; reference: string; total: number } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    setCustomerName(n => n || [user.firstName, user.lastName].filter(Boolean).join(' '));
+    setCustomerPhone(n => n || user.phone || '');
+  }, [user]);
+
+  const categories = ['All', ...Array.from(new Set(storeProducts.map(p => p.category)))];
+  const detailsProblem =
+    customerName.trim().length < 2 ? 'Enter your name'
+    : customerPhone.replace(/\D/g, '').length < 10 ? 'Enter a phone number'
+    : delivery && (address1.trim().length < 5 || city.trim().length < 2 || region.trim().length < 2) ? 'Enter your delivery address'
+    : '';
 
   const filtered = storeProducts.filter(p => {
     const matchCat = filterCat === 'All' || p.category === filterCat;
@@ -104,54 +149,73 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
     return matchCat && matchQ;
   });
 
-  const cartTotal = cart.reduce((s, i) => {
-    const eff = i.product.discount > 0 ? i.product.price * (1 - i.product.discount / 100) : i.product.price;
-    return s + eff * i.quantity;
-  }, 0);
+  const cartTotal = cart.reduce((s, i) => s + unitPrice(i.product, i.variation) * i.quantity, 0);
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
 
-  const addToCart = (p: Product) => {
-    setCart(prev => {
-      const ex = prev.find(i => i.product.id === p.id);
-      if (ex) return prev.map(i => i.product.id === p.id ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, { product: p, quantity: 1 }];
-    });
+  const stockFor = (p: Product, v?: Variation) => (v ? v.stock : p.stock);
+
+  const addToCart = (p: Product, v?: Variation, qty = 1) => {
+    const key = lineKey(p, v);
+    const have = cart.find(i => i.key === key)?.quantity ?? 0;
+    if (have + qty > stockFor(p, v)) { toast.error(`Only ${stockFor(p, v)} left in stock`); return; }
+    setCart(prev => prev.some(i => i.key === key)
+      ? prev.map(i => i.key === key ? { ...i, quantity: i.quantity + qty } : i)
+      : [...prev, { key, product: p, variation: v, quantity: qty }]);
     toast.success(`${p.name} added to cart`);
   };
 
-  const removeFromCart = (productId: string) =>
-    setCart(prev => prev.filter(i => i.product.id !== productId));
+  const removeFromCart = (key: string) => setCart(prev => prev.filter(i => i.key !== key));
 
-  const updateQty = (productId: string, qty: number) => {
-    if (qty <= 0) { removeFromCart(productId); return; }
-    setCart(prev => prev.map(i => i.product.id === productId ? { ...i, quantity: qty } : i));
+  const updateQty = (key: string, qty: number) => {
+    if (qty <= 0) { removeFromCart(key); return; }
+    const line = cart.find(i => i.key === key);
+    if (line && qty > stockFor(line.product, line.variation)) { toast.error(`Only ${stockFor(line.product, line.variation)} left in stock`); return; }
+    setCart(prev => prev.map(i => i.key === key ? { ...i, quantity: qty } : i));
   };
 
+  const goToDetails = () => {
+    if (!isAuthenticated) {
+      toast('Log in to your BadePay account to check out');
+      navigate(`/login?next=${encodeURIComponent(`/store/${slug}`)}`);
+      return;
+    }
+    setStep('details');
+  };
+
+  /** POST /stores/:slug/orders (login required). Wallet pays now with the PIN; card goes to the hosted checkout. */
   const handlePay = async () => {
-    if (pin !== '1234' && pin.length < 4) { toast.error('Enter your 4-digit PIN'); return; }
+    if (paymentMethod === 'wallet' && pin.length !== 4) { toast.error('Enter your 4-digit PIN'); return; }
     setLoading(true);
     try {
-      const orderData = await merchantService.placeStoreOrder(slug, {
-        customerName: customerName || 'Walk-in Customer',
-        customerPhone,
-        deliveryAddress: deliveryAddress.trim(),
-        items: cart.map(i => ({ productId: i.product.id, quantity: i.quantity, price: i.product.price })),
-        totalAmount: cartTotal,
+      const body = {
+        customerName: customerName.trim(),
+        customerEmail: user?.email,
+        customerPhone: customerPhone.replace(/^\+234/, '0').replace(/\s/g, ''),
         paymentMethod,
-        pin,
-      });
-
-      const reference = orderData?.reference || orderData?.order?.reference || `REF-${Date.now()}`;
-
-      if (storeInfo?.merchantId) {
-        recordPayment(storeInfo.merchantId, customerName || 'Walk-in Customer', cartTotal);
+        channel: 'web',
+        ...(paymentMethod === 'wallet' ? { pin } : {}),
+        items: cart.map(i => ({ productId: i.product.id, quantity: i.quantity, variationId: i.variation?.id })),
+        shippingAddress: delivery ? {
+          recipientName: customerName.trim(), addressLine1: address1.trim(), city: city.trim(), state: region.trim(),
+          country: 'Nigeria', phone: customerPhone,
+        } : undefined,
+      };
+      const res = await apiClient.postIdempotent(`/stores/${slug}/orders`, body, crypto.randomUUID());
+      const order = res?.data?.order;
+      const payment = res?.data?.payment;
+      if (!order) throw new Error(res?.message || 'Could not place the order');
+      if (paymentMethod === 'card') {
+        const url = payment?.authorizationUrl ?? payment?.redirectLink ?? payment?.checkoutUrl;
+        if (!url) throw new Error('Card checkout could not start. Your order is saved in My orders.');
+        window.location.href = url;
+        return;
       }
-
-      setCompletedOrder(reference);
-      setLoading(false);
+      setCompletedOrder({ id: order.id, reference: order.reference, total: Number(order.totalAmount ?? cartTotal) });
       setStep('success');
     } catch (err: any) {
+      setPin('');
       toast.error(err?.message || 'Payment failed. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
@@ -201,30 +265,37 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
           <CheckCircle2 size={44} style={{ color: '#34d399' }} />
         </div>
         <div>
-          <h2 className="text-2xl font-black" style={{ color: 'var(--text-primary)' }}>Payment Successful!</h2>
+          <h2 className="text-2xl font-black" style={{ color: 'var(--text-primary)' }}>Order paid</h2>
           <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
-            Your order has been confirmed. Funds have landed in the merchant's wallet.
+            {storeName} has your order. Track it in My orders.
           </p>
         </div>
         <div className="rounded-2xl p-4 text-left space-y-2"
           style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
           <div className="flex justify-between">
             <span className="text-xs font-bold" style={{ color: 'var(--text-tertiary)' }}>Reference</span>
-            <span className="text-xs font-black font-mono" style={{ color: 'var(--text-primary)' }}>{completedOrder}</span>
+            <span className="text-xs font-black font-mono" style={{ color: 'var(--text-primary)' }}>{completedOrder?.reference}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs font-bold" style={{ color: 'var(--text-tertiary)' }}>Amount Paid</span>
-            <span className="text-xs font-black" style={{ color: '#34d399' }}>{formatNGN(cartTotal)}</span>
+            <span className="text-xs font-black" style={{ color: '#34d399' }}>{formatNGN(completedOrder?.total ?? cartTotal)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs font-bold" style={{ color: 'var(--text-tertiary)' }}>Store</span>
             <span className="text-xs font-black" style={{ color: 'var(--text-primary)' }}>{storeName}</span>
           </div>
         </div>
-        <button onClick={() => { setCart([]); setStep('browse'); setPin(''); setCustomerName(''); setCustomerPhone(''); }}
+        {completedOrder && (
+          <button onClick={() => navigate(`/orders/${completedOrder.id}`)}
+            className="w-full rounded-2xl py-3.5 text-sm font-black transition-all active:scale-95"
+            style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
+            View order
+          </button>
+        )}
+        <button onClick={() => { setCart([]); setStep('browse'); setPin(''); setCompletedOrder(null); }}
           className="w-full rounded-2xl py-3.5 text-sm font-black transition-all active:scale-95"
-          style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
-          Shop Again
+          style={{ border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+          Shop again
         </button>
       </motion.div>
     </div>
@@ -332,7 +403,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
             <motion.div key="browse" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {/* Category chips */}
               <div className="flex gap-2 overflow-x-auto py-3 no-scrollbar">
-                {PRODUCT_CATEGORIES.map(c => (
+                {categories.map(c => (
                   <button key={c} onClick={() => setFilterCat(c)}
                     className="rounded-full px-3.5 py-1.5 text-xs font-bold whitespace-nowrap transition-all flex-shrink-0"
                     style={{
@@ -351,8 +422,8 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   {filtered.map((p, i) => {
-                    const discPrice = p.discount > 0 ? p.price * (1 - p.discount / 100) : p.price;
-                    const inCart = cart.find(c => c.product.id === p.id);
+                    const discPrice = unitPrice(p);
+                    const inCart = p.variations.length ? undefined : cart.find(c => c.key === p.id);
                     const isLowStock = p.stock > 0 && p.stock <= 3;
                     return (
                       <motion.div key={p.id}
@@ -365,7 +436,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                           transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
                         }}
                         whileHover={{ y: -2 }}>
-                        <div className="relative h-44 overflow-hidden"
+                        <div className="relative h-44 overflow-hidden" onClick={() => setViewing(p)}
                           style={{ background: 'var(--surface-secondary)' }}>
                           {p.imageUrl
                             ? <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
@@ -395,7 +466,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                           </div>
                         </div>
                         <div className="p-3">
-                          <p className="text-xs font-black leading-tight line-clamp-2" style={{ color: 'var(--text-primary)' }}>{p.name}</p>
+                          <button type="button" onClick={() => setViewing(p)} className="text-left text-xs font-black leading-tight line-clamp-2" style={{ color: 'var(--text-primary)' }}>{p.name}</button>
                           <div className="flex items-center justify-between mt-2.5">
                             <div>
                               <p className="text-sm font-black" style={{ color: '#6fe8d6' }}>{formatNGN(discPrice)}</p>
@@ -420,7 +491,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                                 </button>
                               </div>
                             ) : (
-                              <button onClick={() => addToCart(p)}
+                              <button onClick={() => (p.variations.length ? setViewing(p) : addToCart(p))} aria-label={`Add ${p.name}`}
                                 className="h-8 w-8 flex items-center justify-center rounded-xl transition-all active:scale-95 hover:scale-105"
                                 style={{ background: '#6fe8d6', color: '#1a1a1a', boxShadow: '0 2px 8px rgba(111,232,214,0.3)' }}>
                                 <Plus size={14} />
@@ -451,11 +522,9 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
               ) : (
                 <>
                   {cart.map(item => {
-                    const eff = item.product.discount > 0
-                      ? item.product.price * (1 - item.product.discount / 100)
-                      : item.product.price;
+                    const eff = unitPrice(item.product, item.variation);
                     return (
-                      <div key={item.product.id}
+                      <div key={item.key}
                         className="flex items-center gap-3 rounded-2xl p-3"
                         style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                         {item.product.imageUrl && (
@@ -466,24 +535,25 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                           <p className="text-sm font-black truncate" style={{ color: 'var(--text-primary)' }}>
                             {item.product.name}
                           </p>
+                          {item.variation && <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{item.variation.name}: {item.variation.value}</p>}
                           <p className="text-xs font-bold mt-0.5" style={{ color: 'var(--accent-text)' }}>
                             {formatNGN(eff)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <button onClick={() => updateQty(item.product.id, item.quantity - 1)}
+                          <button onClick={() => updateQty(item.key, item.quantity - 1)}
                             className="h-7 w-7 flex items-center justify-center rounded-lg"
                             style={{ background: 'var(--surface-secondary)', color: 'var(--text-secondary)' }}>
                             <Minus size={11} />
                           </button>
                           <span className="text-sm font-black w-5 text-center"
                             style={{ color: 'var(--text-primary)' }}>{item.quantity}</span>
-                          <button onClick={() => updateQty(item.product.id, item.quantity + 1)}
+                          <button onClick={() => updateQty(item.key, item.quantity + 1)}
                             className="h-7 w-7 flex items-center justify-center rounded-lg"
                             style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
                             <Plus size={11} />
                           </button>
-                          <button onClick={() => removeFromCart(item.product.id)}
+                          <button onClick={() => removeFromCart(item.key)}
                             className="h-7 w-7 flex items-center justify-center rounded-lg"
                             style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>
                             <X size={11} />
@@ -496,9 +566,9 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                   <div className="rounded-2xl p-4 space-y-2"
                     style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
                     {cart.map(item => {
-                      const eff = item.product.discount > 0 ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
+                      const eff = unitPrice(item.product, item.variation);
                       return (
-                        <div key={item.product.id} className="flex justify-between text-xs">
+                        <div key={item.key} className="flex justify-between text-xs">
                           <span style={{ color: 'var(--text-secondary)' }}>{item.product.name} × {item.quantity}</span>
                           <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{formatNGN(eff * item.quantity)}</span>
                         </div>
@@ -524,28 +594,50 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                 <div className="space-y-3">
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest mb-1.5 block"
-                      style={{ color: 'var(--text-tertiary)' }}>Name</label>
-                    <input value={customerName} onChange={e => setCustomerName(e.target.value)}
-                      placeholder="e.g. Amara Okafor"
+                      style={{ color: 'var(--text-tertiary)' }}>Full name</label>
+                    <input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="e.g. Amara Okafor" autoComplete="name"
                       className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
                       style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
                   </div>
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest mb-1.5 block"
-                      style={{ color: 'var(--text-tertiary)' }}>Phone (Optional)</label>
-                    <input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
-                      placeholder="+234 800 000 0000" type="tel"
+                      style={{ color: 'var(--text-tertiary)' }}>Phone</label>
+                    <input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="080 0000 0000" type="tel" autoComplete="tel"
+                      className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                      style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <label className="flex items-center gap-2.5 text-sm cursor-pointer" style={{ color: 'var(--text-primary)' }}>
+                    <input type="checkbox" checked={delivery} onChange={e => setDelivery(e.target.checked)} className="h-4 w-4 accent-[#0b7367]" />
+                    <Truck size={14} /> Deliver to an address
+                  </label>
+                  {delivery && (
+                    <>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest mb-1.5 block"
+                      style={{ color: 'var(--text-tertiary)' }}>Address</label>
+                    <input value={address1} onChange={e => setAddress1(e.target.value)} placeholder="House number and street" autoComplete="address-line1"
+                      className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                      style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+                  </div>
+                      <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest mb-1.5 block"
+                      style={{ color: 'var(--text-tertiary)' }}>City</label>
+                    <input value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Ikeja" autoComplete="address-level2"
                       className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
                       style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
                   </div>
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest mb-1.5 block"
-                      style={{ color: 'var(--text-tertiary)' }}>Delivery address</label>
-                    <textarea value={deliveryAddress} onChange={e => setDeliveryAddress(e.target.value)}
-                      placeholder="Enter delivery address for this order"
-                      className="w-full rounded-xl px-3 py-2.5 text-sm outline-none min-h-[96px] resize-none"
+                      style={{ color: 'var(--text-tertiary)' }}>State</label>
+                    <input value={region} onChange={e => setRegion(e.target.value)} placeholder="e.g. Lagos" autoComplete="address-level1"
+                      className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
                       style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
                   </div>
+                      </div>
+                    </>
+                  )}
+                  <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>Receipts go to {user?.email}.</p>
                 </div>
               </div>
             </motion.div>
@@ -561,7 +653,8 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                   Choose Payment Source
                 </h3>
                 {[
-                  { id: 'wallet' as const, icon: Wallet, label: 'BadePay Wallet', desc: 'Pay from your BadePay balance', color: 'var(--accent-text)' },
+                  { id: 'wallet' as const, icon: Wallet, label: 'BadePay Wallet', desc: `Balance ${formatNGN(Number(user?.balance ?? 0))}`, color: 'var(--accent-text)' },
+                  { id: 'card' as const, icon: CreditCard, label: 'Debit card', desc: 'Secure card checkout', color: 'var(--accent-text)' },
                 ].map(opt => (
                   <button key={opt.id} onClick={() => setPaymentMethod(opt.id)}
                     className="w-full flex items-center gap-3 rounded-2xl p-3.5 text-left transition-all"
@@ -603,7 +696,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                 style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)' }}>
                 <Shield size={14} style={{ color: '#34d399', flexShrink: 0, marginTop: 1 }} />
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Your payment is secured by BadePay. Transaction is confirmed instantly after PIN entry.
+                  {paymentMethod === 'wallet' ? 'Paid from your wallet as soon as you enter your PIN.' : "You'll finish paying on the secure card page, then come back to your order."}
                 </p>
               </div>
             </motion.div>
@@ -637,9 +730,6 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                 ))}
               </div>
               <PinPad value={pin} onChange={setPin} />
-              <p className="text-center text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Demo: use PIN <strong>1234</strong>
-              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -653,25 +743,111 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
             style={{ background: 'var(--background)', borderTop: '1px solid var(--border)', backdropFilter: 'blur(12px)' }}>
             <button
               onClick={() => {
-                if (step === 'cart') setStep('details');
+                if (step === 'cart') goToDetails();
                 else if (step === 'details') setStep('payment');
-                else if (step === 'payment') setStep('pin');
+                else if (step === 'payment' && paymentMethod === 'card') handlePay();
+                else if (step === 'payment') {
+                  if (cartTotal > Number(user?.balance ?? 0)) { toast.error('Insufficient wallet balance. Pay by card or add money.'); return; }
+                  setStep('pin');
+                }
                 else if (step === 'pin') handlePay();
               }}
-              disabled={(step === 'details' && (!customerName.trim() || !deliveryAddress.trim())) || (step === 'pin' && pin.length < 4) || loading}
+              disabled={(step === 'details' && !!detailsProblem) || (step === 'pin' && pin.length < 4) || loading}
               className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black transition-all active:scale-95 disabled:opacity-40"
               style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
               {loading
                 ? <><Loader2 size={16} className="animate-spin" /> Processing…</>
                 : step === 'cart' ? <>{formatNGN(cartTotal)} · Checkout <ChevronRight size={15} /></>
-                : step === 'details' ? <>Continue <ChevronRight size={15} /></>
-                : step === 'payment' ? <>Continue to PIN <ChevronRight size={15} /></>
+                : step === 'details' ? (detailsProblem || <>Continue <ChevronRight size={15} /></>)
+                : step === 'payment' ? <>{paymentMethod === 'card' ? `Pay ${formatNGN(cartTotal)} by card` : 'Continue to PIN'} <ChevronRight size={15} /></>
                 : <><Shield size={15} /> Confirm & Pay {formatNGN(cartTotal)}</>
               }
             </button>
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      {viewing && <ProductSheet product={viewing} onClose={() => setViewing(null)} onAdd={(v, q) => { addToCart(viewing, v, q); setViewing(null); }} />}
     </div>
+  );
+}
+
+/** Product detail (mobile app: ProductDetail): images, description, options and quantity. */
+function ProductSheet({ product, onClose, onAdd }: { product: Product; onClose: () => void; onAdd: (v: Variation | undefined, qty: number) => void }) {
+  const [image, setImage] = useState(0);
+  const [variation, setVariation] = useState<Variation | undefined>();
+  const [qty, setQty] = useState(1);
+  const groups = Object.entries(product.variations.reduce<Record<string, Variation[]>>((m, v) => ({ ...m, [v.name]: [...(m[v.name] ?? []), v] }), {}));
+  const stock = variation ? variation.stock : product.stock;
+  const needsOption = groups.length > 0 && !variation;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={product.name}>
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl sm:rounded-3xl" style={{ background: 'var(--card)' }}>
+        <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"><X size={16} /></button>
+        <div className="aspect-square w-full" style={{ background: 'var(--surface-secondary)' }}>
+          {product.images[image] ?? product.imageUrl
+            ? <img src={product.images[image] ?? product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+            : <div className="flex h-full items-center justify-center"><Package size={40} style={{ color: 'var(--text-tertiary)' }} /></div>}
+        </div>
+        {product.images.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto px-4 pt-3">
+            {product.images.map((src, i) => (
+              <button key={src + i} onClick={() => setImage(i)} aria-label={`Image ${i + 1}`} className="h-14 w-14 shrink-0 overflow-hidden rounded-xl"
+                style={{ outline: i === image ? '2px solid #6fe8d6' : '1px solid var(--border)' }}>
+                <img src={src} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="space-y-4 p-4">
+          <div>
+            <h3 className="text-lg font-black" style={{ color: 'var(--text-primary)' }}>{product.name}</h3>
+            <p className="mt-1 text-base font-black" style={{ color: 'var(--accent-text)' }}>
+              {formatNGN(unitPrice(product, variation))}
+              {product.discount > 0 && <span className="ml-2 text-xs font-medium line-through" style={{ color: 'var(--text-tertiary)' }}>{formatNGN(product.price + (variation?.priceAdjust ?? 0))}</span>}
+            </p>
+          </div>
+          {product.description && <p className="whitespace-pre-line text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{product.description}</p>}
+          {groups.map(([name, options]) => (
+            <div key={name}>
+              <p className="mb-2 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }}>{name}</p>
+              <div className="flex flex-wrap gap-2">
+                {options.map(o => (
+                  <button key={o.id} disabled={o.stock <= 0} onClick={() => { setVariation(o); setQty(1); }}
+                    className="rounded-full px-3.5 py-1.5 text-xs font-bold disabled:opacity-40"
+                    style={variation?.id === o.id ? { background: '#6fe8d6', color: '#1a1a1a' } : { border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+                    {o.value}{o.priceAdjust ? ` (${o.priceAdjust > 0 ? '+' : '−'}${formatNGN(Math.abs(o.priceAdjust))})` : ''}{o.stock <= 0 ? ' · sold out' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {product.deliveryInfo && (
+            <p className="flex items-start gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}><Truck size={14} className="mt-0.5 shrink-0" />{product.deliveryInfo}</p>
+          )}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setQty(q => Math.max(1, q - 1))} aria-label="Fewer" className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: 'var(--surface-secondary)', color: 'var(--text-primary)' }}><Minus size={14} /></button>
+              <span className="w-6 text-center text-sm font-black" style={{ color: 'var(--text-primary)' }}>{qty}</span>
+              <button onClick={() => setQty(q => Math.min(Math.max(1, stock), q + 1))} aria-label="More" className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: 'var(--surface-secondary)', color: 'var(--text-primary)' }}><Plus size={14} /></button>
+            </div>
+            <button disabled={needsOption || stock <= 0} onClick={() => onAdd(variation, qty)}
+              className="flex-1 rounded-2xl py-3 text-sm font-black disabled:opacity-40" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
+              {needsOption ? 'Choose an option' : stock <= 0 ? 'Sold out' : `Add to cart · ${formatNGN(unitPrice(product, variation) * qty)}`}
+            </button>
+          </div>
+          {!needsOption && stock > 0 && stock <= 5 && <p className="text-xs" style={{ color: '#f87171' }}>Only {stock} left</p>}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

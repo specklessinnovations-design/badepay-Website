@@ -1,219 +1,132 @@
 import { useEffect } from 'react';
-
 import { useLocation } from 'wouter';
-
 import { useAuthStore } from '@/store/useAuthStore';
-
-import { getPostAuthPath, isMerchantOnboardingComplete } from '@/lib/authRouting';
-
-
-
-const PUBLIC_AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-otp', '/set-pin'];
-
-
+import { isMerchantOnboardingComplete } from '@/lib/authRouting';
 
 const PROTECTED_ROUTES = [
-
   '/dashboard',
-
   '/activity',
-
   '/profile',
-
   '/transfer',
-
   '/bills',
-
   '/cards',
-
   '/history',
-
   '/scan',
-
   '/settings',
-
   '/set-pin',
-
   '/merchant',
-
 ];
 
+function isProtectedPath(pathname: string) {
+  return PROTECTED_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
 
+function loginPathFor(pathname: string) {
+  const search = typeof window !== 'undefined' ? window.location.search : '';
+  const redirect = encodeURIComponent(pathname + search);
+  if (pathname === '/merchant' || pathname.startsWith('/merchant/')) {
+    return `/login?type=merchant&next=${redirect}`;
+  }
+  return `/login?next=${redirect}`;
+}
 
-const MERCHANT_ROUTES = ['/merchant'];
+/**
+ * Global route guard.
+ * Waits for AuthBootstrap before deciding so a hard refresh does not briefly look
+ * logged-out and bounce through /login (wrong title + wrong post-auth destination).
+ */
+export function useAuthProtection() {
+  const [pathname, navigate] = useLocation();
+  const { isAuthenticated, user, authSetupComplete } = useAuthStore();
 
-const CONSUMER_ROUTES = ['/dashboard', '/activity', '/transfer', '/bills', '/cards', '/history', '/scan', '/stores'];
+  useEffect(() => {
+    if (!authSetupComplete) return;
+
+    if (!isAuthenticated && isProtectedPath(pathname)) {
+      navigate(loginPathFor(pathname));
+    }
+  }, [pathname, isAuthenticated, user, authSetupComplete, navigate]);
+
+  return { isAuthenticated, user };
+}
+
+export function useRequireAuth() {
+  const [, navigate] = useLocation();
+  const { isAuthenticated, authSetupComplete } = useAuthStore();
+
+  useEffect(() => {
+    if (!authSetupComplete) return;
+    if (!isAuthenticated) {
+      const here =
+        typeof window !== 'undefined'
+          ? window.location.pathname + window.location.search
+          : '/dashboard';
+      navigate(`/login?next=${encodeURIComponent(here)}`);
+    }
+  }, [isAuthenticated, authSetupComplete, navigate]);
+
+  return { isAuthenticated };
+}
 
 const MERCHANT_ONBOARDING_PATH = '/merchant/onboarding';
 
-
-
-export function useAuthProtection() {
-
-  
-  const [pathname, navigate] = useLocation();
-  const { isAuthenticated, user, checkSessionValidity, authSetupComplete } = useAuthStore();
-
-  useEffect(() => {
-    if (isAuthenticated && !checkSessionValidity()) {
-      useAuthStore.setState({
-        user: null,
-        isAuthenticated: false,
-        sessionToken: undefined,
-        refreshToken: undefined,
-      });
-      navigate('/login');
-      return;
-    }
-
-    if (isAuthenticated && authSetupComplete && PUBLIC_AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
-      navigate(getPostAuthPath(user));
-      return;
-    }
-
-    if (!isAuthenticated && PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
-      navigate('/login');
-      return;
-    }
-
-    // Same as the mobile app: nothing works before the BVN is verified (KYC level 1).
-    if (isAuthenticated && user && (user.kycLevel ?? 0) < 1 && PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
-      navigate('/verify-bvn');
-      return;
-    }
-
-    if (isAuthenticated && user) {
-      // Only restrict merchant routes to non-merchants who DON'T have a merchant profile
-      if (!user.merchantProfile && MERCHANT_ROUTES.some((route) => pathname.startsWith(route))) {
-        navigate('/dashboard');
-        return;
-      }
-
-      if (
-        user.userType === 'merchant' &&
-        !isMerchantOnboardingComplete(user) &&
-        pathname.startsWith('/merchant') &&
-        !pathname.startsWith(MERCHANT_ONBOARDING_PATH)
-      ) {
-        navigate(MERCHANT_ONBOARDING_PATH);
-        return;
-      }
-
-      if (
-        user.userType === 'merchant' &&
-        isMerchantOnboardingComplete(user) &&
-        pathname.startsWith(MERCHANT_ONBOARDING_PATH)
-      ) {
-        navigate('/merchant');
-      }
-    }
-  }, [isAuthenticated, user, pathname, navigate, checkSessionValidity, authSetupComplete]);
-
-}
-
-
-
-export function useRequireAuth() {
-
-  const [, navigate] = useLocation();
-  const { isAuthenticated, user } = useAuthStore();
-
-
-
-  useEffect(() => {
-
-    if (!isAuthenticated) {
-
-      navigate('/login');
-
-    }
-
-  }, [isAuthenticated, navigate]);
-
-
-
-  return { isAuthenticated, user };
-
-}
-
-
-
+/**
+ * Merchant portal guard.
+ * Preserves the merchant URL via ?redirect= when sending to login, and only
+ * sends personal-only accounts to /dashboard.
+ */
 export function useRequireMerchant(options?: { allowOnboarding?: boolean }) {
-
-  
   const [pathname, navigate] = useLocation();
-
-  const { isAuthenticated, user } = useAuthStore();
-
+  const { isAuthenticated, user, authSetupComplete } = useAuthStore();
   const onOnboarding = pathname.startsWith(MERCHANT_ONBOARDING_PATH);
 
-
-
   useEffect(() => {
+    if (!authSetupComplete) return;
 
     if (!isAuthenticated) {
-
-      navigate('/login?type=merchant');
-
+      const here =
+        typeof window !== 'undefined'
+          ? window.location.pathname + window.location.search
+          : '/merchant';
+      navigate(`/login?type=merchant&next=${encodeURIComponent(here)}`);
       return;
-
     }
 
-    // BVN first (same as the app), then business setup
+    // BVN first, then business setup
     if ((user?.kycLevel ?? 0) < 1) {
       navigate('/verify-bvn?then=merchant');
       return;
     }
 
-    // Only restrict merchant routes to users who DON'T have a merchant profile at all.
-    // Anyone may open onboarding: that's how a personal account becomes a business.
-    if (!onOnboarding && !user?.merchantProfile && user?.userType !== 'merchant') {
+    const isMerchantAccount =
+      Boolean(user?.merchantProfile) || user?.userType === 'merchant';
 
+    // Personal-only accounts stay out of the merchant portal (except onboarding)
+    if (!onOnboarding && !isMerchantAccount) {
       navigate('/dashboard');
-
       return;
-
     }
 
     if (!options?.allowOnboarding && !onOnboarding && !isMerchantOnboardingComplete(user)) {
-
       navigate(MERCHANT_ONBOARDING_PATH);
-
     }
-
-  }, [isAuthenticated, user, navigate, options?.allowOnboarding, onOnboarding]);
-
-
+  }, [isAuthenticated, user, navigate, options?.allowOnboarding, onOnboarding, authSetupComplete]);
 
   return { isAuthenticated, user };
-
 }
-
-
 
 export function useRequireConsumer() {
-
   const [, navigate] = useLocation();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, authSetupComplete } = useAuthStore();
 
   useEffect(() => {
-
+    if (!authSetupComplete) return;
     if (!isAuthenticated) {
-
       navigate('/login');
-
-      return;
-
     }
+  }, [isAuthenticated, authSetupComplete, navigate]);
 
-    // Don't restrict consumer routes - allow any authenticated user to access them
-
-  }, [isAuthenticated, navigate]);
-
-
-
-  const { user } = useAuthStore();
-  return { isAuthenticated, user };
-
+  return { isAuthenticated };
 }
-

@@ -13,10 +13,14 @@ import type { LoginChallenge } from '@/services/authService';
 function LoginForm() {
   const [, navigate] = useLocation();
   const search = useSearch();
-  const accountType = new URLSearchParams(search).get('type') === 'merchant' ? 'merchant' : 'personal';
-  // Where to go after logging in (e.g. back to a store's checkout); same-site paths only.
-  const nextParam = new URLSearchParams(search).get('next');
-  const nextPath = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null;
+  const params = new URLSearchParams(search);
+  const accountType = params.get('type') === 'merchant' ? 'merchant' : 'personal';
+  // Where to go after logging in (deep link / checkout). Accepts ?next= or ?redirect=.
+  const nextParam = params.get('next') || params.get('redirect');
+  const nextPath =
+    nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') && !nextParam.includes('://')
+      ? nextParam
+      : null;
   const { login, completeLoginStep, isLoading, error } = useAuthStore();
   /** A further sign-in step the backend asked for (emailed code or 2FA). */
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
@@ -48,7 +52,8 @@ function LoginForm() {
       bpToast.success('Welcome back!');
     }
     const home = getPostAuthPath(user, accountType);
-    navigate(nextPath && accountType === 'personal' && home === '/dashboard' ? nextPath : home);
+    // Prefer deep-link when present (merchant portal, store checkout, etc.)
+    navigate(nextPath || home);
   };
 
   const submitCode = async (e: React.FormEvent) => {

@@ -2,8 +2,10 @@ import type { User } from '@/store/useAuthStore';
 
 export function isMerchantOnboardingComplete(user: User | null | undefined): boolean {
   if (!user) return false;
-  // Check if user has a merchant profile with business name
-  return !!user.merchantProfile?.businessName;
+  const mp = user.merchantProfile;
+  if (!mp) return false;
+  if (mp.onboardingComplete === true) return true;
+  return Boolean(mp.businessName);
 }
 
 export function getPostAuthPath(user: User | null | undefined, loginType: 'personal' | 'merchant' = 'personal'): string {
@@ -33,3 +35,20 @@ export function formatAccountForDisplay(accountNumber?: string): string {
   }
   return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
 }
+
+/** Internal path from ?redirect= after login. Blocks open redirects. */
+export function getSafeRedirectPath(redirect: string | null | undefined): string | null {
+  if (!redirect) return null;
+  let value = redirect.trim();
+  try {
+    value = decodeURIComponent(value);
+  } catch {
+    /* keep raw */
+  }
+  if (!value.startsWith('/') || value.startsWith('//') || value.includes('://')) return null;
+  if (value.startsWith('/login') || value.startsWith('/register') || value.startsWith('/forgot-password')) {
+    return null;
+  }
+  return value;
+}
+

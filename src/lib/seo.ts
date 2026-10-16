@@ -116,7 +116,13 @@ function titleCase(slug: string) {
 
 /** Resolve SEO data for any pathname, including dynamic routes. */
 export function getPageSeo(pathname: string): PageSeo {
-  const path = pathname.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+  // Strip query/hash and trailing slashes; tolerate values like "_/dashboard" from SSR splat
+  let path = pathname.split(/[?#]/)[0] || "/";
+  if (path.startsWith("/_/")) path = "/" + path.slice(3);
+  else if (path.startsWith("_/")) path = "/" + path.slice(2);
+  path = path.replace(/\/+$/, "") || "/";
+  if (!path.startsWith("/")) path = "/" + path;
+
   if (PAGE_SEO[path]) return PAGE_SEO[path];
 
   const store = path.match(/^\/store\/([^/]+)$/);
@@ -126,6 +132,21 @@ export function getPageSeo(pathname: string): PageSeo {
   }
   if (/^\/admin\/users\/[^/]+$/.test(path)) return priv("User Details · Admin");
   if (/^\/admin\/merchants\/[^/]+$/.test(path)) return priv("Merchant Details · Admin");
+  if (/^\/m\/[^/]+$/.test(path)) return pub("Pay · Merchant", "Pay a Badepay merchant securely.");
+  if (/^\/p\/[^/]+$/.test(path)) return pub("Payment Link", "Complete your Badepay payment.");
+  if (/^\/qr\//.test(path)) return pub("QR Payment", "Scan and pay with Badepay.");
+  if (/^\/marketplace\/[^/]+$/.test(path)) return priv("Listing · Marketplace");
+  if (/^\/news\/[^/]+$/.test(path)) return priv("Article · News");
+
+  // Nested authenticated sections: /merchant/payments → Merchant, /dashboard/foo → Dashboard
+  const segments = path.split("/").filter(Boolean);
+  if (segments.length > 0) {
+    // Prefer longest known prefix (e.g. /merchant/payments before /merchant)
+    for (let i = segments.length; i >= 1; i--) {
+      const prefix = "/" + segments.slice(0, i).join("/");
+      if (PAGE_SEO[prefix]) return PAGE_SEO[prefix];
+    }
+  }
 
   return { title: "Page Not Found", description: DEFAULT_DESCRIPTION, noindex: true };
 }

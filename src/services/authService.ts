@@ -69,7 +69,15 @@ function mapBackendUser(raw: any): StoredUser {
     phone: raw.phone || undefined,
     firstName: raw.firstName || '',
     lastName: raw.lastName || '',
-    userType: raw.userType || 'consumer',
+    userType: (() => {
+      const explicit = raw.userType || raw.user_type || raw.accountType || raw.account_type;
+      if (explicit === 'merchant' || explicit === 'business') return 'merchant';
+      if (explicit === 'consumer' || explicit === 'personal') return 'consumer';
+      const hasMerchant =
+        raw.merchantProfile || raw.merchant_profile || raw.merchant ||
+        (raw.user && (raw.user.merchantProfile || raw.user.merchant_profile));
+      return hasMerchant ? 'merchant' : 'consumer';
+    })(),
     createdAt: raw.createdAt || new Date().toISOString(),
     accountNumber: raw.accountNumber || raw.account_number || '',
     bankName: raw.bankName || 'BadePay Bank',
@@ -87,9 +95,26 @@ function mapBackendUser(raw: any): StoredUser {
     dateOfBirth: raw.dateOfBirth ? String(raw.dateOfBirth).slice(0, 10) : undefined,
     hasPinSet: raw.hasPinSet ?? !!raw.transactionPin,
     pinRequirement: raw.pinRequirement || 'always',
-    merchantProfile: raw.merchantProfile
-      ? { ...raw.merchantProfile, onboardingComplete: true }
-      : undefined,
+    merchantProfile: (() => {
+      const mp =
+        raw.merchantProfile ||
+        raw.merchant_profile ||
+        raw.merchant ||
+        (raw.user && (raw.user.merchantProfile || raw.user.merchant_profile));
+      if (!mp || typeof mp !== 'object') return undefined;
+      const onboardingComplete =
+        mp.onboardingComplete === true ||
+        mp.onboarding_complete === true ||
+        mp.onboardingStatus === 'completed' ||
+        mp.onboarding_status === 'completed' ||
+        Boolean(mp.businessName || mp.business_name);
+      return {
+        ...mp,
+        businessName: mp.businessName || mp.business_name || '',
+        category: mp.category || mp.businessCategory || '',
+        onboardingComplete,
+      };
+    })(),
   };
 }
 

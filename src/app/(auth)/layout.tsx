@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store/useAuthStore';
-import { getPostAuthPath } from '@/lib/authRouting';
+import { getPostAuthPath, getSafeRedirectPath } from '@/lib/authRouting';
 import { AppShell } from '@/components/ui/app-shell';
 
 const PhoneMockup = () => (
@@ -83,14 +83,27 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   const { isAuthenticated, user, checkSessionValidity, authSetupComplete } = useAuthStore();
 
   React.useEffect(() => {
+    // Wait until session restore finishes so a refresh doesn't bounce through /login
+    if (!authSetupComplete) return;
     if (!isAuthenticated) return;
-    if (!authSetupComplete && window.location.pathname.startsWith('/register')) return;
+    // Let registration finish (OTP / PIN) without kicking the user to the dashboard mid-flow
+    if (window.location.pathname.startsWith('/register')) return;
     if (!user || !checkSessionValidity()) {
       useAuthStore.setState({ user: null, isAuthenticated: false, sessionToken: undefined, refreshToken: undefined, lastLoginTime: undefined });
       return;
     }
-    // Signed in already: go to where they should be (BVN verification first, then the personal dashboard)
-    navigate(getPostAuthPath(user));
+    // Prefer deep link so /merchant (and other app URLs) survive login / refresh bounce
+    const params = new URLSearchParams(window.location.search);
+    const safe = getSafeRedirectPath(params.get('redirect') || params.get('next'));
+    if (safe) {
+      navigate(safe);
+      return;
+    }
+    const loginType =
+      params.get('type') === 'merchant' || user.userType === 'merchant' || Boolean(user.merchantProfile)
+        ? 'merchant'
+        : 'personal';
+    navigate(getPostAuthPath(user, loginType));
   }, [isAuthenticated, user, navigate, checkSessionValidity, authSetupComplete]);
 
   return (

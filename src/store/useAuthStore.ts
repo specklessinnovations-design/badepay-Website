@@ -123,7 +123,8 @@ export const useAuthStore = create<AuthState>()((set, get) => {
       isAuthenticated: false,
       isLoading: false,
       error: null,
-      authSetupComplete: true,
+      // false until AuthBootstrap finishes initializeSession — prevents refresh bounce to /login
+      authSetupComplete: false,
       deviceVerified: false,
       suspiciousLoginAttempts: 0,
 

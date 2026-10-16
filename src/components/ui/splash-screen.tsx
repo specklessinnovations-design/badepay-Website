@@ -1,86 +1,96 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useLocation } from 'wouter';
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuthStore } from "@/store/useAuthStore";
 
+/**
+ * Brief branded splash on first paint.
+ * Stays up until auth session restore finishes (or a short minimum), so protected
+ * routes never flash /login and the document title never briefly becomes "Not Found".
+ */
 export function SplashScreen() {
-  const [pathname] = useLocation();
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const authSetupComplete = useAuthStore((s) => s.authSetupComplete);
 
   useEffect(() => {
-    if (pathname !== '/login') {
-      setVisible(false);
-      return;
-    }
+    const minMs = 600;
+    const maxMs = 4000;
+    const started = Date.now();
 
-    setVisible(true);
-    const timer = setTimeout(() => setVisible(false), 3500);
-    return () => clearTimeout(timer);
-  }, [pathname]);
+    let minTimer: ReturnType<typeof setTimeout> | undefined;
+    let maxTimer: ReturnType<typeof setTimeout> | undefined;
+    let done = false;
+
+    const hide = () => {
+      if (done) return;
+      done = true;
+      setVisible(false);
+    };
+
+    maxTimer = setTimeout(hide, maxMs);
+
+    const tryHide = () => {
+      const elapsed = Date.now() - started;
+      if (elapsed >= minMs) hide();
+      else minTimer = setTimeout(hide, minMs - elapsed);
+    };
+
+    if (authSetupComplete) tryHide();
+
+    return () => {
+      if (minTimer) clearTimeout(minTimer);
+      if (maxTimer) clearTimeout(maxTimer);
+    };
+  }, [authSetupComplete]);
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          key="splash"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" as const }}
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
-          style={{ backgroundColor: 'var(--background)' }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050505]"
         >
-          {/* Theme-aware ambient glow */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                'radial-gradient(ellipse 70% 55% at 50% 42%, rgba(111,232,214,0.14) 0%, transparent 70%)',
-            }}
-          />
-
-          {/* Animated rings */}
-          <div className="relative flex items-center justify-center">
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                className="absolute rounded-full"
-                style={{
-                  width: 140 + i * 60,
-                  height: 140 + i * 60,
-                  border: '1px solid rgba(111,232,214,0.12)',
-                }}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: [0, 0.5, 0], scale: [0.8, 1.15, 1.3] }}
-                transition={{
-                  duration: 2.5,
-                  repeat: Infinity,
-                  delay: i * 0.5,
-                  ease: 'easeOut',
-                }}
-              />
-            ))}
-
-            {/* Logo */}
-            <motion.img
-              src="/favicon.png"
-              alt="BadePay"
-              initial={{ opacity: 0, scale: 0.75, filter: 'blur(10px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-              className="relative z-10 h-20 w-auto object-contain"
-              style={{ filter: 'drop-shadow(0 0 36px rgba(111,232,214,0.5))' }}
-            />
-          </div>
-
-          {/* Brand name */}
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
-            className="relative z-10 mt-6 text-sm font-semibold tracking-[0.2em] uppercase"
-            style={{ color: 'var(--text-secondary)' }}
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col items-center gap-5"
           >
-            BadePay
-          </motion.p>
+            <div className="relative">
+              <div className="absolute inset-0 rounded-2xl bg-[#6FE8D6]/20 blur-xl" />
+              <img
+                src="/favicon.png"
+                alt="BadePay"
+                className="relative h-16 w-16 rounded-2xl object-cover shadow-2xl shadow-[#6FE8D6]/20"
+              />
+            </div>
+
+            <div className="text-center">
+              <h1 className="text-2xl font-bold tracking-tight text-white">
+                Bade<span className="text-[#6FE8D6]">Pay</span>
+              </h1>
+              <p className="mt-1 text-xs tracking-widest text-white/30 uppercase">
+                Super App
+              </p>
+            </div>
+
+            <motion.div
+              className="mt-4 h-0.5 w-12 overflow-hidden rounded-full bg-white/10"
+            >
+              <motion.div
+                className="h-full rounded-full bg-[#6FE8D6]"
+                initial={{ x: "-100%" }}
+                animate={{ x: "100%" }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 1.2,
+                  ease: "easeInOut",
+                }}
+                style={{ width: "60%" }}
+              />
+            </motion.div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

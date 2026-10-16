@@ -215,7 +215,7 @@ export default function MerchantStorePage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {(storeProducts as unknown as MerchantProduct[]).map(p => {
                 const outOfStock = p.type === 'physical' && p.stock === 0;
                 const typeLabel = PRODUCT_TYPES.find((t) => t.value === p.type)?.label ?? 'Physical item';

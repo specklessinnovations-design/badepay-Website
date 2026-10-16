@@ -181,9 +181,8 @@ export default function MerchantStorePage() {
       {/* Tab navigation */}
       <div className="flex border-b" style={{ borderColor: 'var(--border)' }}>
         {(['products', 'orders', 'settings'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 pb-3 text-center text-sm font-semibold capitalize transition-all border-b-2 ${
-            activeTab === tab ? 'border-[#6fe8d6] text-[var(--accent-text)]' : 'border-transparent text-[var(--text-secondary)]'
-          }`}>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 pb-3 text-center text-sm font-semibold capitalize transition-all border-b-2 ${activeTab === tab ? 'border-[#6fe8d6] text-[var(--accent-text)]' : 'border-transparent text-[var(--text-secondary)]'
+            }`}>
             {tab === 'products' && `Products (${storeProducts.length})`}
             {tab === 'orders' && `Orders (${activeOrders.length})`}
             {tab === 'settings' && 'Settings'}
@@ -373,9 +372,30 @@ export default function MerchantStorePage() {
           </div>
 
           {/* Logo and banner side by side (banner gets more room); stacked on phones */}
-          <div className="grid gap-4 rounded-2xl p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-            <FileUpload kind="store_logo" label="Store logo" shape="square" value={logoUrl} onChange={setLogoUrl} onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))} />
-            <FileUpload kind="store_banner" label="Store banner" shape="wide" value={bannerUrl} onChange={setBannerUrl} onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))} />
+          <div
+            className="grid grid-cols-2 gap-4 rounded-2xl p-4"
+            style={{
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <FileUpload
+              kind="store_logo"
+              label="Store logo"
+              shape="square"
+              value={logoUrl}
+              onChange={setLogoUrl}
+              onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))}
+            />
+
+            <FileUpload
+              kind="store_banner"
+              label="Store banner"
+              shape="wide"
+              value={bannerUrl}
+              onChange={setBannerUrl}
+              onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))}
+            />
           </div>
 
           <div className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>

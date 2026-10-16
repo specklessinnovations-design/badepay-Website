@@ -160,7 +160,7 @@ export default function MerchantStorePage() {
         <Link href="/merchant" className="h-9 w-9 rounded-full flex items-center justify-center" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
           <ArrowLeft size={16} style={{ color: 'var(--text-secondary)' }} />
         </Link>
-        <div className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>BadePay Store</div>
+        <div className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{storeInfo?.name || user?.merchantProfile?.tradingName || user?.merchantProfile?.businessName || 'My store'}</div>
         <div className="flex gap-2 items-center">
           <button onClick={handleRefresh} disabled={isRefreshing} className="h-9 px-3 rounded-full flex items-center gap-1 text-xs font-semibold disabled:opacity-50" style={{ background: 'rgba(111,232,214,0.1)', color: 'var(--accent-text)' }}>
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
@@ -372,7 +372,8 @@ export default function MerchantStorePage() {
             </div>
           </div>
 
-          <div className="rounded-2xl p-4 space-y-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+          {/* Logo and banner side by side (banner gets more room); stacked on phones */}
+          <div className="grid gap-4 rounded-2xl p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
             <FileUpload kind="store_logo" label="Store logo" shape="square" value={logoUrl} onChange={setLogoUrl} onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))} />
             <FileUpload kind="store_banner" label="Store banner" shape="wide" value={bannerUrl} onChange={setBannerUrl} onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))} />
           </div>

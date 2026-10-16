@@ -86,6 +86,8 @@ export function useRequireMerchant(options?: { allowOnboarding?: boolean }) {
     if (!authSetupComplete) return;
 
     if (!isAuthenticated) {
+      // Another guard may already have sent us to /login: don't wrap that URL in a second `next`.
+      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/login')) return;
       const here =
         typeof window !== 'undefined'
           ? window.location.pathname + window.location.search

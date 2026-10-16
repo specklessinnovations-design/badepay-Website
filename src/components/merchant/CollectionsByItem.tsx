@@ -43,7 +43,7 @@ export function CollectionsByItem() {
     <section className="rounded-2xl p-5" style={{ background: 'var(--card)', border: '1px solid var(--border)' }} aria-label="Collections by item">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <HandHeart size={18} style={{ color: '#6fe8d6' }} />
+          <HandHeart size={18} style={{ color: 'var(--accent-text)' }} />
           <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Collections by item</h2>
         </div>
         <select aria-label="Period" value={period} onChange={(e) => setPeriod(e.target.value as typeof period)}
@@ -92,7 +92,7 @@ export function CollectionsByItem() {
                         {p.channel === 'card' ? 'Card / transfer' : 'BadePay app'} · {new Date(p.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' })}
                       </p>
                     </div>
-                    <span className="shrink-0 text-sm font-bold" style={{ color: '#34d399' }}>{naira(p.amount)}</span>
+                    <span className="shrink-0 text-sm font-bold" style={{ color: 'var(--success-text)' }}>{naira(p.amount)}</span>
                   </li>
                 ))}
               </ul>

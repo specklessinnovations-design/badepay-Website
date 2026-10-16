@@ -9,8 +9,8 @@ type Status = 'all' | 'completed' | 'pending' | 'failed';
 type Method = 'qr' | 'transfer' | 'card';
 
 const STATUS_CONFIG = {
-  completed: { label: 'Completed', color: '#34d399', bg: 'rgba(52,211,153,0.1)', icon: CheckCircle2 },
-  pending:   { label: 'Pending',   color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  icon: Clock },
+  completed: { label: 'Completed', color: 'var(--success-text)', bg: 'rgba(52,211,153,0.1)', icon: CheckCircle2 },
+  pending:   { label: 'Pending',   color: 'var(--warning-text)', bg: 'rgba(245,158,11,0.1)',  icon: Clock },
   failed:    { label: 'Failed',    color: '#f87171', bg: 'rgba(248,113,113,0.1)', icon: AlertCircle },
 };
 
@@ -56,9 +56,9 @@ export default function PaymentsPage() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
         className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Received', value: formatNGN(totalAmount), color: '#34d399', sub: `${filtered.length} payments` },
+          { label: 'Total Received', value: formatNGN(totalAmount), color: 'var(--success-text)', sub: `${filtered.length} payments` },
           { label: 'Completed', value: completedCount.toString(), color: 'var(--text-primary)', sub: `${filtered.length ? ((completedCount / filtered.length) * 100).toFixed(0) : 0}% success` },
-          { label: 'Pending', value: pendingCount.toString(), color: '#f59e0b', sub: 'Awaiting settlement' },
+          { label: 'Pending', value: pendingCount.toString(), color: 'var(--warning-text)', sub: 'Awaiting settlement' },
         ].map((s, i) => (
           <div key={i} className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
             <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-tertiary)' }}>{s.label}</p>
@@ -136,7 +136,7 @@ export default function PaymentsPage() {
                   </div>
                   {/* Amount + badge */}
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-black" style={{ color: '#34d399' }}>+{formatNGN(p.amount)}</p>
+                    <p className="text-sm font-black" style={{ color: 'var(--success-text)' }}>+{formatNGN(p.amount)}</p>
                     <span className="text-[10px] font-bold rounded-full px-2 py-0.5 inline-block mt-0.5"
                       style={{ background: sc.bg, color: sc.color }}>{sc.label}</span>
                   </div>

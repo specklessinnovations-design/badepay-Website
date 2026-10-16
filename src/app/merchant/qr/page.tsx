@@ -177,9 +177,7 @@ export default function MerchantQrPage() {
       </div>
 
       {/* Primary QR card */}
-      <div className="rounded-3xl p-5 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #081a18 0%, #0d2e2a 60%, #081a18 100%)', border: '1px solid rgba(111,232,214,0.2)' }}>
-        <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full pointer-events-none" style={{ background: 'rgba(111,232,214,0.1)', filter: 'blur(48px)' }} />
-        <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full pointer-events-none" style={{ background: 'rgba(111,232,214,0.05)', filter: 'blur(32px)' }} />
+      <div className="rounded-3xl p-5 relative overflow-hidden" style={{ background: '#0b2724', border: '1px solid rgba(111,232,214,0.2)' }}>
 
         {/* Business name + badge */}
         <div className="relative z-10 flex items-center justify-between mb-4">
@@ -187,7 +185,7 @@ export default function MerchantQrPage() {
             <div className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'rgba(111,232,214,0.6)' }}>Primary QR</div>
             <div className="text-sm font-semibold mt-0.5 truncate max-w-[200px]" style={{ color: '#ffffff' }}>{businessName}</div>
           </div>
-          <span className="text-[10px] px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
+          <span className="text-[10px] px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(52,211,153,0.15)', color: 'var(--success-text)', border: '1px solid rgba(52,211,153,0.2)' }}>
             ● Active
           </span>
         </div>
@@ -259,9 +257,9 @@ export default function MerchantQrPage() {
         <div className="text-xs uppercase tracking-widest font-semibold mb-3" style={{ color: 'var(--text-tertiary)' }}>QR Code Types</div>
         <div className="space-y-3">
           {/* Static QR Card */}
-          <button onClick={() => setTab('static')} className={`w-full rounded-2xl p-4 flex items-start gap-4 text-left transition-all ${tab === 'static' ? 'ring-2 ring-[#6fe8d6]/20' : ''}`} style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+          <button onClick={() => setTab('static')} className={`w-full rounded-2xl p-4 flex items-start gap-4 text-left transition-all ${tab === 'static' ? 'ring-2 ring-[var(--accent-text)]/30' : ''}`} style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
             <div className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(111,232,214,0.1)' }}>
-              <QrCode size={20} style={{ color: '#6fe8d6' }} />
+              <QrCode size={20} style={{ color: 'var(--accent-text)' }} />
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
@@ -272,7 +270,7 @@ export default function MerchantQrPage() {
                 Customer scans QR — funds land in your wallet instantly
               </div>
               {collections.length > 0 && (
-                <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: '#34d399' }}>
+                <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--success-text)' }}>
                   <ArrowUpRight size={14} />
                   {totalScans} payment{totalScans !== 1 ? 's' : ''} collected
                 </div>
@@ -302,7 +300,7 @@ export default function MerchantQrPage() {
           <div className="w-full rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>What people can pay for</div>
-              <Link href="/merchant/store" className="text-xs font-semibold" style={{ color: '#6fe8d6' }}>Manage</Link>
+              <Link href="/merchant/store" className="text-xs font-semibold" style={{ color: 'var(--accent-text)' }}>Manage</Link>
             </div>
             {qrItems.length === 0 ? (
               <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
@@ -323,7 +321,7 @@ export default function MerchantQrPage() {
           {/* Printable QR Card */}
           <button onClick={() => setShowFullscreenQR(true)} className="w-full rounded-2xl p-4 flex items-start gap-4 text-left transition-all" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
             <div className="h-12 w-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(52,211,153,0.1)' }}>
-              <Printer size={20} style={{ color: '#34d399' }} />
+              <Printer size={20} style={{ color: 'var(--success-text)' }} />
             </div>
             <div className="flex-1">
               <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Printable QR</div>
@@ -367,7 +365,7 @@ export default function MerchantQrPage() {
 
       {/* Security note */}
       <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(111,232,214,0.05)', border: '1px solid rgba(111,232,214,0.15)' }}>
-        <Lock size={16} style={{ color: '#6fe8d6' }} />
+        <Lock size={16} style={{ color: 'var(--accent-text)' }} />
         <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
           All QR payments are <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>end-to-end encrypted</span> and verified by BadePay's fraud engine in real time.
         </p>
@@ -416,7 +414,7 @@ export default function MerchantQrPage() {
 
             <div className="rounded-3xl p-6" style={{ background: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}>
               {loadingQr ? (
-                <Loader2 size={128} className="animate-spin" style={{ color: '#6fe8d6' }} />
+                <Loader2 size={128} className="animate-spin" style={{ color: 'var(--accent-text)' }} />
               ) : dynamicQrDataUrl ? (
                 <img src={dynamicQrDataUrl} alt="QR Code" className="w-64 h-64 object-contain" />
               ) : qrDataUrl ? (
@@ -437,7 +435,7 @@ export default function MerchantQrPage() {
                 </button>
               </div>
               {copied && (
-                <div className="mt-2 text-xs font-semibold" style={{ color: '#6fe8d6' }}>
+                <div className="mt-2 text-xs font-semibold" style={{ color: 'var(--accent-text)' }}>
                   Link copied to clipboard ✓
                 </div>
               )}

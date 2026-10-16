@@ -13,9 +13,9 @@ import toast from 'react-hot-toast';
 type StatusFilter = 'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled';
 
 const STATUS_CONFIG = {
-  pending:   { label: 'Pending',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: Clock },
+  pending:   { label: 'Pending',   color: 'var(--warning-text)', bg: 'rgba(245,158,11,0.12)',  icon: Clock },
   confirmed: { label: 'Confirmed', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  icon: CheckCircle2 },
-  completed: { label: 'Completed', color: '#34d399', bg: 'rgba(52,211,153,0.12)',  icon: CheckCircle2 },
+  completed: { label: 'Completed', color: 'var(--success-text)', bg: 'rgba(52,211,153,0.12)',  icon: CheckCircle2 },
   cancelled: { label: 'Cancelled', color: '#f87171', bg: 'rgba(248,113,113,0.12)', icon: XCircle },
 };
 
@@ -53,7 +53,7 @@ function OrderCard({ order, onConfirm, onComplete, onCancel }: {
               style={{ background: sc.bg, color: sc.color }}>{sc.label}</span>
             {order.paymentStatus === 'paid' && (
               <span className="text-[10px] font-black rounded-full px-2 py-0.5 flex-shrink-0"
-                style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>Paid</span>
+                style={{ background: 'rgba(52,211,153,0.12)', color: 'var(--success-text)' }}>Paid</span>
             )}
           </div>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
@@ -150,7 +150,7 @@ function OrderCard({ order, onConfirm, onComplete, onCancel }: {
               {order.status === 'confirmed' && (
                 <button onClick={onComplete}
                   className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black transition-all active:scale-95"
-                  style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>
+                  style={{ background: 'rgba(52,211,153,0.12)', color: 'var(--success-text)', border: '1px solid rgba(52,211,153,0.2)' }}>
                   <CheckCircle2 size={13} /> Mark as Completed
                 </button>
               )}
@@ -216,8 +216,8 @@ export default function MerchantOrdersPage() {
         className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Total Orders', value: stats.total.toString(), color: 'var(--text-primary)', sub: 'All time' },
-          { label: 'Pending', value: stats.pending.toString(), color: '#f59e0b', sub: 'Needs attention' },
-          { label: 'Completed', value: stats.completed.toString(), color: '#34d399', sub: 'Fulfilled' },
+          { label: 'Pending', value: stats.pending.toString(), color: 'var(--warning-text)', sub: 'Needs attention' },
+          { label: 'Completed', value: stats.completed.toString(), color: 'var(--success-text)', sub: 'Fulfilled' },
           { label: 'Revenue', value: formatNGN(stats.revenue, { compact: true }), color: 'var(--accent-text)', sub: 'From paid orders' },
         ].map((s, i) => (
           <div key={i} className="rounded-2xl p-4"

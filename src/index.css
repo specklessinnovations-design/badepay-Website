@@ -1,6 +1,11 @@
 
 @import "tailwindcss";
 
+/* Tailwind v4 draws borders in currentColor by default (black dividers on lists): use the theme border. */
+@layer base {
+  *, ::before, ::after { border-color: var(--border); }
+}
+
 @theme {
   --color-primary: #1a1a1a;
   --color-accent: #6fe8d6;
@@ -58,6 +63,8 @@
   --accent: #6fe8d6;
   --accent-dark: #4dd4c0;
   --accent-text: #6fe8d6;           /* text/icon color — lime on dark = readable */
+  --success-text: #34d399;          /* money in / completed — readable on dark */
+  --warning-text: #fbbf24;
   --accent-text-muted: rgba(111,232,214,0.65);
   --accent-bg: rgba(111,232,214,0.09);
   --accent-bg-hover: rgba(111,232,214,0.15);
@@ -74,8 +81,8 @@
   --info-light: rgba(59,130,246,0.12);
 
   /* Glass */
-  --glass-bg: rgba(12,12,16,0.75);
-  --glass-bg-strong: rgba(8,8,12,0.88);
+  --glass-bg: #0c0c10;
+  --glass-bg-strong: #0a0a0e;
   --glass-border: rgba(255,255,255,0.07);
   --glass-border-light: rgba(255,255,255,0.12);
 
@@ -85,8 +92,8 @@
   --shadow-md: 0 8px 24px rgba(0,0,0,0.5),0 2px 6px rgba(0,0,0,0.35);
   --shadow-lg: 0 16px 48px rgba(0,0,0,0.6),0 4px 12px rgba(0,0,0,0.4);
   --shadow-xl: 0 32px 80px rgba(0,0,0,0.7),0 8px 24px rgba(0,0,0,0.45);
-  --shadow-glow: 0 0 0 1px rgba(111,232,214,0.12),0 0 32px rgba(111,232,214,0.08);
-  --shadow-glow-strong: 0 0 0 1px rgba(111,232,214,0.22),0 0 48px rgba(111,232,214,0.18);
+  --shadow-glow: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-glow-strong: 0 2px 8px rgba(0,0,0,0.45);
   --shadow-inner: inset 0 1px 0 rgba(255,255,255,0.04);
 
   --radius-sm: 0.625rem;
@@ -124,13 +131,15 @@ html[data-theme="light"] {
 
   /* ← KEY FIX: lime is invisible on white, use dark olive instead */
   --accent-text: #0d6b5e;           /* WCAG AA on white backgrounds */
+  --success-text: #047857;          /* green that passes AA on white */
+  --warning-text: #b45309;          /* amber that passes AA on white */
   --accent-text-muted: rgba(13,107,94,0.65);
   --accent-bg: rgba(13,107,94,0.07);
   --accent-bg-hover: rgba(13,107,94,0.12);
   --accent-border: rgba(13,107,94,0.2);
 
-  --glass-bg: rgba(255,255,255,0.82);
-  --glass-bg-strong: rgba(255,255,255,0.93);
+  --glass-bg: #ffffff;
+  --glass-bg-strong: #ffffff;
   --glass-border: rgba(0,0,0,0.08);
   --glass-border-light: rgba(0,0,0,0.14);
 
@@ -139,8 +148,8 @@ html[data-theme="light"] {
   --shadow-md: 0 8px 24px rgba(0,0,0,0.11),0 2px 6px rgba(0,0,0,0.07);
   --shadow-lg: 0 16px 48px rgba(0,0,0,0.13),0 4px 12px rgba(0,0,0,0.08);
   --shadow-xl: 0 32px 80px rgba(0,0,0,0.16),0 8px 24px rgba(0,0,0,0.1);
-  --shadow-glow: 0 0 0 1px rgba(13,107,94,0.2),0 4px 20px rgba(13,107,94,0.1);
-  --shadow-glow-strong: 0 0 0 1px rgba(13,107,94,0.3),0 8px 32px rgba(13,107,94,0.15);
+  --shadow-glow: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-glow-strong: 0 2px 8px rgba(0,0,0,0.08);
   --shadow-inner: inset 0 1px 0 rgba(255,255,255,0.95);
 }
 
@@ -176,49 +185,26 @@ body {
   background-color: var(--background);
   isolation: isolate;
 }
-.app-shell::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(ellipse 90% 60% at 15% -15%, rgba(111,232,214,0.055) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 95% 5%, rgba(111,232,214,0.035) 0%, transparent 50%),
-    radial-gradient(ellipse 55% 35% at 50% 105%, rgba(111,232,214,0.025) 0%, transparent 45%);
-}
-html[data-theme="light"] .app-shell::before {
-  background:
-    radial-gradient(ellipse 90% 60% at 15% -15%, rgba(111,232,214,0.12) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 95% 5%, rgba(111,232,214,0.07) 0%, transparent 50%);
-}
+/* No ambient glow behind app pages: plain, solid background. */
 .app-shell > * { position: relative; z-index: 1; }
 
 /* ─── Glass utilities ────────────────────────────────────────────────────── */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--glass-border);
 }
 .glass-strong {
   background: var(--glass-bg-strong);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
   border: 1px solid var(--glass-border-light);
 }
 .glass-card {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-md), var(--shadow-inner);
 }
 .glass-sidebar {
   background: var(--glass-bg-strong);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
   border-right: 1px solid var(--glass-border-light);
 }
 

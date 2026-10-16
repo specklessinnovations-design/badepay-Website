@@ -7,6 +7,7 @@ import {
   Store, Package, Star, Wallet, Shield, ChevronRight, Loader2, CreditCard, Truck
 } from 'lucide-react';
 import { merchantService } from '@/services/merchantService';
+import { MerchantMark } from '@/components/merchant/MerchantBrand';
 import { useAuthStore } from '@/store/useAuthStore';
 import apiClient from '@/lib/apiClient';
 import { formatNGN } from '@/utils/formatting';
@@ -227,6 +228,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
   const storeName = storeInfo?.name || 'Store';
   const storeDesc = storeInfo?.description || '';
   const bannerUrl = storeInfo?.bannerUrl || '';
+  const logoUrl = storeInfo?.logoUrl || undefined;
 
   if (loadingStore) {
     return (
@@ -246,7 +248,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
         <div className="text-center px-6 py-12">
           <div className="mx-auto h-20 w-20 rounded-3xl flex items-center justify-center mb-5"
             style={{ background: 'rgba(111,232,214,0.1)', border: '1px solid rgba(111,232,214,0.2)' }}>
-            <Store size={32} style={{ color: '#6fe8d6' }} />
+            <Store size={32} style={{ color: 'var(--accent-text)' }} />
           </div>
           <h2 className="text-xl font-black mb-2" style={{ color: 'var(--text-primary)' }}>Store not found</h2>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -266,7 +268,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
         className="w-full max-w-sm text-center space-y-5">
         <div className="mx-auto h-24 w-24 rounded-full flex items-center justify-center"
           style={{ background: 'rgba(52,211,153,0.15)', border: '2px solid #34d399' }}>
-          <CheckCircle2 size={44} style={{ color: '#34d399' }} />
+          <CheckCircle2 size={44} style={{ color: 'var(--success-text)' }} />
         </div>
         <div>
           <h2 className="text-2xl font-black" style={{ color: 'var(--text-primary)' }}>Order paid</h2>
@@ -282,7 +284,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
           </div>
           <div className="flex justify-between">
             <span className="text-xs font-bold" style={{ color: 'var(--text-tertiary)' }}>Amount Paid</span>
-            <span className="text-xs font-black" style={{ color: '#34d399' }}>{formatNGN(completedOrder?.total ?? cartTotal)}</span>
+            <span className="text-xs font-black" style={{ color: 'var(--success-text)' }}>{formatNGN(completedOrder?.total ?? cartTotal)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs font-bold" style={{ color: 'var(--text-tertiary)' }}>Store</span>
@@ -308,57 +310,24 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
 
-      {/* ── Store header ── */}
-      <div className="relative">
-        {/* Banner */}
-        <div className="relative h-44 overflow-hidden">
-          {bannerUrl
-            ? <img src={bannerUrl} alt="store banner" className="w-full h-full object-cover" />
-            : <div className="h-full w-full"
-                style={{ background: 'linear-gradient(135deg,#051a14 0%,#0d3028 40%,#081e18 60%,#030f0d 100%)' }}>
-                <div className="absolute inset-0 opacity-30"
-                  style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, rgba(111,232,214,0.2) 0%, transparent 60%), radial-gradient(circle at 70% 30%, rgba(111,232,214,0.1) 0%, transparent 50%)' }} />
-              </div>
-          }
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%)' }} />
-          {/* Store stats on banner */}
-          <div className="absolute bottom-3 right-3 flex gap-2">
-            <div className="rounded-xl px-2.5 py-1.5 text-[10px] font-black backdrop-blur-sm"
-              style={{ background: 'rgba(0,0,0,0.55)', color: '#e5e5e5' }}>
-              {storeProducts.length} products
-            </div>
-            <div className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 backdrop-blur-sm"
-              style={{ background: 'rgba(52,211,153,0.2)', border: '1px solid rgba(52,211,153,0.3)' }}>
-              <div className="h-1.5 w-1.5 rounded-full bg-[#34d399] animate-pulse" />
-              <span className="text-[10px] font-black" style={{ color: '#34d399' }}>OPEN</span>
-            </div>
+      {/* ── Store header: the store's own brand (banner, logo, name) ── */}
+      <header>
+        <div className="h-36 sm:h-44 overflow-hidden" style={{ background: '#0b2724' }}>
+          {bannerUrl && <img src={bannerUrl} alt="" className="h-full w-full object-cover" />}
+        </div>
+        <div className="flex gap-4 px-4 pb-3">
+          <div className="-mt-9 shrink-0 rounded-2xl" style={{ border: '3px solid var(--background)', background: 'var(--background)' }}>
+            <MerchantMark name={storeName} logoUrl={logoUrl} size={72} />
+          </div>
+          <div className="min-w-0 flex-1 pt-3">
+            <h1 className="truncate text-xl font-black leading-tight" style={{ color: 'var(--text-primary)' }}>{storeName}</h1>
+            {storeDesc && <p className="mt-0.5 line-clamp-2 text-sm" style={{ color: 'var(--text-secondary)' }}>{storeDesc}</p>}
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              {storeProducts.length} {storeProducts.length === 1 ? 'item' : 'items'} · Pay securely with BadePay
+            </p>
           </div>
         </div>
-        {/* Store identity */}
-        <div className="relative px-4 -mt-8 pb-2">
-          <div className="flex items-end gap-3">
-            <div className="h-16 w-16 rounded-2xl flex items-center justify-center text-xl font-black flex-shrink-0"
-              style={{
-                background: 'linear-gradient(135deg,#6fe8d6 0%,#4dd9c8 100%)',
-                color: '#050f0d',
-                border: '3px solid var(--background)',
-                boxShadow: '0 8px 24px rgba(111,232,214,0.3)',
-              }}>
-              {storeName.slice(0, 2).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0 pb-1">
-              <h1 className="text-lg font-black leading-tight" style={{ color: 'var(--text-primary)' }}>{storeName}</h1>
-              {storeDesc && <p className="text-xs mt-0.5 line-clamp-1" style={{ color: 'var(--text-secondary)' }}>{storeDesc}</p>}
-              <div className="flex items-center gap-1 mt-1">
-                {[1,2,3,4,5].map(s => (
-                  <Star key={s} size={10} fill="#f59e0b" style={{ color: '#f59e0b' }} />
-                ))}
-                <span className="text-[10px] font-bold ml-1" style={{ color: 'var(--text-tertiary)' }}>5.0 · Verified</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </header>
 
       {/* ── Browse / Cart / Checkout nav ── */}
       <div className="sticky top-0 z-30 px-4 py-3 flex items-center gap-3"
@@ -448,8 +417,8 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                                 <Package size={28} style={{ color: 'var(--text-tertiary)' }} />
                               </div>
                           }
-                          {/* Gradient overlay */}
-                          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 50%)' }} />
+                          {/* Shade behind the category tag only when there's a photo */}
+                          {p.imageUrl && <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 45%)' }} />}
                           {/* Badges */}
                           <div className="absolute top-2 left-2 flex flex-col gap-1">
                             {p.discount > 0 && (
@@ -473,7 +442,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                           <button type="button" onClick={() => setViewing(p)} className="text-left text-xs font-black leading-tight line-clamp-2" style={{ color: 'var(--text-primary)' }}>{p.name}</button>
                           <div className="flex items-center justify-between mt-2.5">
                             <div>
-                              <p className="text-sm font-black" style={{ color: '#6fe8d6' }}>{formatNGN(discPrice)}</p>
+                              <p className="text-sm font-black" style={{ color: 'var(--accent-text)' }}>{formatNGN(discPrice)}</p>
                               {p.discount > 0 && (
                                 <p className="text-[10px] line-through" style={{ color: 'var(--text-tertiary)' }}>{formatNGN(p.price)}</p>
                               )}
@@ -497,7 +466,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                             ) : (
                               <button onClick={() => (p.variations.length ? setViewing(p) : addToCart(p))} aria-label={`Add ${p.name}`}
                                 className="h-8 w-8 flex items-center justify-center rounded-xl transition-all active:scale-95 hover:scale-105"
-                                style={{ background: '#6fe8d6', color: '#1a1a1a', boxShadow: '0 2px 8px rgba(111,232,214,0.3)' }}>
+                                style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
                                 <Plus size={14} />
                               </button>
                             )}
@@ -698,7 +667,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
               </div>
               <div className="flex items-start gap-2 rounded-xl p-3"
                 style={{ background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)' }}>
-                <Shield size={14} style={{ color: '#34d399', flexShrink: 0, marginTop: 1 }} />
+                <Shield size={14} style={{ color: 'var(--success-text)', flexShrink: 0, marginTop: 1 }} />
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                   {paymentMethod === 'wallet' ? 'Paid from your wallet as soon as you enter your PIN.' : "You'll finish paying on the secure card page, then come back to your order."}
                 </p>
@@ -713,7 +682,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
               <div className="text-center">
                 <div className="mx-auto h-16 w-16 rounded-2xl flex items-center justify-center mb-4"
                   style={{ background: 'rgba(111,232,214,0.1)', border: '1px solid rgba(111,232,214,0.2)' }}>
-                  <Shield size={28} style={{ color: '#6fe8d6' }} />
+                  <Shield size={28} style={{ color: 'var(--accent-text)' }} />
                 </div>
                 <h3 className="text-xl font-black mb-1" style={{ color: 'var(--text-primary)' }}>
                   Enter your PIN

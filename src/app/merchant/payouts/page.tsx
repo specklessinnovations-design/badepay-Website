@@ -100,9 +100,9 @@ export default function PayoutsPage() {
   };
 
   if (error) return <p className="text-sm text-red-400">{error}</p>;
-  if (!settings) return <div className="flex justify-center py-16"><Loader2 className="animate-spin" style={{ color: '#6fe8d6' }} /></div>;
+  if (!settings) return <div className="flex justify-center py-16"><Loader2 className="animate-spin" style={{ color: 'var(--accent-text)' }} /></div>;
   const canWithdraw = !!settings.bankAccount && settings.balance.available > 0 && !settings.paused;
-  const statusColor = (s: string) => (s === 'success' ? '#10b981' : s === 'failed' || s === 'reversed' ? '#ef4444' : '#f59e0b');
+  const statusColor = (s: string) => (s === 'success' ? 'var(--success-text)' : s === 'failed' || s === 'reversed' ? '#dc2626' : 'var(--warning-text)');
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -118,7 +118,7 @@ export default function PayoutsPage() {
           Balance {naira(settings.balance.walletBalance)} · Reserve {naira(settings.balance.reserve)}{settings.balance.fee ? ` · Fee ${naira(settings.balance.fee)}` : ''}{settings.balance.inTransit ? ` · In transit ${naira(settings.balance.inTransit)}` : ''}
         </p>
         {settings.nextPayoutAt && settings.schedule !== 'manual' && <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>Next automatic payout {when(settings.nextPayoutAt)}</p>}
-        {settings.automaticPayoutsResumeAt && <p className="mt-1 text-xs" style={{ color: '#f59e0b' }}>New bank account — automatic payouts resume {when(settings.automaticPayoutsResumeAt)}</p>}
+        {settings.automaticPayoutsResumeAt && <p className="mt-1 text-xs" style={{ color: 'var(--warning-text)' }}>New bank account — automatic payouts resume {when(settings.automaticPayoutsResumeAt)}</p>}
         <button type="button" disabled={!canWithdraw} onClick={() => { setWithdrawAmount(''); setSheet('withdraw'); }}
           className="mt-4 h-11 w-full rounded-xl text-sm font-black disabled:opacity-50" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
           Withdraw to bank
@@ -132,7 +132,7 @@ export default function PayoutsPage() {
             <span className="block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Payout account</span>
             {settings.bankAccount
               ? <span className="block truncate text-xs" style={{ color: 'var(--text-secondary)' }}>{settings.bankAccount.bankName ?? settings.bankAccount.bankCode} · {settings.bankAccount.accountNumber} · {settings.bankAccount.accountName}</span>
-              : <span className="block text-xs" style={{ color: '#f59e0b' }}>Add a bank account to receive payouts</span>}
+              : <span className="block text-xs" style={{ color: 'var(--warning-text)' }}>Add a bank account to receive payouts</span>}
           </span>
           {settings.bankAccount?.verified && <BadgeCheck size={16} style={{ color: '#10b981' }} />}
         </button>

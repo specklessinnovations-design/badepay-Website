@@ -162,11 +162,11 @@ export default function MerchantStorePage() {
         </Link>
         <div className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>BadePay Store</div>
         <div className="flex gap-2 items-center">
-          <button onClick={handleRefresh} disabled={isRefreshing} className="h-9 px-3 rounded-full flex items-center gap-1 text-xs font-semibold disabled:opacity-50" style={{ background: 'rgba(111,232,214,0.1)', color: '#6fe8d6' }}>
+          <button onClick={handleRefresh} disabled={isRefreshing} className="h-9 px-3 rounded-full flex items-center gap-1 text-xs font-semibold disabled:opacity-50" style={{ background: 'rgba(111,232,214,0.1)', color: 'var(--accent-text)' }}>
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
           {isPublished ? (
-            <a href={`/store/${slug}`} target="_blank" rel="noopener noreferrer" className="h-9 px-3 rounded-full flex items-center gap-1 text-xs font-semibold" style={{ background: 'rgba(111,232,214,0.1)', color: '#6fe8d6' }}>
+            <a href={`/store/${slug}`} target="_blank" rel="noopener noreferrer" className="h-9 px-3 rounded-full flex items-center gap-1 text-xs font-semibold" style={{ background: 'rgba(111,232,214,0.1)', color: 'var(--accent-text)' }}>
               <span>Live Store</span>
               <ExternalLink size={12} />
             </a>
@@ -182,7 +182,7 @@ export default function MerchantStorePage() {
       <div className="flex border-b" style={{ borderColor: 'var(--border)' }}>
         {(['products', 'orders', 'settings'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 pb-3 text-center text-sm font-semibold capitalize transition-all border-b-2 ${
-            activeTab === tab ? 'border-[#6fe8d6] text-[#6fe8d6]' : 'border-transparent text-[var(--text-secondary)]'
+            activeTab === tab ? 'border-[#6fe8d6] text-[var(--accent-text)]' : 'border-transparent text-[var(--text-secondary)]'
           }`}>
             {tab === 'products' && `Products (${storeProducts.length})`}
             {tab === 'orders' && `Orders (${activeOrders.length})`}
@@ -197,7 +197,7 @@ export default function MerchantStorePage() {
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase tracking-widest font-semibold" style={{ color: 'var(--text-tertiary)' }}>Catalog</span>
             <div className="flex gap-2">
-              <button onClick={() => setEditing({ product: null, type: 'donation' })} className="h-9 px-3 rounded-xl text-xs font-semibold flex items-center gap-1" style={{ border: '1px solid #6fe8d6', color: '#6fe8d6' }}>
+              <button onClick={() => setEditing({ product: null, type: 'donation' })} className="h-9 px-3 rounded-xl text-xs font-semibold flex items-center gap-1" style={{ border: '1px solid #6fe8d6', color: 'var(--accent-text)' }}>
                 <HandHeart size={14} /> {isGivingOrg ? 'Add giving item' : 'Add donation'}
               </button>
               <button onClick={() => setEditing({ product: null })} className="h-9 px-3 rounded-xl text-xs font-semibold flex items-center gap-1" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
@@ -253,7 +253,7 @@ export default function MerchantStorePage() {
 
                     <div className="p-3 flex-1 flex flex-col justify-between">
                       <div>
-                        <div className="text-xs uppercase font-bold" style={{ color: '#6fe8d6' }}>{typeLabel} · {p.category}</div>
+                        <div className="text-xs uppercase font-bold" style={{ color: 'var(--accent-text)' }}>{typeLabel} · {p.category}</div>
                         <div className="text-sm font-semibold mt-0.5 line-clamp-1" style={{ color: 'var(--text-primary)' }}>{p.name}</div>
                         <div className="text-xs font-bold mt-1" style={{ color: 'var(--text-primary)' }}>
                           {priceLabel(p)}
@@ -302,7 +302,7 @@ export default function MerchantStorePage() {
                       <div className="text-xs font-semibold">{o.customerName}</div>
                       <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{o.customerPhone}</div>
                     </div>
-                    <span className="text-xs px-2 py-0.5 font-semibold rounded-full uppercase" style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399' }}>
+                    <span className="text-xs px-2 py-0.5 font-semibold rounded-full uppercase" style={{ background: 'rgba(52,211,153,0.1)', color: 'var(--success-text)' }}>
                       {o.status}
                     </span>
                   </div>
@@ -358,7 +358,7 @@ export default function MerchantStorePage() {
       {activeTab === 'settings' && (
         <div className="space-y-4">
           <div className="rounded-2xl p-4" style={{ background: 'rgba(111,232,214,0.05)', border: '1px solid rgba(111,232,214,0.15)' }}>
-            <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: '#6fe8d6' }}>
+            <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--accent-text)' }}>
               <Sparkles size={16} /> Live storefront link
             </div>
             <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
@@ -366,7 +366,7 @@ export default function MerchantStorePage() {
             </p>
             <div className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: 'var(--background)', border: '1px solid var(--border)' }}>
               <span className="text-xs font-mono truncate flex-1" style={{ color: 'var(--text-tertiary)' }}>{storeUrl}</span>
-              <button onClick={handleCopyLink} className="p-1.5 rounded-lg" style={{ color: '#6fe8d6' }}>
+              <button onClick={handleCopyLink} className="p-1.5 rounded-lg" style={{ color: 'var(--accent-text)' }}>
                 <Copy size={14} />
               </button>
             </div>

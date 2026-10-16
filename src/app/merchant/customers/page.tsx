@@ -28,7 +28,7 @@ export default function MerchantCustomersPage() {
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="rounded-3xl p-5" style={card}>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(111,232,214,0.15)' }}><Users size={20} style={{ color: '#6fe8d6' }} /></div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'rgba(111,232,214,0.15)' }}><Users size={20} style={{ color: 'var(--accent-text)' }} /></div>
           <div>
             <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{data.summary.totalCustomers}</div>
             <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Paying customer{data.summary.totalCustomers === 1 ? '' : 's'}</div>
@@ -56,7 +56,7 @@ export default function MerchantCustomersPage() {
               {c.avatarUrl ? <img src={c.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
                 : <span className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold" style={{ background: 'var(--surface-secondary)', color: 'var(--text-primary)' }}>{c.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}</span>}
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1.5 truncate text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{c.name} {c.isVip && <Crown size={13} style={{ color: '#f59e0b' }} aria-label="VIP" />}</p>
+                <p className="flex items-center gap-1.5 truncate text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{c.name} {c.isVip && <Crown size={13} style={{ color: 'var(--warning-text)' }} aria-label="VIP" />}</p>
                 <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>{c.transactionCount} payment{c.transactionCount === 1 ? '' : 's'} · last {ago(c.lastPaidAt)}</p>
               </div>
               <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{naira(c.totalSpent)}</span>

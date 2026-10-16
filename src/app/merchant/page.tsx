@@ -6,6 +6,7 @@ import { formatNGN, formatDate } from '@/utils/formatting';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMerchantStore } from '@/store/useMerchantStore';
 import { useMerchantStoreData } from '@/store/useMerchantStoreData';
+import { MerchantMark, useMerchantBrand } from '@/components/merchant/MerchantBrand';
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 14 },
@@ -17,6 +18,7 @@ export default function MerchantDashboard() {
   const user = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
   const [, navigate] = useLocation();
+  const brand = useMerchantBrand();
   const payments = useMerchantStore(s => s.payments);
   const settlements = useMerchantStore(s => s.settlements);
   const fetchPayments = useMerchantStore(s => s.fetchPayments);
@@ -86,31 +88,19 @@ export default function MerchantDashboard() {
   return (
     <div className="space-y-5">
 
-      {/* ── Revenue hero — always dark gradient, lime text is fine here ── */}
+      {/* ── Revenue hero: solid dark brand card (mint text is readable on it in both themes) ── */}
       <motion.div {...fadeUp(0)} className="relative overflow-hidden rounded-3xl p-6 lg:p-8"
-        style={{
-          background: 'linear-gradient(135deg,#081a18 0%,#0d2e2a 55%,#051210 100%)',
-          border: '1px solid rgba(111,232,214,0.18)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.45)',
-        }}>
-        {/* Ambient orbs */}
-        <div className="pointer-events-none absolute -right-14 -top-14 h-56 w-56 rounded-full"
-          style={{ background: 'radial-gradient(circle,rgba(111,232,214,0.22) 0%,transparent 70%)' }} />
-        <div className="pointer-events-none absolute -left-8 -bottom-8 h-36 w-36 rounded-full"
-          style={{ background: 'radial-gradient(circle,rgba(111,232,214,0.12) 0%,transparent 70%)' }} />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.025]"
-          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.7) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.7) 1px,transparent 1px)', backgroundSize: '28px 28px' }} />
+        style={{ background: '#0b2724', border: '1px solid rgba(111,232,214,0.18)' }}>
 
         <div className="relative z-10">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl flex items-center justify-center text-sm font-black"
-                style={{ background: '#6fe8d6', color: '#081a18' }}>{initials}</div>
+              <MerchantMark name={brand.name} logoUrl={brand.logoUrl} size={44} />
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(111,232,214,0.55)' }}>
+                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(111,232,214,0.85)' }}>
                   {profile?.category || 'Merchant Portal'}
                 </p>
-                <p className="text-sm font-black" style={{ color: '#ffffff' }}>{businessName}</p>
+                <p className="text-sm font-black" style={{ color: '#ffffff' }}>{brand.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 rounded-full px-2.5 py-1"
@@ -120,7 +110,7 @@ export default function MerchantDashboard() {
             </div>
           </div>
 
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1.5" style={{ color: 'rgba(111,232,214,0.5)' }}>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1.5" style={{ color: 'rgba(111,232,214,0.85)' }}>
             Total Revenue
           </p>
           <div className="flex items-center gap-3 mb-1">
@@ -133,14 +123,14 @@ export default function MerchantDashboard() {
               {showRevenue ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
-          <p className="text-xs mb-5" style={{ color: 'rgba(111,232,214,0.4)' }}>
+          <p className="text-xs mb-5" style={{ color: 'rgba(255,255,255,0.7)' }}>
             {stats.pendingSettlement > 0 ? `${formatNGN(stats.pendingSettlement)} pending settlement` : 'All settled'}
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/merchant/qr"
               className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black transition-all active:scale-95"
-              style={{ background: '#6fe8d6', color: '#081a18', boxShadow: '0 2px 16px rgba(111,232,214,0.4)' }}>
+              style={{ background: '#6fe8d6', color: '#081a18' }}>
               <QrCode size={13} /> View QR
             </Link>
             <Link href="/merchant/payments"
@@ -150,8 +140,8 @@ export default function MerchantDashboard() {
             </Link>
             <Link href="/merchant/payouts"
               className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black transition-all active:scale-95"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.65)' }}>
-              Settlements
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)' }}>
+              Payouts
             </Link>
           </div>
         </div>
@@ -213,31 +203,27 @@ export default function MerchantDashboard() {
         <Link href="/merchant/store"
           className="rounded-2xl p-4 flex flex-col justify-between gap-3 transition-all active:scale-95 hover:opacity-90"
           style={{
-            background: storeInfo?.isPublished
-              ? 'linear-gradient(135deg,#081a18 0%,#0d2e2a 100%)'
-              : 'var(--card)',
-            border: storeInfo?.isPublished
-              ? '1px solid rgba(111,232,214,0.2)'
-              : '1px solid var(--border)',
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
           }}>
           <div className="flex items-center justify-between">
             <div className="h-9 w-9 rounded-xl flex items-center justify-center"
-              style={{ background: storeInfo?.isPublished ? 'rgba(111,232,214,0.15)' : 'var(--surface-secondary)' }}>
-              <Package size={16} style={{ color: storeInfo?.isPublished ? '#6fe8d6' : 'var(--text-tertiary)' }} />
+              style={{ background: storeInfo?.isPublished ? 'var(--accent-bg-hover)' : 'var(--surface-secondary)' }}>
+              <Package size={16} style={{ color: storeInfo?.isPublished ? 'var(--accent-text)' : 'var(--text-tertiary)' }} />
             </div>
             {storeInfo?.isPublished && (
               <div className="flex items-center gap-1 rounded-full px-2 py-0.5"
                 style={{ background: 'rgba(52,211,153,0.12)' }}>
                 <div className="h-1.5 w-1.5 rounded-full bg-[#34d399] animate-pulse" />
-                <span className="text-[9px] font-black" style={{ color: '#34d399' }}>LIVE</span>
+                <span className="text-[9px] font-black" style={{ color: 'var(--success-text)' }}>LIVE</span>
               </div>
             )}
           </div>
           <div>
-            <p className="text-sm font-black" style={{ color: storeInfo?.isPublished ? '#fff' : 'var(--text-primary)' }}>
+            <p className="text-sm font-black" style={{ color: 'var(--text-primary)' }}>
               My Store
             </p>
-            <p className="text-xs mt-0.5" style={{ color: storeInfo?.isPublished ? 'rgba(111,232,214,0.55)' : 'var(--text-tertiary)' }}>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
               {storeProducts.length > 0 ? `${storeProducts.length} products` : 'Set up your store'}
             </p>
           </div>
@@ -304,8 +290,8 @@ export default function MerchantDashboard() {
                     <p className="text-xs truncate" style={{ color: 'var(--text-tertiary)' }}>{formatDate(new Date(p.createdAt))}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-black" style={{ color: '#34d399' }}>+{formatNGN(p.amount)}</p>
-                    <p className="text-[10px] font-bold capitalize" style={{ color: p.status === 'success' ? '#34d399' : '#f59e0b' }}>
+                    <p className="text-sm font-black" style={{ color: 'var(--success-text)' }}>+{formatNGN(p.amount)}</p>
+                    <p className="text-[10px] font-bold capitalize" style={{ color: p.status === 'success' ? 'var(--success-text)' : 'var(--warning-text)' }}>
                       {p.status === 'success' ? 'Completed' : 'Pending'}
                     </p>
                   </div>

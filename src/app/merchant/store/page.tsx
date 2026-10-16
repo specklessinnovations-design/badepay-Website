@@ -220,7 +220,7 @@ export default function MerchantStorePage() {
                 const typeLabel = PRODUCT_TYPES.find((t) => t.value === p.type)?.label ?? 'Physical item';
                 return (
                   <div key={p.id} className="rounded-2xl overflow-hidden flex flex-col" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-                    <div className="h-28 relative" style={{ background: 'var(--surface-secondary)' }}>
+                    <div className="h-48 relative" style={{ background: 'var(--surface-secondary)' }}>
                       {productImage(p) ? (
                         <img src={productImage(p)} alt={p.name} className="w-full h-full object-cover" />
                       ) : (

@@ -186,7 +186,7 @@ body {
   isolation: isolate;
 }
 /* No ambient glow behind app pages: plain, solid background. */
-.app-shell > * { position: relative; z-index: 1; }
+/* (No `.app-shell > *` positioning: it overrode sticky sidebars/headers and fixed drawers.) */
 
 /* ─── Glass utilities ────────────────────────────────────────────────────── */
 .glass {
@@ -399,9 +399,12 @@ html[data-theme="light"] .glass-effect {
 .truncate-lines-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* ─── Light mode global headings ─────────────────────────────────────────── */
-html[data-theme="light"] h1,
-html[data-theme="light"] h2,
-html[data-theme="light"] h3 { color: #0a0a0f; }
+/* In a layer so text-colour utilities (e.g. white headings on dark cards) can override it. */
+@layer base {
+  html[data-theme="light"] h1,
+  html[data-theme="light"] h2,
+  html[data-theme="light"] h3 { color: #0a0a0f; }
+}
 html[data-theme="light"] .surface-card { box-shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,1); }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */

@@ -4,6 +4,8 @@
  * (so titles update on in-app navigation).
  */
 
+import { ADMIN_BASE, isAdminPath } from "@/lib/adminPaths";
+
 export const SITE_NAME = "BadePay";
 export const SITE_URL = ((import.meta.env.VITE_SITE_URL as string | undefined) || "https://www.badepay.com").replace(/\/$/, "");
 export const OG_IMAGE = `${SITE_URL}/og-image.png`;
@@ -106,6 +108,31 @@ export const PAGE_SEO: Record<string, PageSeo> = {
   "/merchant/qr": priv("QR Code · Merchant"),
   "/merchant/settlements": priv("Settlements · Merchant"),
   "/merchant/store": priv("My Store · Merchant"),
+  "/merchant/payouts": priv("Payouts · Merchant"),
+  "/merchant/customers": priv("Customers · Merchant"),
+  "/merchant/analytics": priv("Analytics · Merchant"),
+  "/verify-bvn": priv("Verify Your Identity"),
+  "/account-ready": priv("Your Account Is Ready"),
+  "/orders": priv("My Orders"),
+  "/orders/callback": priv("Confirming Payment"),
+  "/wallet/callback": priv("Confirming Payment"),
+  "/profile/disputes": priv("My Disputes"),
+  "/profile/disputes/new": priv("Report an Issue"),
+  "/admin/reports": priv("Reports · Admin"),
+  "/admin/closures": priv("Account Closures · Admin"),
+  "/admin/tickets": priv("Tickets · Admin"),
+  "/admin/approvals": priv("Approvals · Admin"),
+  "/admin/fraud": priv("Fraud · Admin"),
+  "/admin/review": priv("Payment Review · Admin"),
+  "/admin/settlements": priv("Settlements · Admin"),
+  "/admin/reconciliation": priv("Reconciliation · Admin"),
+  "/admin/content": priv("Content · Admin"),
+  "/admin/team": priv("Team & Roles · Admin"),
+  "/admin/audit-log": priv("Audit Log · Admin"),
+  "/admin/pilot": priv("Pilot · Admin"),
+  "/admin/system": priv("System · Admin"),
+  "/admin/search": priv("Search · Admin"),
+  "/admin/account": priv("My Account · Admin"),
   "/merchant/orders": priv("Orders · Merchant"),
 };
 
@@ -125,6 +152,9 @@ export function getPageSeo(pathname: string): PageSeo {
   path = path.replace(/\/+$/, "") || "/";
   if (!path.startsWith("/")) path = "/" + path;
 
+  // The admin portal lives at a private path (VITE_ADMIN_BASE_PATH): use the /admin titles for it.
+  if (ADMIN_BASE !== "/admin" && isAdminPath(path)) path = "/admin" + path.slice(ADMIN_BASE.length);
+
   if (PAGE_SEO[path]) return PAGE_SEO[path];
 
   const store = path.match(/^\/store\/([^/]+)$/);
@@ -139,6 +169,9 @@ export function getPageSeo(pathname: string): PageSeo {
   if (/^\/qr\//.test(path)) return pub("QR Payment", "Scan and pay with Badepay.");
   if (/^\/marketplace\/[^/]+$/.test(path)) return priv("Listing · Marketplace");
   if (/^\/news\/[^/]+$/.test(path)) return priv("Article · News");
+  if (/^\/orders\/[^/]+$/.test(path)) return priv("Order Details");
+  if (/^\/profile\/disputes\/[^/]+$/.test(path)) return priv("Dispute");
+  if (/^\/admin\/tickets\/[^/]+$/.test(path)) return priv("Ticket · Admin");
 
   // Nested authenticated sections: /merchant/payments → Merchant, /dashboard/foo → Dashboard
   const segments = path.split("/").filter(Boolean);

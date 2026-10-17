@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { Search, Store, Star, MapPin, ChevronRight, Package, ArrowLeft } from 'lucide-react';
+import { Search, Store, ChevronRight, Package, ArrowLeft } from 'lucide-react';
+import { MerchantMark } from '@/components/merchant/MerchantBrand';
 import { useMerchantStoreData } from '@/store/useMerchantStoreData';
 
 export default function StoresListPage() {
@@ -68,45 +69,24 @@ export default function StoresListPage() {
             const user = item.user;
             return (
               <motion.div key={store.id} {...fadeUp(i * 0.05)}>
-                <Link href={`/store/${store.slug}`} 
-                  className="surface-card block overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group">
-                  <div className="relative h-32 overflow-hidden">
-                    {store.bannerUrl ? (
-                      <img src={store.bannerUrl} alt={store.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                    ) : (
-                      <div className="h-full w-full" style={{ background: 'linear-gradient(135deg, var(--accent-bg) 0%, var(--surface-secondary) 100%)' }} />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                      <div className="h-10 w-10 rounded-xl flex items-center justify-center text-sm font-black border-2 border-white/20 backdrop-blur-md"
-                        style={{ background: 'rgba(255,255,255,0.1)', color: '#ffffff' }}>
-                        {store.name.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="text-white">
-                        <h3 className="text-sm font-black leading-tight">{store.name}</h3>
-                        <p className="text-[10px] font-bold opacity-80">{store.category}</p>
-                      </div>
-                    </div>
+                <Link href={`/store/${store.slug}`}
+                  className="group block overflow-hidden rounded-2xl transition-shadow hover:shadow-md"
+                  style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+                  <div className="h-24 overflow-hidden" style={{ background: '#0b2724' }}>
+                    {store.bannerUrl && <img src={store.bannerUrl} alt="" className="h-full w-full object-cover" />}
                   </div>
-                  <div className="p-4 flex items-center justify-between">
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-medium line-clamp-1" style={{ color: 'var(--text-secondary)' }}>
-                        {store.description}
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1">
-                          <Star size={12} fill="#f59e0b" style={{ color: '#f59e0b' }} />
-                          <span className="text-[10px] font-black" style={{ color: 'var(--text-primary)' }}>5.0</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin size={12} style={{ color: 'var(--text-tertiary)' }} />
-                          <span className="text-[10px] font-bold" style={{ color: 'var(--text-tertiary)' }}>Lagos, NG</span>
-                        </div>
-                      </div>
+                  <div className="flex items-start gap-3 px-4 pb-4">
+                    <div className="-mt-6 shrink-0 rounded-[14px]" style={{ border: '3px solid var(--card)' }}>
+                      <MerchantMark name={store.name} logoUrl={store.logoUrl} size={52} />
                     </div>
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center transition-colors group-hover:bg-[var(--accent-bg)]"
+                    <div className="min-w-0 flex-1 pt-2">
+                      <h3 className="truncate text-[15px] font-black leading-tight" style={{ color: 'var(--text-primary)' }}>{store.name}</h3>
+                      {store.category && <p className="text-xs font-semibold" style={{ color: 'var(--text-tertiary)' }}>{store.category}</p>}
+                      {store.description && <p className="mt-1 line-clamp-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{store.description}</p>}
+                    </div>
+                    <div className="mt-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors group-hover:bg-[var(--accent-bg)]"
                       style={{ border: '1px solid var(--border)' }}>
-                      <ChevronRight size={16} style={{ color: 'var(--text-tertiary)' }} className="group-hover:text-[var(--accent-text)]" />
+                      <ChevronRight size={16} style={{ color: 'var(--text-tertiary)' }} />
                     </div>
                   </div>
                 </Link>

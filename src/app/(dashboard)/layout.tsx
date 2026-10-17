@@ -72,16 +72,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <AppShell className="lg:flex">
-      {showMainNav && <PersonalSidebar />}
+      {/* Desktop side menu on every page (it hides itself below lg; phones use the bottom nav) */}
+      <PersonalSidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Sub-page header */}
         {subPageTitle && (
-          <header className="sticky top-0 z-40 backdrop-blur-xl"
-            style={{
-              background: 'color-mix(in srgb, var(--card) 90%, transparent)',
-              borderBottom: '1px solid var(--border)',
-            }}>
+          <header className="sticky top-0 z-40"
+            style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}>
             <div className="mx-auto flex h-14 w-full max-w-lg items-center gap-3 px-4 lg:max-w-5xl lg:px-6">
               <button type="button" onClick={() => history.back()}
                 className="flex h-9 w-9 items-center justify-center rounded-xl transition-all active:scale-95"
@@ -98,19 +96,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Main nav top bar — mobile only */}
         {showMainNav && (
-          <header className="sticky top-0 z-40 lg:hidden backdrop-blur-xl"
-            style={{
-              background: 'color-mix(in srgb, var(--card) 88%, transparent)',
-              borderBottom: '1px solid var(--border)',
-            }}>
+          <header className="sticky top-0 z-40 lg:hidden"
+            style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}>
             <div className="flex h-14 items-center justify-between px-4">
               <Link href="/dashboard" className="flex items-center">
-                <img
-                  src="/logo.png"
-                  alt="BadePay"
-                  className="h-9 w-auto object-contain"
-                  style={{ filter: 'drop-shadow(0 0 8px rgba(111,232,214,0.25))' }}
-                />
+                <img src="/favicon.png" alt="" className="h-8 w-8 rounded-lg object-contain" />
+                <span className="ml-2 text-base font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>BadePay</span>
               </Link>
               <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors"
                 style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
@@ -129,11 +120,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {showMainNav && <PersonalBottomNav />}
 
         {!showMainNav && !subPageTitle && (
-          <div className="fixed bottom-4 left-0 right-0 flex justify-center lg:static lg:mt-4 lg:justify-start lg:px-6">
+          <div className="fixed bottom-4 left-0 right-0 flex justify-center lg:hidden">
             <Link href="/dashboard"
-              className="rounded-full px-5 py-2.5 text-sm font-semibold transition-colors backdrop-blur-xl"
+              className="rounded-full px-5 py-2.5 text-sm font-semibold transition-colors"
               style={{
-                background: 'color-mix(in srgb, var(--card) 90%, transparent)',
+                background: 'var(--card)',
                 border: '1px solid var(--border)',
                 color: 'var(--text-secondary)',
                 boxShadow: 'var(--shadow-sm)',

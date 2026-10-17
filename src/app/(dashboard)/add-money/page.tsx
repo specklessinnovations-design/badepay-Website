@@ -145,18 +145,12 @@ export default function AddMoneyPage() {
 
       {/* Bank Transfer Card */}
       <div className="rounded-3xl p-6 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, #081a18 0%, #0d2e2a 55%, #051210 100%)',
-          border: '1px solid rgba(111,232,214,0.18)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.45)',
-        }}>
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full"
-          style={{ background: 'radial-gradient(circle,rgba(111,232,214,0.22) 0%,transparent 70%)' }} />
+        style={{ background: '#0b2724', border: '1px solid rgba(111,232,214,0.18)' }}>
         
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-[rgba(111,232,214,0.55)]">Partner bank</div>
+              <div className="text-[10px] uppercase tracking-[0.2em] text-[rgba(111,232,214,0.9)]">Partner bank</div>
               <div className="text-[14px] font-semibold mt-0.5 text-white">{bankLabel}</div>
             </div>
             <div className="h-10 w-10 rounded-xl flex items-center justify-center"
@@ -166,7 +160,7 @@ export default function AddMoneyPage() {
           </div>
 
           <div className="pt-5 border-t border-[rgba(111,232,214,0.2)]">
-            <div className="text-[10px] uppercase tracking-[0.2em] text-[rgba(111,232,214,0.55)]">Account number</div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-[rgba(111,232,214,0.9)]">Account number</div>
             <div className="mt-1 flex items-center justify-between">
               <span className="font-display text-[28px] font-semibold tracking-wide tabular text-white">{formatAccountNumber(rawAccountNumber) || (vaError ? 'Not ready yet' : '--- --- ----')}</span>
               <button
@@ -178,7 +172,7 @@ export default function AddMoneyPage() {
                 {copiedNum ? <Check size={16} className="text-[#6fe8d6] animate-pulse" /> : <Copy size={16} className="text-[#6fe8d6]" />}
               </button>
             </div>
-            <div className="mt-1 text-[12px] text-[rgba(111,232,214,0.55)]">{vaError || accountName}</div>
+            <div className="mt-1 text-[12px] text-[rgba(111,232,214,0.9)]">{vaError || accountName}</div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">

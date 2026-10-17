@@ -98,70 +98,48 @@ export default function ProfilePage() {
     <div className="pb-24 lg:pb-8">
       <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarChange} />
 
-      {/* ── Cover + Avatar hero ── */}
-      <div className="relative -mx-4 lg:-mx-0 lg:rounded-3xl overflow-hidden mb-16"
-        style={{ height: 140, background: 'linear-gradient(135deg, #6fe8d6 0%, #4dd4c0 100%)' }}>
-        {/* Mesh orbs */}
-        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full opacity-30"
-          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 65%)' }} />
-        <div className="pointer-events-none absolute left-1/4 bottom-0 h-32 w-32 rounded-full opacity-15"
-          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 65%)' }} />
-        {/* Grid dots */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: 'radial-gradient(rgba(0,0,0,0.1) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-
-        {/* Edit profile link — top right */}
-        <Link href="/profile/edit"
-          className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-black/80 transition-all hover:text-black"
-          style={{ background: 'rgba(0,0,0,0.1)', border: '1px solid rgba(0,0,0,0.15)' }}>
-          Edit profile
-        </Link>
-      </div>
-
-      {/* ── Avatar (overlapping cover) ── */}
-      <div className="relative -mt-28 mb-4 flex flex-col items-center lg:items-start lg:flex-row lg:gap-5 lg:items-end px-4 lg:px-0">
-        <div className="relative mb-3 lg:mb-0">
-          <motion.button type="button" onClick={() => fileInputRef.current?.click()}
-            whileTap={{ scale: 0.97 }}
-            className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[1.5rem] text-2xl font-black text-[#1a1a1a] ring-4 ring-[var(--background)]"
-            style={{
-              background: user.avatar ? 'transparent' : 'linear-gradient(135deg, #6fe8d6 0%, #4dd4c0 100%)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-            }}>
+      {/* ── Profile header: one solid card (photo, name, email, verification) ── */}
+      <section className="mb-5 flex flex-col items-center gap-4 rounded-3xl p-5 text-center sm:flex-row sm:text-left"
+        style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+        <div className="relative shrink-0">
+          <motion.button type="button" onClick={() => fileInputRef.current?.click()} whileTap={{ scale: 0.97 }}
+            aria-label="Change profile photo"
+            className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-[1.25rem] text-2xl font-black text-white"
+            style={{ background: user.avatar ? 'var(--surface-secondary)' : '#0d6b5e' }}>
             {user.avatar
               ? <img src={user.avatar} alt={displayName} className="h-full w-full object-cover" />
-              : <span>{initials || '?'}</span>
-            }
-            {/* Camera overlay */}
-            <motion.div
-              initial={{ opacity: 0 }} whileHover={{ opacity: 1 }}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-[1.5rem]"
-              style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }}>
+              : <span>{initials || '?'}</span>}
+            <motion.div initial={{ opacity: 0 }} whileHover={{ opacity: 1 }}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ background: 'rgba(0,0,0,0.5)' }}>
               {uploading
                 ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                : <Camera size={18} color="white" />
-              }
+                : <Camera size={18} color="white" />}
               <span className="text-[9px] font-bold text-white">Change</span>
             </motion.div>
           </motion.button>
-          {/* Camera badge */}
-          <button type="button" onClick={() => fileInputRef.current?.click()}
-            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#6fe8d6] shadow-md">
-            <Camera size={13} color="#1a1a1a" strokeWidth={2.5} />
+          <button type="button" onClick={() => fileInputRef.current?.click()} aria-label="Change profile photo"
+            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full"
+            style={{ background: '#6fe8d6', border: '2px solid var(--card)' }}>
+            <Camera size={13} color="#0b2724" strokeWidth={2.5} />
           </button>
         </div>
 
-        {/* Name block */}
-        <div className="text-center lg:text-left pb-1">
-          <h1 className="text-xl font-black text-[var(--text-primary)] leading-tight">{displayName}</h1>
-          <p className="text-sm text-[var(--text-secondary)]">{user.email || 'no-email@badepay.app'}</p>
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
-            style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)' }}>
-            <div className="h-1.5 w-1.5 rounded-full bg-[#10B981]" style={{ boxShadow: '0 0 6px rgba(16,185,129,0.8)' }} />
-            <span className="text-xs font-bold text-[#10B981]">KYC Tier {kycTier}</span>
-          </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl font-black leading-tight" style={{ color: 'var(--text-primary)' }}>{displayName}</h1>
+          <p className="truncate text-sm" style={{ color: 'var(--text-secondary)' }}>{user.email || 'no-email@badepay.app'}</p>
+          <span className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold"
+            style={{ background: 'var(--accent-bg-hover)', color: 'var(--success-text)' }}>
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--success-text)' }} />
+            KYC Tier {kycTier}
+          </span>
         </div>
-      </div>
+
+        <Link href="/profile/edit"
+          className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold transition-colors hover:bg-[var(--surface-secondary)]"
+          style={{ border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+          Edit profile
+        </Link>
+      </section>
 
       {/* ── Balance card ── */}
       <div className="mb-6">
@@ -230,11 +208,11 @@ export default function ProfilePage() {
       </div>
 
       {/* ── Stats strip ── */}
-      <div className="grid grid-cols-3 gap-px mb-6 overflow-hidden rounded-2xl"
-        style={{ background: 'var(--border)' }}>
+      <div className="grid grid-cols-2 gap-px mb-6 overflow-hidden rounded-2xl"
+        style={{ background: 'var(--border)', border: '1px solid var(--border)' }}>
         {[
-          { label: 'Tier', value: String(kycTier), color: '#6fe8d6' },
-          { label: 'Cards', value: String(activeCards), color: '#10B981' },
+          { label: 'KYC tier', value: String(kycTier), color: 'var(--accent-text)' },
+          { label: 'Cards', value: String(activeCards), color: 'var(--success-text)' },
         ].map(({ label, value, color }) => (
           <div key={label} className="flex flex-col items-center gap-0.5 py-4"
             style={{ background: 'var(--card)' }}>
@@ -337,7 +315,7 @@ function NavRow({ href, icon: Icon, label, sub, badge }: {
   badge?: string | { text: string; color: string };
 }) {
   const badgeText = typeof badge === 'string' ? badge : badge?.text;
-  const badgeColor = typeof badge === 'string' ? '#6fe8d6' : badge?.color;
+  const badgeColor = typeof badge === 'string' ? 'var(--accent-text)' : badge?.color;
 
   return (
     <Link href={href}
@@ -351,7 +329,7 @@ function NavRow({ href, icon: Icon, label, sub, badge }: {
           <p className="text-sm font-semibold text-[var(--text-primary)]">{label}</p>
           {badge && (
             <span className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-              style={{ background: `${badgeColor}15`, color: badgeColor }}>{badgeText}</span>
+              style={{ background: 'var(--accent-bg-hover)', color: badgeColor }}>{badgeText}</span>
           )}
         </div>
         <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">{sub}</p>
@@ -377,7 +355,7 @@ function ToggleRow({ icon: Icon, label, sub, on, onToggle }: {
       <button type="button" role="switch" aria-checked={on} onClick={onToggle}
         className="relative shrink-0 h-6 w-11 rounded-full transition-all duration-300"
         style={{ background: on ? '#6fe8d6' : 'var(--surface-tertiary)', boxShadow: on ? '0 0 10px rgba(111,232,214,0.3)' : 'none' }}>
-        <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-300"
+        <span className="absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-300"
           style={{ transform: on ? 'translateX(21px)' : 'translateX(2px)' }} />
       </button>
     </div>

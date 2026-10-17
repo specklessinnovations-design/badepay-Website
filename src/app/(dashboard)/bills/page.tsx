@@ -76,7 +76,7 @@ const CATEGORIES: { key: string; label: string; emoji: string; items: ServiceIte
       { icon: Smartphone, label: 'Airtime', sub: 'MTN · Glo · Airtel', color: '#3B82F6', modal: 'airtime' },
       { icon: Wifi, label: 'Data', sub: 'All networks', color: '#14B8A6', modal: 'data' },
       { icon: Wallet, label: 'Betting Wallets', sub: 'Bet9ja · Sporty', color: '#7C6CF0', modal: 'betting' },
-      { icon: Car, label: 'Uber', sub: 'Ride payments', color: '#1C1C1E', modal: 'uber' },
+      { icon: Car, label: 'Uber', sub: 'Ride payments', color: '#64748b', modal: 'uber' },
       { icon: Zap, label: 'Electricity', sub: 'IKEDC · EKEDC', color: '#EF4444', modal: 'electricity' },
       { icon: Coins, label: 'Exchange Rate', sub: 'Live NGN rates', color: '#F59E0B', modal: 'exchange' },
       { icon: Landmark, label: 'Govt & Tax', sub: 'FIRS · LIRS', color: '#1E3A8A', modal: 'tax' },

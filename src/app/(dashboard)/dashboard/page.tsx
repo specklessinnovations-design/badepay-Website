@@ -35,7 +35,7 @@ const SERVICE_CATEGORIES: { key: string; label: string; items: ServiceItem[] }[]
       { label: 'Airtime', icon: Smartphone, href: '/bills?type=airtime', color: '#3B82F6' },
       { label: 'Data', icon: Wifi, href: '/bills?type=data', color: '#14B8A6' },
       { label: 'Betting', icon: Wallet, href: '/bills', color: '#7C6CF0' },
-      { label: 'Uber', icon: Car, href: '/bills', color: '#111827' },
+      { label: 'Uber', icon: Car, href: '/bills', color: '#64748b' },
       { label: 'Electricity', icon: Zap, href: '/bills?type=electricity', color: '#EF4444' },
       { label: 'Exchange', icon: Coins, href: '/insights', color: '#F59E0B' },
       { label: 'Gov & Tax', icon: Landmark, href: '/bills', color: '#1E3A8A' },
@@ -47,7 +47,7 @@ const SERVICE_CATEGORIES: { key: string; label: string; items: ServiceItem[] }[]
     label: 'Travel',
     items: [
       { label: 'BadeTrip', icon: Plane, href: '/bills', color: '#7C6CF0' },
-      { label: 'Uber', icon: Car, href: '/bills', color: '#111827' },
+      { label: 'Uber', icon: Car, href: '/bills', color: '#64748b' },
       { label: 'Bolt', icon: Car, href: '/bills', color: '#22C55E' },
       { label: 'LagRide', icon: Car, href: '/bills', color: '#F4652A' },
       { label: 'Train', icon: Train, href: '/bills', color: '#14B8A6' },
@@ -217,90 +217,68 @@ export default function DashboardHome() {
   return (
     <div className="space-y-0">
 
-      {/* ── Mint Header Banner ──────────────────────────────────────── */}
-      <motion.div
-        {...fadeUp(0)}
-        className="rounded-b-[28px] overflow-hidden relative"
-        style={{ background: 'linear-gradient(135deg, #6fe8d6 0%, #4dd4c0 100%)' }}
-      >
-        {/* Decorative circles */}
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
-        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-[0.07]"
-          style={{ background: 'radial-gradient(circle, rgba(0,0,0,0.1) 0%, transparent 70%)', transform: 'translate(-30%, 30%)' }} />
-
-        <div className="relative z-10 px-4 pt-5 pb-6">
-          {/* Top row: greeting + actions */}
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <p className="text-xs font-semibold tracking-widest uppercase text-black/60">{getGreeting()}</p>
-              <h1 className="text-xl font-black text-black mt-0.5">{formatDisplayName(user.firstName)} 👋</h1>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onClick={() => setIsAiOpen(true)}
-                className="h-9 w-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{ background: 'rgba(0,0,0,0.08)', border: '1.5px solid rgba(0,0,0,0.15)' }}
-                aria-label="Open AI assistant"
-              >
-                <Sparkles size={16} className="text-black" />
-              </button>
-              <Link href="/profile/notifications"
-                className="relative h-9 w-9 rounded-full flex items-center justify-center transition-all hover:scale-105"
-                style={{ background: 'rgba(0,0,0,0.08)', border: '1.5px solid rgba(0,0,0,0.15)' }}
-              >
-                <Bell size={16} className="text-black" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                    style={{ background: '#EF4444' }}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </Link>
-            </div>
+      {/* ── Balance hero: solid deep brand card, white text (readable in light and dark) ── */}
+      <motion.section {...fadeUp(0)} aria-label="Your balance"
+        className="rounded-3xl p-5 lg:p-6" style={{ background: '#0b2724', border: '1px solid rgba(111,232,214,0.18)' }}>
+        {/* Greeting + actions */}
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: '#6fe8d6' }}>{getGreeting()}</p>
+            <h1 className="mt-0.5 text-xl font-black text-white">{formatDisplayName(user.firstName)} 👋</h1>
           </div>
-
-          {/* Balance Card */}
-          <div className="rounded-2xl p-4 mb-5"
-            style={{ background: 'rgba(0,0,0,0.06)', border: '1.5px solid rgba(0,0,0,0.12)', backdropFilter: 'blur(12px)' }}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-black/70">Available Balance</span>
-              <button
-                type="button"
-                onClick={() => setShowBalance(!showBalance)}
-                className="text-black/70 hover:text-black transition-colors"
-              >
-                {showBalance ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-            <div className="text-3xl font-black text-black tracking-tight mb-1">
-              {showBalance ? `₦${displayBalance.toLocaleString()}` : '₦ ••••••'}
-            </div>
-            <p className="text-xs text-black/50 font-medium">Account: {user.accountNumber || '••••••••••'}</p>
-          </div>
-
-          {/* 4 Primary Action Tabs */}
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { Icon: ScanLine, label: 'Scan', href: '/scan' },
-              { Icon: Banknote, label: 'Pay/Receive', href: '/profile/my-qr' },
-              { Icon: Send, label: 'Bills', href: '/bills' },
-              { Icon: Newspaper, label: 'News', href: '/news' },
-            ].map(({ Icon, label, href }) => (
-              <Link key={label} href={href}
-                className="flex flex-col items-center gap-2 transition-transform hover:scale-105 active:scale-95"
-              >
-                <div className="h-14 w-14 rounded-2xl flex items-center justify-center"
-                  style={{ border: '1.5px solid rgba(0,0,0,0.2)', background: 'rgba(0,0,0,0.05)' }}>
-                  <Icon size={24} className="text-black" strokeWidth={2.2} />
-                </div>
-                <span className="text-[12px] font-bold text-black text-center leading-tight">{label}</span>
-              </Link>
-            ))}
+          <div className="flex items-center gap-2.5">
+            <button type="button" onClick={() => setIsAiOpen(true)} aria-label="Open AI assistant"
+              className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-white/20"
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
+              <Sparkles size={17} className="text-white" />
+            </button>
+            <Link href="/profile/notifications" aria-label={unreadCount ? `${unreadCount} unread notifications` : 'Notifications'}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-white/20"
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
+              <Bell size={17} className="text-white" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                  style={{ background: '#EF4444', border: '2px solid #0b2724' }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
           </div>
         </div>
-      </motion.div>
+
+        {/* Balance */}
+        <div className="mb-5 rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>Available balance</span>
+            <button type="button" onClick={() => setShowBalance(!showBalance)} aria-label={showBalance ? 'Hide balance' : 'Show balance'}
+              className="rounded-lg p-1 transition-colors hover:bg-white/10" style={{ color: 'rgba(255,255,255,0.75)' }}>
+              {showBalance ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          <div className="mb-1 text-3xl font-black tracking-tight text-white lg:text-4xl">
+            {showBalance ? `₦${displayBalance.toLocaleString()}` : '₦ ••••••'}
+          </div>
+          <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>Account {user.accountNumber || '••••••••••'}</p>
+        </div>
+
+        {/* Primary actions */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { Icon: ScanLine, label: 'Scan', href: '/scan' },
+            { Icon: Banknote, label: 'Pay/Receive', href: '/profile/my-qr' },
+            { Icon: Send, label: 'Bills', href: '/bills' },
+            { Icon: Newspaper, label: 'News', href: '/news' },
+          ].map(({ Icon, label, href }) => (
+            <Link key={label} href={href} className="group flex flex-col items-center gap-2">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl transition-transform group-active:scale-95"
+                style={{ background: '#6fe8d6' }}>
+                <Icon size={23} strokeWidth={2.2} style={{ color: '#0b2724' }} />
+              </div>
+              <span className="text-center text-[12px] font-bold leading-tight text-white">{label}</span>
+            </Link>
+          ))}
+        </div>
+      </motion.section>
 
       {/* ── White content area ──────────────────────────────────────── */}
       <div className="space-y-5 pt-4">

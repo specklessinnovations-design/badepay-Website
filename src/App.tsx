@@ -308,8 +308,21 @@ function App() {
         </WouterRouter>
         <Toaster
           position="top-right"
+          // Plain toast()/toast.success() calls get a solid, themed card (bpToast renders its own).
           toastOptions={{
-            style: { background: 'transparent', boxShadow: 'none', padding: 0 },
+            style: {
+              background: 'var(--card)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: 14,
+              padding: '10px 14px',
+              fontSize: 14,
+              fontWeight: 500,
+              maxWidth: 380,
+              boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
+            },
+            success: { iconTheme: { primary: '#0d6b5e', secondary: '#ffffff' } },
+            error: { iconTheme: { primary: '#dc2626', secondary: '#ffffff' } },
           }}
           containerStyle={{ top: 20, right: 20 }}
         />

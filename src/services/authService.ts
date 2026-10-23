@@ -80,7 +80,7 @@ function mapBackendUser(raw: any): StoredUser {
     })(),
     createdAt: raw.createdAt || new Date().toISOString(),
     accountNumber: raw.accountNumber || raw.account_number || '',
-    bankName: raw.bankName || 'BadePay Bank',
+    bankName: raw.bankName || 'RCCGPay Bank',
     accountName: raw.accountName || `${raw.firstName || ''} ${raw.lastName || ''}`.trim(),
     balance: Number(raw.balance ?? raw.wallet?.balance ?? 0),
     kycLevel: (raw.kycLevel ?? 0) as 0 | 1 | 2 | 3,
@@ -129,7 +129,7 @@ export function deviceId(): string {
     return 'web-unknown-device';
   }
 }
-const device = () => ({ deviceId: deviceId(), deviceName: 'BadePay Web' });
+const device = () => ({ deviceId: deviceId(), deviceName: 'RCCGPay Web' });
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();

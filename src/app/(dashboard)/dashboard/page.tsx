@@ -486,7 +486,7 @@ export default function DashboardHome() {
                   <Bot size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-black" style={{ color: 'var(--text-primary)' }}>BadePay AI</p>
+                  <p className="text-sm font-black" style={{ color: 'var(--text-primary)' }}>RCCGPay AI</p>
                   <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Ask anything about your wallet</p>
                 </div>
               </div>

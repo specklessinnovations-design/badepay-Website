@@ -43,7 +43,7 @@ function BPToast({ message, type, t }: BPToastProps) {
     >
       <img
         src="/favicon.png"
-        alt="BadePay"
+        alt="RCCGPay"
         style={{ height: '24px', width: '24px', objectFit: 'contain', borderRadius: '6px', flexShrink: 0 }}
       />
 

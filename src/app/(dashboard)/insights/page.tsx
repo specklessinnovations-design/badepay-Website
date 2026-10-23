@@ -183,7 +183,7 @@ export default function InsightsPage() {
             <TrendingUp size={20} style={{ color: '#0b7367' }} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Heads-up from BadePay AI</div>
+            <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Heads-up from RCCGPay AI</div>
             <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
               {cats.length > 0
                 ? `Your top spend category is ${cats[0].label} at ${cats[0].pct}% of total outflow. Set a budget to manage this category.`

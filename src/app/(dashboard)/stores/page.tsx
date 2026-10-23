@@ -34,7 +34,7 @@ export default function StoresListPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-black text-[var(--text-primary)]">Stores</h1>
-          <p className="mt-1 text-sm font-bold text-[var(--text-secondary)]">Shop directly from BadePay merchants</p>
+          <p className="mt-1 text-sm font-bold text-[var(--text-secondary)]">Shop directly from RCCGPay merchants</p>
         </div>
         <div className="h-12 w-12 rounded-2xl flex items-center justify-center accent-icon-wrap">
           <Store size={24} style={{ color: 'var(--accent-text)' }} />

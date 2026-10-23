@@ -108,7 +108,7 @@ export default function PayoutsPage() {
     <div className="mx-auto max-w-2xl space-y-4">
       {settings.paused && (
         <p className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
-          <PauseCircle size={16} /> Payouts are paused by BadePay{settings.paused.reason ? `: ${settings.paused.reason}` : ''}.
+          <PauseCircle size={16} /> Payouts are paused by RCCGPay{settings.paused.reason ? `: ${settings.paused.reason}` : ''}.
         </p>
       )}
       <div className="rounded-3xl p-5" style={card}>

@@ -36,8 +36,8 @@ export function Sidebar() {
     <aside className={`hidden md:flex flex-col bg-[#ffefb3] border-r border-[#013e37]/10 transition-all duration-300 z-40 ${sidebarCollapsed ? 'w-20' : 'w-64'}`}>
       <div className="h-16 flex items-center justify-between px-4 border-b border-[#013e37]/10 bg-[#013e37]">
         <div className="flex items-center gap-3 overflow-hidden">
-          <img src="/logo.png" alt="BadePay" className="w-8 h-8 object-contain rounded-lg bg-[#ffefb3] p-0.5" />
-          {!sidebarCollapsed && <span className="text-[#ffefb3] font-bold text-xl whitespace-nowrap tracking-wide">BadePay</span>}
+          <img src="/logo.png" alt="RCCGPay" className="w-8 h-8 object-contain rounded-lg bg-[#ffefb3] p-0.5" />
+          {!sidebarCollapsed && <span className="text-[#ffefb3] font-bold text-xl whitespace-nowrap tracking-wide">RCCGPay</span>}
         </div>
         <button onClick={toggleSidebar} className="text-[#ffefb3]/70 hover:text-[#ffefb3] p-1 rounded-md hover:bg-white/10 hidden md:block transition-colors">
           {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}

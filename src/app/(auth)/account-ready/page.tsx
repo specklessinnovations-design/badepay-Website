@@ -29,11 +29,11 @@ export default function AccountReadyPage() {
     if (user) void load();
   }, [!!user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const details = va ? `My BadePay account details:\nBank: ${va.bankName}\nAccount Number: ${va.accountNumber}\nAccount Name: ${va.accountName}` : '';
+  const details = va ? `My RCCGPay account details:\nBank: ${va.bankName}\nAccount Number: ${va.accountNumber}\nAccount Name: ${va.accountName}` : '';
   const copy = async () => { if (va) { await navigator.clipboard.writeText(va.accountNumber); bpToast.success('Account number copied'); } };
   const share = async () => {
     try {
-      if (navigator.share) await navigator.share({ title: 'BadePay account details', text: details });
+      if (navigator.share) await navigator.share({ title: 'RCCGPay account details', text: details });
       else { await navigator.clipboard.writeText(details); bpToast.success('Details copied'); }
     } catch { /* share sheet closed */ }
   };
@@ -45,7 +45,7 @@ export default function AccountReadyPage() {
           <Check size={36} strokeWidth={3} color="#081a18" />
         </div>
         <p className="mt-6 text-[11px] uppercase tracking-[0.22em]" style={{ color: '#0b7367' }}>KYC level {user?.kycLevel ?? 0}</p>
-        <h1 className="mt-3 text-[28px] font-black leading-tight" style={{ color: 'var(--text-primary)' }}>Your BadePay account is ready</h1>
+        <h1 className="mt-3 text-[28px] font-black leading-tight" style={{ color: 'var(--text-primary)' }}>Your RCCGPay account is ready</h1>
         <p className="mt-3 max-w-[320px] text-sm" style={{ color: 'var(--text-secondary)' }}>Fund your wallet by sending money to this account from any Nigerian bank.</p>
       </div>
       <div className="mx-auto mt-10 max-w-md rounded-3xl p-6" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>

@@ -65,7 +65,7 @@ export function PublicPageLayout({ children, title }: PublicPageLayoutProps) {
 
       <nav className="bp-nav">
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <img src="/favicon.png" alt="BadePay" style={{ height: 34, width: "auto", objectFit: "contain" }} />
+          <img src="/favicon.png" alt="RCCGPay" style={{ height: 34, width: "auto", objectFit: "contain" }} />
           <span style={{ fontSize: 21, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>BadePay</span>
         </Link>
         <div className="bp-nav-links" style={{ display: "flex", gap: 30 }}>
@@ -97,7 +97,7 @@ export function PublicPageLayout({ children, title }: PublicPageLayoutProps) {
         <div className="bp-footer-grid">
           <div>
             <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <img src="/favicon.png" alt="BadePay" style={{ height: 28, width: "auto" }} />
+              <img src="/favicon.png" alt="RCCGPay" style={{ height: 28, width: "auto" }} />
               <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>BadePay</span>
             </Link>
             <p style={{ fontSize: 13, lineHeight: 1.7, color: "rgba(255,255,255,0.4)", maxWidth: 320, margin: 0 }}>

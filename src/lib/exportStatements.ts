@@ -37,7 +37,7 @@ export function exportTransactionsPdf(transactions: Transaction[], userName: str
         .join('\n')
     : 'No transactions recorded.';
 
-  const content = `BadePay Statement\nAccount: ${userName}\nGenerated: ${new Date().toLocaleString()}\n\n${lines}`;
+  const content = `RCCGPay Statement\nAccount: ${userName}\nGenerated: ${new Date().toLocaleString()}\n\n${lines}`;
   const blob = new Blob([content], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

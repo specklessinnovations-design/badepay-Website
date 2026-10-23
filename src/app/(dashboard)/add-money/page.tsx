@@ -44,8 +44,8 @@ export default function AddMoneyPage() {
     ensureVirtualAccount('personal').then(setVa).catch((e) => setVaError(e?.message || 'Your account number isn’t ready yet.'));
   }, []);
   const rawAccountNumber = va?.accountNumber || '';
-  const bankLabel = va?.bankName || 'BadePay';
-  const accountName = va?.accountName || (user ? `${user.firstName} ${user.lastName}` : 'BadePay User');
+  const bankLabel = va?.bankName || 'RCCGPay';
+  const accountName = va?.accountName || (user ? `${user.firstName} ${user.lastName}` : 'RCCGPay User');
 
   const formatAccountNumber = (num: string) => {
     const cleaned = num.replace(/\D/g, '');
@@ -69,11 +69,11 @@ export default function AddMoneyPage() {
   };
 
   const handleShare = async () => {
-    const text = `My BadePay account details:\nBank: ${bankLabel}\nAccount Number: ${rawAccountNumber}\nAccount Name: ${accountName}`;
+    const text = `My RCCGPay account details:\nBank: ${bankLabel}\nAccount Number: ${rawAccountNumber}\nAccount Name: ${accountName}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "BadePay Account Details",
+          title: "RCCGPay Account Details",
           text: text,
         });
       } catch (err) {

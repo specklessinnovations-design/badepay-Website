@@ -61,17 +61,17 @@ export function SplashScreen() {
               <div className="absolute inset-0 rounded-2xl bg-[#6FE8D6]/20 blur-xl" />
               <img
                 src="/favicon.png"
-                alt="BadePay"
+                alt="RCCGPay"
                 className="relative h-16 w-16 rounded-2xl object-cover shadow-2xl shadow-[#6FE8D6]/20"
               />
             </div>
 
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-tight text-white">
-                Bade<span className="text-[#6FE8D6]">Pay</span>
+                RCCG<span className="text-[#6FE8D6]">Pay</span>
               </h1>
               <p className="mt-1 text-xs tracking-widest text-white/30 uppercase">
-                Super App
+                powered by BadePay
               </p>
             </div>
 

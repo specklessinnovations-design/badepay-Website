@@ -94,7 +94,7 @@ function FeaturedCard({ article }: { article: Article }) {
       <div className="relative p-4 pb-5">
         <p className="text-white font-bold text-[16px] leading-tight line-clamp-2">{article.title}</p>
         <div className="flex items-center gap-2 mt-2">
-          <span className="text-white/70 text-xs font-medium">{article.author?.name || 'BadePay'}</span>
+          <span className="text-white/70 text-xs font-medium">{article.author?.name || 'RCCGPay'}</span>
           <span className="text-white/40">·</span>
           <span className="text-white/60 text-xs flex items-center gap-1"><Clock size={11} />{timeAgo}</span>
         </div>
@@ -137,7 +137,7 @@ function ArticleCard({ article }: { article: Article }) {
         </div>
         <div className="flex items-center justify-between mt-1.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>{article.author?.name || 'BadePay'}</span>
+            <span className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>{article.author?.name || 'RCCGPay'}</span>
             <span style={{ color: 'var(--text-tertiary)' }}>·</span>
             <span className="text-[11px] flex items-center gap-0.5" style={{ color: 'var(--text-tertiary)' }}>
               <Clock size={10} />{timeAgo}

@@ -172,7 +172,7 @@ export default function ChangePinPage() {
       <div className="flex items-start gap-2 text-xs text-[var(--text-tertiary)] leading-relaxed">
         <Lock size={14} className="text-[#6fe8d6] shrink-0 mt-0.5" />
         <span>
-          Your PIN is hashed with bcrypt and never stored in readable form. BadePay staff will never ask for your PIN.
+          Your PIN is hashed with bcrypt and never stored in readable form. RCCGPay staff will never ask for your PIN.
         </span>
       </div>
     </div>

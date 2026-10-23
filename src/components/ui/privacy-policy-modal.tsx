@@ -150,7 +150,7 @@ export function PrivacyPolicyModal({ open, onAccept, onDecline }: PrivacyPolicyM
                       color: '#ffffff',
                       lineHeight: 1.45,
                     }}>
-                      BadePay needs your consent<br />to handle your personal data:
+                      RCCGPay needs your consent<br />to handle your personal data:
                     </p>
                   </div>
 
@@ -277,7 +277,7 @@ export function PrivacyPolicyModal({ open, onAccept, onDecline }: PrivacyPolicyM
                       paddingRight: '4px',
                     }}>
                       <p style={{ margin: '0 0 8px' }}>
-                        Your personal data will be processed and information from your device may be stored, accessed, and shared with our licensed partners to deliver BadePay services.{' '}
+                        Your personal data will be processed and information from your device may be stored, accessed, and shared with our licensed partners to deliver RCCGPay services.{' '}
                         Read our full <a href="/privacy" target="_blank" rel="noreferrer" style={{ color: '#6fe8d6' }}>Privacy Policy</a>{' '}
                         and <a href="/terms" target="_blank" rel="noreferrer" style={{ color: '#6fe8d6' }}>Terms &amp; Conditions</a>.
                       </p>
@@ -367,7 +367,7 @@ export function PrivacyPolicyModal({ open, onAccept, onDecline }: PrivacyPolicyM
                       color: '#ffffff',
                       lineHeight: 1.45,
                     }}>
-                      How BadePay uses your data
+                      How RCCGPay uses your data
                     </p>
                   </div>
 
@@ -460,7 +460,7 @@ export function PrivacyPolicyModal({ open, onAccept, onDecline }: PrivacyPolicyM
                     borderRadius: '14px',
                   }}>
                     <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.30)', lineHeight: 1.6 }}>
-                      BadePay complies with the{' '}
+                      RCCGPay complies with the{' '}
                       <strong style={{ color: 'rgba(255,255,255,0.50)' }}>Nigeria Data Protection Regulation (NDPR) 2019</strong>{' '}
                       and the CBN Consumer Protection Framework. Declining will cancel account creation.
                     </p>

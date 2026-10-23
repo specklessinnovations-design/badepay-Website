@@ -162,7 +162,7 @@ export const platformDataService = {
 
   /** GET /admin/settings — get platform settings */
   getPlatformSettings: () => ({
-    platformName: 'BadePay',
+    platformName: 'RCCGPay',
     supportEmail: 'support@badepay.com',
     supportPhone: '+234 800 123 4567',
     corporateAddress: '123 Lagos Island, Lagos, Nigeria',

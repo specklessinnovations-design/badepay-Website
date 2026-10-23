@@ -261,7 +261,7 @@ export default function MerchantOnboardingPage() {
                   <Landmark className="h-4 w-4" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-[var(--text-primary)]">BadePay · {accountDisplay}</div>
+                  <div className="text-sm font-medium text-[var(--text-primary)]">RCCGPay · {accountDisplay}</div>
                   <div className="text-xs text-[var(--text-secondary)]">
                     {user?.firstName} {user?.lastName}
                   </div>

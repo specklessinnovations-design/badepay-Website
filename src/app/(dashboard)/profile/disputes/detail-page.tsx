@@ -60,7 +60,7 @@ export default function DisputeDetailPage() {
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Reported {when(d.createdAt)}</p>
         {d.resolutionNote && (
           <p className="mt-3 rounded-xl p-3 text-sm" style={{ background: 'var(--surface-secondary)', color: 'var(--text-primary)' }}>
-            <b>BadePay:</b> {d.resolutionNote}
+            <b>RCCGPay:</b> {d.resolutionNote}
           </p>
         )}
       </div>
@@ -78,7 +78,7 @@ export default function DisputeDetailPage() {
               <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap"
                 style={{ background: m.authorType === 'customer' ? 'rgba(111,232,214,0.12)' : 'var(--surface-secondary)', color: 'var(--text-primary)' }}>
                 {m.body}
-                <p className="mt-1 text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{m.authorType === 'customer' ? 'You' : 'BadePay support'} · {when(m.createdAt)}</p>
+                <p className="mt-1 text-[10px]" style={{ color: 'var(--text-tertiary)' }}>{m.authorType === 'customer' ? 'You' : 'RCCGPay support'} · {when(m.createdAt)}</p>
               </div>
             </li>
           ))}

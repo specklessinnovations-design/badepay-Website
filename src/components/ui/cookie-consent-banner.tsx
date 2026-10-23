@@ -142,7 +142,7 @@ export function CookieConsentBanner() {
                       textTransform: 'uppercase',
                       color: 'rgba(255,255,255,0.35)',
                     }}>
-                      Welcome to BadePay
+                      Welcome to RCCGPay
                     </p>
                     <p style={{
                       margin: 0,
@@ -151,7 +151,7 @@ export function CookieConsentBanner() {
                       color: '#ffffff',
                       lineHeight: 1.45,
                     }}>
-                      BadePay asks for your consent<br />to use your personal data to:
+                      RCCGPay asks for your consent<br />to use your personal data to:
                     </p>
                   </div>
 

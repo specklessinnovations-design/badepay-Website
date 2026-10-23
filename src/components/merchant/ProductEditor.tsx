@@ -237,7 +237,7 @@ export function ProductEditor({ product, defaultType, onClose, onSaved }: {
             <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#6fe8d6]" checked={f.showOnQr} onChange={(e) => setF({ ...f, showOnQr: e.target.checked })} />
             <span>
               <span className="block text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Show when people scan my QR code</span>
-              <span className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>They pick this, then pay in the BadePay app or by card. {type === 'donation' ? 'Giving items are only paid this way.' : ''}</span>
+              <span className="block text-xs" style={{ color: 'var(--text-tertiary)' }}>They pick this, then pay in the RCCGPay app or by card. {type === 'donation' ? 'Giving items are only paid this way.' : ''}</span>
             </span>
           </label>
           {product && (

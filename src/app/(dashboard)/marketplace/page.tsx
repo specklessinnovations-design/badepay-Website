@@ -77,7 +77,7 @@ export default function MarketplacePage() {
       <motion.div {...fadeUp(0)} className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black" style={{ color: 'var(--text-primary)' }}>Marketplace</h1>
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Discover products and stores from BadePay merchants</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Discover products and stores from RCCGPay merchants</p>
         </div>
         <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-[rgba(11,115,103,0.1)]">
           <ShoppingBag size={20} style={{ color: '#0b7367' }} />

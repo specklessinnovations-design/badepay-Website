@@ -12,7 +12,7 @@ export default function AIAssistantPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Hello! I am BadePay AI. Ask me about transfers, bills, savings, QR payments, and account support.',
+      content: 'Hello! I am RCCGPay AI. Ask me about transfers, bills, savings, QR payments, and account support.',
     },
   ]);
   const [draft, setDraft] = useState('');
@@ -43,7 +43,7 @@ export default function AIAssistantPage() {
 
     try {
       const response = await apiClient.post('/ai/chat', { message: text });
-      const answer = response?.data?.response || 'I am here to help with anything related to your BadePay account.';
+      const answer = response?.data?.response || 'I am here to help with anything related to your RCCGPay account.';
       setMessages((prev) => [...prev, { role: 'assistant', content: answer }]);
     } catch {
       setMessages((prev) => [
@@ -61,7 +61,7 @@ export default function AIAssistantPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-secondary)]">AI Assistant</p>
-            <h2 className="mt-2 text-2xl font-black text-[var(--text-primary)]">Talk to your BadePay guide</h2>
+            <h2 className="mt-2 text-2xl font-black text-[var(--text-primary)]">Talk to your RCCGPay guide</h2>
             <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
               Use the chatbot to get quick help with transfers, bills, savings, and everyday wallet actions.
             </p>

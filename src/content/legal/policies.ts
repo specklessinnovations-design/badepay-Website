@@ -2,6 +2,7 @@ import type { LegalSection } from "@/components/legal/LegalDocument";
 
 // ─── Terms & Conditions ───────────────────────────────────────────────────────
 export const TERMS_INTRO = [
+  "RCCGPay is a payment service operated by BadePay. In this document, “BadePay”, “we”, “us” and “our” refer to BadePay as the operator of RCCGPay, and the “Services” include the RCCGPay app and website.",
   "These Terms & Conditions (“Terms”) govern your access to and use of the BadePay application, website, payment services, merchant services, and other products provided by BadePay (“BadePay”, “we”, “us”, or “our”) (collectively, the “Services”).",
   "By creating an account or using BadePay, you agree to comply with these Terms. If you do not agree, you should not use the Services.",
 ];
@@ -157,6 +158,7 @@ export const TERMS_SECTIONS: LegalSection[] = [
 
 // ─── Cookie Policy ────────────────────────────────────────────────────────────
 export const COOKIES_INTRO = [
+  "RCCGPay is a payment service operated by BadePay. In this document, “BadePay”, “we”, “us” and “our” refer to BadePay as the operator of RCCGPay, and the “Services” include the RCCGPay app and website.",
   "This Cookie Policy explains how BadePay uses cookies and similar technologies on the BadePay website and related digital services. It should be read together with our Privacy Policy.",
 ];
 
@@ -222,6 +224,7 @@ export const COOKIES_SECTIONS: LegalSection[] = [
 
 // ─── AML & KYC Policy ─────────────────────────────────────────────────────────
 export const AML_INTRO = [
+  "RCCGPay is a payment service operated by BadePay. In this document, “BadePay”, “we”, “us” and “our” refer to BadePay as the operator of RCCGPay, and the “Services” include the RCCGPay app and website.",
   "BadePay maintains procedures designed to help prevent fraud, money laundering, terrorist financing, identity theft, and other unlawful activities.",
   "Our AML/KYC requirements may include identity verification, transaction monitoring, sanctions screening, and other compliance measures required by applicable laws and our financial/payment partners.",
 ];
@@ -316,6 +319,7 @@ export const AML_SECTIONS: LegalSection[] = [
 
 // ─── Refund & Dispute Policy ──────────────────────────────────────────────────
 export const REFUNDS_INTRO = [
+  "RCCGPay is a payment service operated by BadePay. In this document, “BadePay”, “we”, “us” and “our” refer to BadePay as the operator of RCCGPay, and the “Services” include the RCCGPay app and website.",
   "This policy explains how users and merchants can report payment issues, request refunds where applicable, and raise transaction disputes.",
 ];
 

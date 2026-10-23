@@ -92,7 +92,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
-  const displayName = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'BadePay User';
+  const displayName = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : 'RCCGPay User';
 
   return (
     <div className="pb-24 lg:pb-8">
@@ -285,7 +285,7 @@ export default function ProfilePage() {
       </motion.button>
 
       <p className="text-center text-xs text-[var(--text-tertiary)]">
-        BadePay v1.0 · Licensed under CBN regulation
+        RCCGPay v1.0 · Powered by BadePay
       </p>
     </div>
   );

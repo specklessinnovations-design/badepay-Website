@@ -8,7 +8,7 @@ import {
   Car, Plane, Building2, Coins, Train, CloudSun,
   UtensilsCrossed, ShoppingBag, Package, Globe, ShoppingCart,
   HeartPulse, Wallet, LayoutGrid, Search, MapPin, ChevronDown,
-  Newspaper, ScanLine, Banknote,
+  Newspaper, ScanLine, Banknote, ReceiptText,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -266,7 +266,7 @@ export default function DashboardHome() {
           {[
             { Icon: ScanLine, label: 'Scan', href: '/scan' },
             { Icon: Banknote, label: 'Pay/Receive', href: '/profile/my-qr' },
-            { Icon: Send, label: 'Bills', href: '/bills' },
+            { Icon: ReceiptText, label: 'Bills', href: '/bills' },
             { Icon: Newspaper, label: 'News', href: '/news' },
           ].map(({ Icon, label, href }) => (
             <Link key={label} href={href} className="group flex flex-col items-center gap-2">

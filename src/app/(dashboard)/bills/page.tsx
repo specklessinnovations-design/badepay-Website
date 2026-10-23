@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import {
-  Smartphone, Wifi, Zap, Tv, Receipt, Wallet, Globe,
+  Smartphone, Wifi, Zap, Tv, ReceiptText, Wallet, Globe,
   ChevronRight, Car, Plane, Train, Building2, CloudSun,
   UtensilsCrossed, ShoppingBag, Package, ShoppingCart,
   HeartPulse, Landmark, Coins, LayoutGrid, TrendingUp,
@@ -334,7 +334,7 @@ export default function BillsPage() {
           <p className="mt-2 text-3xl font-black text-[var(--text-primary)]">{formatNGN(userBalance)}</p>
         </div>
         <div className="h-12 w-12 rounded-2xl bg-[#0b7367]/10 flex items-center justify-center border border-[#0b7367]/20">
-          <Receipt size={24} className="text-[#0b7367]" />
+          <ReceiptText size={24} className="text-[#0b7367]" />
         </div>
       </div>
 

@@ -48,7 +48,7 @@ export default function MerchantCustomersPage() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search customers" aria-label="Search customers" className="flex-1 bg-transparent text-sm outline-none" style={{ color: 'var(--text-primary)' }} />
       </label>
       {!shown.length ? (
-        <p className="rounded-2xl p-8 text-center text-sm" style={{ ...card, color: 'var(--text-secondary)' }}>Customers who pay you on RCCGPay appear here.</p>
+        <p className="rounded-2xl p-8 text-center text-sm" style={{ ...card, color: 'var(--text-secondary)' }}>Customers who pay you on BadePay appear here.</p>
       ) : (
         <ul className="overflow-hidden rounded-2xl" style={card}>
           {shown.map((c) => (

@@ -48,7 +48,7 @@ export default function TransferPage() {
     apiClient.get('/beneficiaries').then((r) => setBeneficiaries(r?.data?.beneficiaries ?? [])).catch(() => setBeneficiaries([]));
   }, []);
 
-  const bankName = bankCode === BADEPAY ? 'RCCGPay' : banks.find((b) => b.code === bankCode)?.name ?? '';
+  const bankName = bankCode === BADEPAY ? 'BadePay' : banks.find((b) => b.code === bankCode)?.name ?? '';
   const alreadySaved = beneficiaries.some((b) => b.accountNumber === accountNumber && b.bankCode === bankCode);
   const chargedFee = transferType === 'bank' ? fee : 0;
 
@@ -169,7 +169,7 @@ export default function TransferPage() {
             onClick={() => switchType('badepay')}
             className={`h-8 rounded-lg text-[12px] font-semibold transition-all ${transferType === 'badepay' ? 'bg-[#6fe8d6] text-[#081a18]' : 'text-[var(--text-secondary)]'}`}
           >
-            RCCGPay user
+            BadePay user
           </button>
           <button
             type="button"
@@ -294,7 +294,7 @@ export default function TransferPage() {
                       {name.split(' ').slice(0, 2).map((x) => x[0]).join('').toUpperCase()}
                     </div>
                     <div className="text-[10px] font-medium leading-tight text-center truncate w-full text-[var(--text-primary)]">{name.split(' ')[0]}</div>
-                    <div className="text-[9px] text-[var(--text-tertiary)] truncate w-full text-center">{b.type === 'badepay' ? 'RCCGPay' : b.bankName}</div>
+                    <div className="text-[9px] text-[var(--text-tertiary)] truncate w-full text-center">{b.type === 'badepay' ? 'BadePay' : b.bankName}</div>
                   </button>
                   <button type="button" onClick={() => removeBeneficiary(b)} aria-label={`Remove ${name}`}
                     className="absolute right-1 top-0 hidden h-5 w-5 items-center justify-center rounded-full group-hover:flex focus:flex"

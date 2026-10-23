@@ -40,7 +40,7 @@ export default function FundingCallbackPage() {
   return (
     <div className={box}>
       {state === 'success' && <><CheckCircle2 size={56} style={{ color: '#10b981' }} /><h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Wallet funded</h1>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{amount ? `${naira(amount)} has been added to your RCCGPay wallet.` : 'Your RCCGPay wallet has been credited.'}</p></>}
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{amount ? `${naira(amount)} has been added to your BadePay wallet.` : 'Your BadePay wallet has been credited.'}</p></>}
       {state === 'pending' && <><Clock size={56} style={{ color: '#f59e0b' }} /><h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Payment processing</h1>
         <p className="max-w-xs text-sm" style={{ color: 'var(--text-secondary)' }}>Your bank hasn’t confirmed this payment yet. Your wallet is credited automatically as soon as it does.</p></>}
       {state === 'failed' && <><XCircle size={56} style={{ color: '#ef4444' }} /><h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Payment not completed</h1>

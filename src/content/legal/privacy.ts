@@ -1,7 +1,6 @@
 import type { LegalSection } from "@/components/legal/LegalDocument";
 
 export const PRIVACY_INTRO = [
-  "RCCGPay is a payment service operated by BadePay. In this document, “BadePay”, “we”, “us” and “our” refer to BadePay as the operator of RCCGPay, and the “Services” include the RCCGPay app and website.",
   "BadePay (“BadePay”, “we”, “us”, or “our”) is committed to protecting the privacy and security of your personal information. This Privacy Policy explains how we collect, use, disclose, store, and protect your information when you access or use the BadePay mobile application, website, payment services, and related products and services (collectively, the “Services”).",
   "By accessing or using BadePay, you acknowledge that you have read and understood this Privacy Policy.",
 ];

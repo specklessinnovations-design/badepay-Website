@@ -42,7 +42,7 @@ export default function VerifyBvnPage() {
       const res = await apiClient.post('/kyc/bvn', { bvn, dateOfBirth });
       await initializeSession();
       if (res?.data?.submission?.status === 'approved') {
-        bpToast.success('BVN verified. Welcome to RCCGPay');
+        bpToast.success('BVN verified. Welcome to BadePay');
         done();
       } else {
         bpToast.success(res?.message || 'Thanks, your BVN is being reviewed.');
@@ -92,7 +92,7 @@ export default function VerifyBvnPage() {
           <>
             <h1 className="mt-6 text-[28px] font-black leading-tight" style={{ color: 'var(--text-primary)' }}>We're checking your details</h1>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-              Your BVN needs a quick manual review. This usually takes a few hours. We'll notify you as soon as you can start using RCCGPay.
+              Your BVN needs a quick manual review. This usually takes a few hours. We'll notify you as soon as you can start using BadePay.
             </p>
             <button type="button" onClick={checkAgain} disabled={checking}
               className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold disabled:opacity-50"
@@ -104,7 +104,7 @@ export default function VerifyBvnPage() {
           <form onSubmit={submit}>
             <h1 className="mt-6 text-[28px] font-black leading-tight" style={{ color: 'var(--text-primary)' }}>Verify your identity</h1>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-              Hi {user.firstName}, enter your BVN to start using RCCGPay. It keeps your money safe and gets you your own bank account number.
+              Hi {user.firstName}, enter your BVN to start using BadePay. It keeps your money safe and gets you your own bank account number.
             </p>
             <label className="mt-8 block text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-tertiary)' }} htmlFor="bvn">Bank Verification Number (BVN)</label>
             <input id="bvn" inputMode="numeric" autoComplete="off" maxLength={11} placeholder="11 digits" value={bvn}
@@ -124,7 +124,7 @@ export default function VerifyBvnPage() {
             <p className="mt-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>As registered with your bank.</p>
             {dobError && <p className="mt-2 text-sm text-red-500">{dobError}</p>}
             <p className="mt-8 rounded-2xl p-4 text-xs leading-relaxed" style={{ background: 'var(--surface-secondary)', color: 'var(--text-secondary)' }}>
-              Your BVN is checked with a licensed identity provider. RCCGPay never stores the full number and it never gives us access to your bank account.
+              Your BVN is checked with a licensed identity provider. BadePay never stores the full number and it never gives us access to your bank account.
             </p>
             <button type="submit" disabled={submitting || bvn.length !== 11 || !dateOfBirth}
               className="mt-4 w-full rounded-2xl py-3.5 text-sm font-black disabled:opacity-50" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>

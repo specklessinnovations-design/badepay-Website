@@ -311,7 +311,7 @@ export default function ScanPayPage() {
                 {loading ? 'Reading QR code…' : 'Hold steady'}
               </div>
               <p className="mt-2 text-white/60 text-sm">
-                Point your camera at a RCCGPay personal or merchant QR code.
+                Point your camera at a BadePay personal or merchant QR code.
               </p>
             </div>
 

@@ -6,15 +6,15 @@
 
 import { ADMIN_BASE, isAdminPath } from "@/lib/adminPaths";
 
-export const SITE_NAME = "RCCGPay";
+export const SITE_NAME = "BadePay";
 export const SITE_URL = ((import.meta.env.VITE_SITE_URL as string | undefined) || "https://www.badepay.com").replace(/\/$/, "");
 export const OG_IMAGE = `${SITE_URL}/og-image.png`;
-export const OG_IMAGE_ALT = "RCCGPay — Scan. Pay. Done. Fast, secure QR payments for Nigeria.";
+export const OG_IMAGE_ALT = "BadePay — Scan. Pay. Done. Fast, secure QR payments for Nigeria.";
 export const TWITTER_HANDLE = "@badepay";
 export const THEME_COLOR = "#0e0e0e";
 
 const DEFAULT_DESCRIPTION =
-  "RCCGPay is Nigeria's fast, secure QR payment platform. Scan a QR code and pay in naira, send money, pay bills, and accept payments as a merchant — no POS machine needed.";
+  "BadePay is Nigeria's fast, secure QR payment platform. Scan a QR code and pay in naira, send money, pay bills, and accept payments as a merchant — no POS machine needed.";
 
 export interface PageSeo {
   /** Page name, shown first in the browser tab: "<title> | BadePay". */
@@ -26,28 +26,28 @@ export interface PageSeo {
   rawTitle?: boolean;
 }
 
-const PRIVATE_DESCRIPTION = "Sign in to your RCCGPay account to manage payments, transfers, and more.";
+const PRIVATE_DESCRIPTION = "Sign in to your BadePay account to manage payments, transfers, and more.";
 const priv = (title: string): PageSeo => ({ title, description: PRIVATE_DESCRIPTION, noindex: true });
 /** A public page that search engines may index. */
 const pub = (title: string, description: string): PageSeo => ({ title, description });
 
 export const PAGE_SEO: Record<string, PageSeo> = {
   "/": {
-    title: "RCCGPay — Fast, Secure QR Payments in Nigeria",
+    title: "BadePay — Fast, Secure QR Payments in Nigeria",
     rawTitle: true,
     description: DEFAULT_DESCRIPTION,
   },
 
   // Public pages
-  "/contact": { title: "Contact Us", description: "Get in touch with RCCGPay for account support, payment issues, merchant enquiries, privacy requests, and partnerships. Email hello@badepay.com or visit us in Lekki Phase 1, Lagos." },
-  "/legal": { title: "Legal", description: "Access RCCGPay's legal terms, policies, and notices — Terms & Conditions, Privacy Policy, Cookie Policy, AML & KYC Policy, and Refund & Dispute Policy." },
-  "/privacy": { title: "Privacy Policy", description: "Learn how RCCGPay collects, uses, shares, stores, and protects your personal information, and the privacy rights available to you under Nigerian law." },
-  "/terms": { title: "Terms & Conditions", description: "The Terms & Conditions governing your use of the RCCGPay app, website, QR payments, and merchant services." },
-  "/cookies": { title: "Cookie Policy", description: "How RCCGPay uses cookies and similar technologies on its website and digital services, and how you can manage your choices." },
-  "/aml-kyc": { title: "AML & KYC Policy", description: "RCCGPay's Anti-Money Laundering and Know Your Customer procedures — identity verification, transaction monitoring, and sanctions screening." },
-  "/refunds": { title: "Refund & Dispute Policy", description: "How to report a payment issue, request a refund, or raise a transaction dispute with RCCGPay." },
-  "/login": { title: "Log In", description: "Log in to your RCCGPay account to scan and pay, send money, pay bills, and manage your wallet." },
-  "/register": { title: "Create Account", description: "Create a free RCCGPay account in minutes. Pay with QR codes, send money, and accept payments for your business across Nigeria." },
+  "/contact": { title: "Contact Us", description: "Get in touch with BadePay for account support, payment issues, merchant enquiries, privacy requests, and partnerships. Email hello@badepay.com or visit us in Lekki Phase 1, Lagos." },
+  "/legal": { title: "Legal", description: "Access BadePay's legal terms, policies, and notices — Terms & Conditions, Privacy Policy, Cookie Policy, AML & KYC Policy, and Refund & Dispute Policy." },
+  "/privacy": { title: "Privacy Policy", description: "Learn how BadePay collects, uses, shares, stores, and protects your personal information, and the privacy rights available to you under Nigerian law." },
+  "/terms": { title: "Terms & Conditions", description: "The Terms & Conditions governing your use of the BadePay app, website, QR payments, and merchant services." },
+  "/cookies": { title: "Cookie Policy", description: "How BadePay uses cookies and similar technologies on its website and digital services, and how you can manage your choices." },
+  "/aml-kyc": { title: "AML & KYC Policy", description: "BadePay's Anti-Money Laundering and Know Your Customer procedures — identity verification, transaction monitoring, and sanctions screening." },
+  "/refunds": { title: "Refund & Dispute Policy", description: "How to report a payment issue, request a refund, or raise a transaction dispute with BadePay." },
+  "/login": { title: "Log In", description: "Log in to your BadePay account to scan and pay, send money, pay bills, and manage your wallet." },
+  "/register": { title: "Create Account", description: "Create a free BadePay account in minutes. Pay with QR codes, send money, and accept payments for your business across Nigeria." },
 
   // Auth flow (not useful in search results)
   "/forgot-password": priv("Forgot Password"),
@@ -160,7 +160,7 @@ export function getPageSeo(pathname: string): PageSeo {
   const store = path.match(/^\/store\/([^/]+)$/);
   if (store) {
     const name = titleCase(store[1]);
-    return { title: `${name} Store`, description: `Shop from ${name} and pay securely with RCCGPay — fast QR and card payments in naira.` };
+    return { title: `${name} Store`, description: `Shop from ${name} and pay securely with BadePay — fast QR and card payments in naira.` };
   }
   if (/^\/admin\/users\/[^/]+$/.test(path)) return priv("User Details · Admin");
   if (/^\/admin\/merchants\/[^/]+$/.test(path)) return priv("Merchant Details · Admin");

@@ -125,7 +125,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Brand row */}
         <div className="relative z-10 flex-shrink-0 px-8 xl:px-12 pt-7">
           <Link href="/" className="group inline-flex items-center gap-3">
-            <img src="/favicon.png" alt="RCCGPay" className="h-14 w-auto object-contain transition-all duration-300 group-hover:scale-105" style={{ filter: 'drop-shadow(0 0 16px rgba(111,232,214,0.55))' }} />
+            <img src="/favicon.png" alt="BadePay" className="h-14 w-auto object-contain transition-all duration-300 group-hover:scale-105" style={{ filter: 'drop-shadow(0 0 16px rgba(111,232,214,0.55))' }} />
           </Link>
         </div>
 
@@ -165,7 +165,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Footer */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
           className="relative z-10 flex-shrink-0 px-8 xl:px-12 pb-5 flex items-center justify-between">
-          <p className="text-[11px] text-[#404040]">© 2026 RCCGPay Inc.</p>
+          <p className="text-[11px] text-[#404040]">© 2026 BadePay Inc.</p>
           <div className="flex gap-4">
             {[['Privacy','/privacy'],['Terms','/terms'],['Legal','/legal'],['Contact','/contact']].map(([l, href]) => (
               <Link key={l} href={href} className="text-[11px] text-[#404040] hover:text-[#6fe8d6] transition-colors">{l}</Link>
@@ -180,7 +180,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="flex flex-1 flex-col items-center justify-center p-5 md:p-8 min-h-full">
           {/* Mobile brand */}
           <div className="lg:hidden mb-7 flex items-center gap-3">
-            <img src="/favicon.png" alt="RCCGPay" className="h-8 w-auto object-contain" />
+            <img src="/favicon.png" alt="BadePay" className="h-8 w-auto object-contain" />
           </div>
           <div className="w-full max-w-[400px]">{children}</div>
         </div>

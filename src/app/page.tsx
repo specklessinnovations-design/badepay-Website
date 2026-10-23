@@ -115,7 +115,7 @@ function PhoneScreen({ stage }: { stage: "scan" | "confirm" | "success" }) {
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: 1 }}>RCCGPay</span>
+        <span style={{ color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: 1 }}>BadePay</span>
         <div style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <img src="/favicon.png" alt="logo" style={{ width: 18, height: 18, objectFit: "contain" }} />
         </div>
@@ -585,8 +585,8 @@ export default function LandingPage() {
 
           <nav className="hero-nav" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 48px", borderBottom: "1px solid rgba(255,255,255,0.05)", position: "relative", zIndex: 100, flexShrink: 0 }}>
             <div style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? "translateX(0)" : "translateX(-16px)", transition: "all 0.7s ease", display: "flex", alignItems: "center", gap: 12 }}>
-              <img src="/favicon.png" alt="RCCGPay" style={{ height: 40, width: "auto", objectFit: "contain" }} />
-              <span style={{ fontSize: 24, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>RCCGPay</span>
+              <img src="/favicon.png" alt="BadePay" style={{ height: 40, width: "auto", objectFit: "contain" }} />
+              <span style={{ fontSize: 24, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>BadePay</span>
             </div>
             <div className="desktop-nav-links" style={{ display: "flex", gap: 32, opacity: heroLoaded ? 1 : 0, transition: "opacity 0.7s ease 0.15s" }}>
               {SECTIONS.slice(1).map(s => (
@@ -651,7 +651,7 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div style={{ background: "#fff", padding: 5, borderRadius: 8, border: "1.5px solid #f0f0f0" }}><QRCodeSVG size={150} /></div>
-                  <div style={{ textAlign: "center" }}><p style={{ fontSize: 7, fontWeight: 700, color: "#888", letterSpacing: 3 }}>SCAN TO PAY WITH</p><p style={{ fontSize: 11, fontWeight: 600, color: "#1a1a1a", letterSpacing: 2 }}>RCCGPay</p></div>
+                  <div style={{ textAlign: "center" }}><p style={{ fontSize: 7, fontWeight: 700, color: "#888", letterSpacing: 3 }}>SCAN TO PAY WITH</p><p style={{ fontSize: 11, fontWeight: 600, color: "#1a1a1a", letterSpacing: 2 }}>BadePay</p></div>
                 </div>
               </SectionReveal>
 
@@ -693,7 +693,7 @@ export default function LandingPage() {
                   <p style={{ fontSize: 10, fontWeight: 800, color: "#bbb", letterSpacing: 3 }}>ABOUT BADEPAY</p>
                 </div>
                 <h2 style={{ fontSize: "clamp(32px,4vw,64px)", fontWeight: 300, lineHeight: 1.1, color: "#1a1a1a", marginBottom: 24 }}>Nigeria's Simplest Way to Accept Payments</h2>
-                <p style={{ fontSize: 18, color: "#555", fontWeight: 300, lineHeight: 1.85, marginBottom: 18 }}>RCCGPay helps Nigerian businesses accept cashless payments with nothing but a QR code — no POS terminal required.</p>
+                <p style={{ fontSize: 18, color: "#555", fontWeight: 300, lineHeight: 1.85, marginBottom: 18 }}>BadePay helps Nigerian businesses accept cashless payments with nothing but a QR code — no POS terminal required.</p>
                 <p style={{ fontSize: 14, color: "#999", fontWeight: 300, lineHeight: 1.9 }}>From Balogun Market to Victoria Island boutiques — instant naira settlements, zero hardware costs. Bank-grade encryption ensures every transaction is secure and seamless.</p>
               </div>
             </SectionReveal>
@@ -778,7 +778,7 @@ export default function LandingPage() {
                     {/* Flow diagram */}
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       {[
-                        { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6fe8d6" strokeWidth="2" strokeLinecap="round"><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18" /></svg>, label: "Customer opens RCCGPay app", sub: "Any Nigerian smartphone" },
+                        { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6fe8d6" strokeWidth="2" strokeLinecap="round"><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18" /></svg>, label: "Customer opens BadePay app", sub: "Any Nigerian smartphone" },
                         { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6fe8d6" strokeWidth="2" strokeLinecap="round"><path d="M3 7h4l2 9 4-12 2 9h4" /></svg>, label: "Scans your merchant QR", sub: "Unique code tied to your account" },
                         { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6fe8d6" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>, label: "Enters amount & confirms", sub: "PIN or biometric auth" },
                         { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6fe8d6" strokeWidth="2" strokeLinecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>, label: "Naira hits your balance", sub: "Instant — under 0.3 seconds" },
@@ -864,7 +864,7 @@ export default function LandingPage() {
                       {
                         icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6fe8d6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>,
                         title: "Works Everywhere",
-                        desc: "Market stall, shop front, events — RCCGPay runs wherever your business is.",
+                        desc: "Market stall, shop front, events — BadePay runs wherever your business is.",
                         badge: "Nationwide",
                         badgeColor: "#6fe8d6",
                       },
@@ -927,7 +927,7 @@ export default function LandingPage() {
             {/* Footer CTA */}
             <SectionReveal sectionId="features" delay={0.38} y={10}>
               <div className="features-bottom" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "14px 48px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontWeight: 300 }}>Join thousands of merchants already using RCCGPay across Nigeria.</p>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontWeight: 300 }}>Join thousands of merchants already using BadePay across Nigeria.</p>
                 <div className="features-bottom-btns" style={{ display: "flex", gap: 10 }}>
                   <Link href="/register"><button className="btn-lime" style={{ padding: "11px 26px", fontSize: 13 }}>Get Started Free</button></Link>
                   <Link href="/contact"><button className="btn-ghost-dark" style={{ padding: "11px 26px", fontSize: 13 }}>Talk to Sales</button></Link>
@@ -946,7 +946,7 @@ export default function LandingPage() {
                 <div style={{ marginBottom: 36 }}>
                   <p style={{ fontSize: 10, fontWeight: 800, color: "#ccc", letterSpacing: 4, marginBottom: 14 }}>INDUSTRIES WE SERVE</p>
                   <h2 style={{ fontSize: "clamp(28px,3.8vw,58px)", fontWeight: 300, lineHeight: 1.1, color: "#1a1a1a", marginBottom: 10 }}>Built for Every Business</h2>
-                  <p style={{ fontSize: 16, color: "#aaa", fontWeight: 300 }}>From Balogun to Abuja — RCCGPay works everywhere.</p>
+                  <p style={{ fontSize: 16, color: "#aaa", fontWeight: 300 }}>From Balogun to Abuja — BadePay works everywhere.</p>
                 </div>
               </SectionReveal>
               {[
@@ -1015,7 +1015,7 @@ export default function LandingPage() {
                 <div className="hiw-line" style={{ position: "absolute", left: 17, top: 0, bottom: 0, width: 2, background: "linear-gradient(to bottom, #6fe8d6, rgba(111,232,214,0.05))", borderRadius: 2, opacity: 0.35 }} />
                 {[
                   { n: 1, title: "Register", desc: "Sign up and complete KYC verification — under 5 minutes.", icon: "📋" },
-                  { n: 2, title: "Get Your QR", desc: "RCCGPay generates a unique QR tied to your merchant account.", icon: "🔲" },
+                  { n: 2, title: "Get Your QR", desc: "BadePay generates a unique QR tied to your merchant account.", icon: "🔲" },
                   { n: 3, title: "Display It", desc: "Print or show your QR digitally at your checkout point.", icon: "🏪" },
                 ].map((s, i) => (
                   <SectionReveal key={i} sectionId="how-it-works" delay={0.18 + i * 0.09} y={18}>
@@ -1040,9 +1040,9 @@ export default function LandingPage() {
               <div className="hiw-right-steps" style={{ display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
                 <div className="hiw-line" style={{ position: "absolute", left: 17, top: 0, bottom: 0, width: 2, background: "linear-gradient(to bottom, #6fe8d6, rgba(111,232,214,0.05))", borderRadius: 2, opacity: 0.35 }} />
                 {[
-                  { n: 4, title: "Customer Scans", desc: "Customer opens RCCGPay app, scans your QR — any Nigerian smartphone.", icon: "📱" },
+                  { n: 4, title: "Customer Scans", desc: "Customer opens BadePay app, scans your QR — any Nigerian smartphone.", icon: "📱" },
                   { n: 5, title: "Confirm Amount", desc: "Customer enters amount and confirms with PIN or biometrics.", icon: "✅" },
-                  { n: 6, title: "You Get Paid", desc: "Instant alert — payment hits your RCCGPay balance immediately.", icon: "💸" },
+                  { n: 6, title: "You Get Paid", desc: "Instant alert — payment hits your BadePay balance immediately.", icon: "💸" },
                 ].map((s, i) => (
                   <SectionReveal key={i} sectionId="how-it-works" delay={0.18 + i * 0.09} y={18}>
                     <div className="hiw-step">
@@ -1174,7 +1174,7 @@ export default function LandingPage() {
                 <div style={{ position: "absolute", right: 0, top: 14, width: 130, height: 148, background: "#fff", borderRadius: 16, padding: 12, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, boxShadow: "0 20px 50px rgba(0,0,0,0.5)", transform: "rotate(6deg)" }}>
                   <p style={{ fontSize: 6, fontWeight: 700, color: "#aaa", letterSpacing: 2 }}>SCAN TO PAY</p>
                   <QRCodeSVG size={82} />
-                  <p style={{ fontSize: 7, fontWeight: 600, color: "#1a1a1a", letterSpacing: 1.5 }}>RCCGPay</p>
+                  <p style={{ fontSize: 7, fontWeight: 600, color: "#1a1a1a", letterSpacing: 1.5 }}>BadePay</p>
                 </div>
                 <div style={{ position: "absolute", right: -8, bottom: 14, background: "rgba(10,10,10,0.95)", border: "1px solid rgba(111,232,214,0.3)", borderRadius: 12, padding: "8px 11px", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 12px 36px rgba(0,0,0,0.6)" }}>
                   <div style={{ width: 24, height: 24, background: "#6fe8d6", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="11" height="11" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></div>
@@ -1186,9 +1186,9 @@ export default function LandingPage() {
           <SectionReveal sectionId="cta" delay={0.48} y={12}>
             <div className="cta-footer" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "20px 48px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, maxWidth: 1640, margin: "0 auto", width: "100%" }}>
               <div style={{ display: "flex", alignItems: "center" }}>
-                <img src="/favicon.png" alt="RCCGPay" style={{ height: 30, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+                <img src="/favicon.png" alt="BadePay" style={{ height: 30, width: "auto", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
               </div>
-              <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 10, fontWeight: 300 }}>© 2026 RCCGPay. Nigeria's QR Payment Leader.</p>
+              <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 10, fontWeight: 300 }}>© 2026 BadePay. Nigeria's QR Payment Leader.</p>
               <div className="cta-footer-links" style={{ display: "flex", gap: 20 }}>
                 <Link href="/contact" className="nav-a" style={{ fontSize: 11 }}>Contact</Link>
                 <Link href="/privacy" className="nav-a" style={{ fontSize: 11 }}>Privacy</Link>

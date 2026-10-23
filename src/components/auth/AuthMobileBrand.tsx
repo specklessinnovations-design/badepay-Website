@@ -12,7 +12,7 @@ export function AuthMobileBrand() {
         >
           <span className="text-2xl font-bold text-[#1a1a1a]">B</span>
         </div>
-        <span className="text-2xl font-light tracking-[0.12em] text-[var(--text-primary)]">RCCGPay</span>
+        <span className="text-2xl font-light tracking-[0.12em] text-[var(--text-primary)]">BadePay</span>
       </Link>
     </div>
   );

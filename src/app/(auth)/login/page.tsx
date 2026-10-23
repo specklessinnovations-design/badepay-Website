@@ -118,7 +118,7 @@ function LoginForm() {
       <div className="mb-7">
         <h1 className="text-3xl font-black tracking-tight text-[var(--text-primary)] mb-1.5">Welcome back</h1>
         <p className="text-[var(--text-secondary)] text-sm">
-          {accountType === 'merchant' ? 'Sign in to your merchant portal' : 'Sign in to your RCCGPay account'}
+          {accountType === 'merchant' ? 'Sign in to your merchant portal' : 'Sign in to your BadePay account'}
         </p>
       </div>
 
@@ -240,7 +240,7 @@ function LoginForm() {
       )}
 
       <p className="mt-7 text-center text-sm text-[var(--text-secondary)]">
-        New to RCCGPay?{' '}
+        New to BadePay?{' '}
         <Link
           href={accountType === 'merchant' ? '/register?role=merchant' : '/register'}
           className="font-bold transition-colors"

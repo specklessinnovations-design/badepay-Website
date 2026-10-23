@@ -55,7 +55,7 @@ export function PersonalSidebar() {
         <Link href="/dashboard" className="flex items-center gap-3 mb-5">
           {/* Icon + name as text, so the wordmark stays readable in dark mode */}
           <img src="/favicon.png" alt="" className="h-9 w-9 rounded-lg object-contain" />
-          <span className="text-lg font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>RCCGPay</span>
+          <span className="text-lg font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>BadePay</span>
         </Link>
 
         {user && (
@@ -70,7 +70,7 @@ export function PersonalSidebar() {
                 {formatDisplayName(user.firstName, user.lastName)}
               </p>
               <p className="text-xs font-medium mt-0.5 truncate" style={{ color: 'var(--text-tertiary)' }}>
-                {user.accountNumber ? `•••• ${user.accountNumber.slice(-4)}` : 'RCCGPay account'}
+                {user.accountNumber ? `•••• ${user.accountNumber.slice(-4)}` : 'BadePay account'}
               </p>
             </div>
             {/* Online indicator */}

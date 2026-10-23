@@ -51,7 +51,7 @@ export default function TransactionSuccessPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const typeLabel = type === 'bank' ? 'Bank Transfer' : type === 'bill' ? 'Bill Payment' : type === 'scan' ? 'QR Payment' : 'RCCGPay Transfer';
+  const typeLabel = type === 'bank' ? 'Bank Transfer' : type === 'bill' ? 'Bill Payment' : type === 'scan' ? 'QR Payment' : 'BadePay Transfer';
 
   const details = [
     { label: 'Recipient', value: recipient, show: !!recipient },

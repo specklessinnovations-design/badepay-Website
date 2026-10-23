@@ -180,7 +180,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
 
   const goToDetails = () => {
     if (!isAuthenticated) {
-      toast('Log in to your RCCGPay account to check out');
+      toast('Log in to your BadePay account to check out');
       navigate(`/login?next=${encodeURIComponent(`/store/${slug}`)}`);
       return;
     }
@@ -323,7 +323,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
             <h1 className="truncate text-xl font-black leading-tight" style={{ color: 'var(--text-primary)' }}>{storeName}</h1>
             {storeDesc && <p className="mt-0.5 line-clamp-2 text-sm" style={{ color: 'var(--text-secondary)' }}>{storeDesc}</p>}
             <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              {storeProducts.length} {storeProducts.length === 1 ? 'item' : 'items'} · Pay securely with RCCGPay
+              {storeProducts.length} {storeProducts.length === 1 ? 'item' : 'items'} · Pay securely with BadePay
             </p>
           </div>
         </div>
@@ -626,7 +626,7 @@ export default function CustomerStore({ slug }: CustomerStoreProps) {
                   Choose Payment Source
                 </h3>
                 {[
-                  { id: 'wallet' as const, icon: Wallet, label: 'RCCGPay Wallet', desc: `Balance ${formatNGN(Number(user?.balance ?? 0))}`, color: 'var(--accent-text)' },
+                  { id: 'wallet' as const, icon: Wallet, label: 'BadePay Wallet', desc: `Balance ${formatNGN(Number(user?.balance ?? 0))}`, color: 'var(--accent-text)' },
                   { id: 'card' as const, icon: CreditCard, label: 'Debit card', desc: 'Secure card checkout', color: 'var(--accent-text)' },
                 ].map(opt => (
                   <button key={opt.id} onClick={() => setPaymentMethod(opt.id)}

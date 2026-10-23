@@ -96,13 +96,13 @@ export default function ContactPage() {
               <div>
                 <p style={{ margin: "0 0 4px", color: "#fff", fontSize: 15, fontWeight: 600 }}>Stay safe</p>
                 <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: "rgba(255,255,255,0.55)" }}>
-                  RCCGPay will never ask for your password, PIN, or OTP through an unsolicited email, SMS, or social media message.
+                  BadePay will never ask for your password, PIN, or OTP through an unsolicited email, SMS, or social media message.
                 </p>
               </div>
             </div>
 
             <div className="ct-map">
-              <iframe src={MAP_EMBED} title="RCCGPay office location" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+              <iframe src={MAP_EMBED} title="BadePay office location" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
             </div>
           </div>
 

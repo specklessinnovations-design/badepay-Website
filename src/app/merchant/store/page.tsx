@@ -124,7 +124,7 @@ export default function MerchantStorePage() {
   /** Phone share sheet where the browser has one (WhatsApp, Instagram…); otherwise copy the link. */
   const handleShareLink = async () => {
     const name = storeInfo?.name || user?.merchantProfile?.tradingName || 'my store';
-    const data = { title: name, text: `Shop ${name} on RCCGPay`, url: storeLink() };
+    const data = { title: name, text: `Shop ${name} on BadePay`, url: storeLink() };
     if (typeof navigator.share === 'function' && (!navigator.canShare || navigator.canShare(data))) {
       try { await navigator.share(data); return; } catch (e) { if ((e as Error)?.name === 'AbortError') return; }
     }
@@ -247,7 +247,7 @@ export default function MerchantStorePage() {
               <Package size={40} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
               <p className="text-sm font-semibold mt-3" style={{ color: 'var(--text-primary)' }}>No products added yet</p>
               <p className="text-xs mt-1 max-w-[220px] mx-auto" style={{ color: 'var(--text-secondary)' }}>
-                List items for your customers to purchase directly inside RCCGPay.
+                List items for your customers to purchase directly inside BadePay.
               </p>
             </div>
           ) : (

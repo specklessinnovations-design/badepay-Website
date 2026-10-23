@@ -51,7 +51,7 @@ export function CollectionsByItem() {
           {PERIODS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
         </select>
       </div>
-      <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Paid by scanning your QR code — in the RCCGPay app or by card. Choose an item to see who gave.</p>
+      <p className="mt-1 text-xs" style={{ color: 'var(--text-tertiary)' }}>Paid by scanning your QR code — in the BadePay app or by card. Choose an item to see who gave.</p>
 
       {error ? <p className="mt-4 text-xs text-red-400">{error}</p> : !data ? (
         <p className="mt-4 text-xs" style={{ color: 'var(--text-tertiary)' }}>Loading…</p>
@@ -89,7 +89,7 @@ export function CollectionsByItem() {
                       {p.note && <p className="truncate text-xs" style={{ color: 'var(--text-secondary)' }}>“{p.note}”</p>}
                       <p className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
                         {p.channel === 'card' ? <CreditCard size={11} /> : <Wallet size={11} />}
-                        {p.channel === 'card' ? 'Card / transfer' : 'RCCGPay app'} · {new Date(p.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' })}
+                        {p.channel === 'card' ? 'Card / transfer' : 'BadePay app'} · {new Date(p.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' })}
                       </p>
                     </div>
                     <span className="shrink-0 text-sm font-bold" style={{ color: 'var(--success-text)' }}>{naira(p.amount)}</span>

@@ -57,7 +57,7 @@ export function ConsentModal({ open, onAccept, onDecline, emailAddress, phoneNum
                         Verify & Consent
                       </h2>
                       <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                        RCCGPay · Account Setup
+                        BadePay · Account Setup
                       </p>
                     </div>
                   </div>
@@ -106,7 +106,7 @@ export function ConsentModal({ open, onAccept, onDecline, emailAddress, phoneNum
                         Terms of Service
                       </p>
                       <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                        You agree to our Terms of Service and understand that RCCGPay is operated by BadePay, a regulated payment service.
+                        You agree to our Terms of Service and understand that BadePay is a regulated payment service.
                       </p>
                     </div>
                   </div>
@@ -135,7 +135,7 @@ export function ConsentModal({ open, onAccept, onDecline, emailAddress, phoneNum
                 <div className="rounded-2xl px-4 py-3.5"
                   style={{ background: 'rgba(111,232,214,0.05)', border: '1px solid rgba(111,232,214,0.15)' }}>
                   <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-                    RCCGPay is operated by BadePay, which is regulated by the Central Bank of Nigeria (CBN) and complies with all applicable financial services regulations.
+                    BadePay is regulated by the Central Bank of Nigeria (CBN) and complies with all applicable financial services regulations.
                   </p>
                 </div>
               </div>

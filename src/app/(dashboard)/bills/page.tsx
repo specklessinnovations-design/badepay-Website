@@ -185,7 +185,7 @@ export default function BillsPage() {
   const [bookingRef, setBookingRef] = useState('');
   const [trainRoute, setTrainRoute] = useState(TRAIN_ROUTES[0].route);
   const [hotelNights, setHotelNights] = useState('2');
-  const [esimProvider, setEsimProvider] = useState('RCCGPay eSIM');
+  const [esimProvider, setEsimProvider] = useState('BadePay eSIM');
   const [esimEmail, setEsimEmail] = useState('');
   const [healthcareProvider, setHealthcareProvider] = useState('Hygeia');
   const [patientId, setPatientId] = useState('');
@@ -1153,7 +1153,7 @@ export default function BillsPage() {
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] mb-2">eSIM Provider</label>
             <div className="grid grid-cols-3 gap-2">
-              {['RCCGPay eSIM', 'Airalo', 'Holafly'].map(p => (
+              {['BadePay eSIM', 'Airalo', 'Holafly'].map(p => (
                 <button
                   key={p}
                   onClick={() => setEsimProvider(p)}

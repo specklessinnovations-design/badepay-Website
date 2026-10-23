@@ -64,7 +64,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#6fe8d6] border-t-transparent" />
-          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Loading RCCGPay…</p>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Loading BadePay…</p>
         </div>
       </div>
     );
@@ -101,7 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex h-14 items-center justify-between px-4">
               <Link href="/dashboard" className="flex items-center">
                 <img src="/favicon.png" alt="" className="h-8 w-8 rounded-lg object-contain" />
-                <span className="ml-2 text-base font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>RCCGPay</span>
+                <span className="ml-2 text-base font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>BadePay</span>
               </Link>
               <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors"
                 style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>

@@ -119,7 +119,7 @@ export default function KycPage() {
       </div>
 
       <p className="rounded-2xl p-4 text-xs" style={{ background: 'var(--surface-secondary)', color: 'var(--text-secondary)' }}>
-        Your BVN and NIN are checked with an identity verification provider. RCCGPay never stores the full numbers.
+        Your BVN and NIN are checked with an identity verification provider. BadePay never stores the full numbers.
       </p>
 
       {sheet && createPortal(

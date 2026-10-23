@@ -247,7 +247,7 @@ export default function SecurityCenterPage() {
       </Section>
 
       <Section title="Account">
-        <Row icon={Trash2} title="Close my account" sub="Ask us to close your RCCGPay account" danger onClick={() => { setPassword(''); setCloseReason(''); setCloseSheet(true); }} />
+        <Row icon={Trash2} title="Close my account" sub="Ask us to close your BadePay account" danger onClick={() => { setPassword(''); setCloseReason(''); setCloseSheet(true); }} />
       </Section>
 
       {twoFaSheet && (

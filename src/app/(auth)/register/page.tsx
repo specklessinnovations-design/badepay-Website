@@ -96,7 +96,7 @@ function RegisterForm() {
   const [pilotMessage, setPilotMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    authService.pilot().then(p => { if (p.inviteOnly) setPilotMessage(p.message ?? 'RCCGPay is invite-only during our pilot.'); }).catch(() => {});
+    authService.pilot().then(p => { if (p.inviteOnly) setPilotMessage(p.message ?? 'BadePay is invite-only during our pilot.'); }).catch(() => {});
   }, []);
 
   const [step, setStep] = useState(0);
@@ -255,7 +255,7 @@ function RegisterForm() {
         pin,
         emailVerificationToken: emailProof,
       });
-      bpToast.success(`Welcome to RCCGPay, ${data.firstName.trim()}!`);
+      bpToast.success(`Welcome to BadePay, ${data.firstName.trim()}!`);
       // Remember the business sign-up through BVN verification (the flag in the URL can be lost on redirects).
       try { if (isMerchant) sessionStorage.setItem('bp_then_merchant', '1'); } catch { /* storage blocked */ }
       navigate(isMerchant ? '/verify-bvn?then=merchant' : '/verify-bvn');

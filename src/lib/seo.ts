@@ -108,6 +108,7 @@ export const PAGE_SEO: Record<string, PageSeo> = {
   "/merchant/qr": priv("QR Code · Merchant"),
   "/merchant/settlements": priv("Settlements · Merchant"),
   "/merchant/store": priv("My Store · Merchant"),
+  "/merchant/settings": priv("Store Settings · Merchant"),
   "/merchant/payouts": priv("Payouts · Merchant"),
   "/merchant/customers": priv("Customers · Merchant"),
   "/merchant/analytics": priv("Analytics · Merchant"),

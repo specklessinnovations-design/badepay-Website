@@ -74,6 +74,7 @@ import MerchantPayoutsPage from "@/app/merchant/payouts/page";
 import MerchantCustomersPage from "@/app/merchant/customers/page";
 import MerchantAnalyticsPage from "@/app/merchant/analytics/page";
 import MerchantStorePage from "@/app/merchant/store/page";
+import MerchantSettingsPage from "@/app/merchant/settings/page";
 import MerchantOrdersPage from "@/app/merchant/orders/page";
 import MerchantLayout from "@/app/merchant/layout";
 import CustomerStore from "@/app/store/page";
@@ -268,6 +269,9 @@ function Router() {
       </Route>
       <Route path="/merchant/store">
         <MerchantLayout><MerchantStorePage /></MerchantLayout>
+      </Route>
+      <Route path="/merchant/settings">
+        <MerchantLayout><MerchantSettingsPage /></MerchantLayout>
       </Route>
       <Route path="/merchant/orders">
         <MerchantLayout><MerchantOrdersPage /></MerchantLayout>

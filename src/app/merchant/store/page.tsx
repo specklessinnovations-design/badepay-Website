@@ -2,14 +2,12 @@
 import { Link } from 'wouter';
 import {
   Store, Plus, Trash2, Package, RefreshCw, ExternalLink, Pencil, QrCode, HandHeart,
-  ShoppingBag, Check, ArrowLeft, Sparkles, Copy, Link2, Share2
+  ShoppingBag, Check, ArrowLeft, Copy, Link2, Share2, Settings
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMerchantStoreData } from '@/store/useMerchantStoreData';
 import toast from 'react-hot-toast';
-import { FileUpload } from '@/components/ui/file-upload';
 import { ProductEditor, MerchantProduct, PRODUCT_TYPES, priceLabel, productImage } from '@/components/merchant/ProductEditor';
-import { merchantService } from '@/services/merchantService';
 
 const GRADIENTS = [
   'from-pink-500 to-rose-500',
@@ -30,40 +28,17 @@ export default function MerchantStorePage() {
   const storeProducts = products[merchantId] || [];
   const storeOrders = orders || [];
 
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublished, setIsPublished] = useState(!!storeInfo?.isPublished);
   const [storeSlug, setStoreSlug] = useState(storeInfo?.slug || user?.merchantProfile?.qrSlug || '');
-  const [storeDesc, setStoreDesc] = useState(storeInfo?.description || '');
-  const [logoUrl, setLogoUrl] = useState(storeInfo?.logoUrl || '');
-  const [bannerUrl, setBannerUrl] = useState(storeInfo?.bannerUrl || '');
-  const [uploadsBusy, setUploadsBusy] = useState(0);
   const [editing, setEditing] = useState<{ product: MerchantProduct | null; type?: 'donation' } | null>(null);
   const isGivingOrg = /religious|non-profit|ngo/i.test(user?.merchantProfile?.category ?? '');
 
-  // The store loads after the first render: fill the settings form once it arrives.
   useEffect(() => {
-    if (!storeInfo) return;
-    setStoreDesc(storeInfo.description || '');
-    setLogoUrl(storeInfo.logoUrl || '');
-    setBannerUrl(storeInfo.bannerUrl || '');
-    setIsPublished(!!storeInfo.isPublished);
-  }, [storeInfo?.id, storeInfo?.description, storeInfo?.logoUrl, storeInfo?.bannerUrl, storeInfo?.isPublished]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleSaveSettings = async () => {
-    setIsSaving(true);
-    try {
-      const updated = await merchantService.updateMyStore({ description: storeDesc, logoUrl, bannerUrl });
-      if (!updated) throw new Error('save failed');
-      await fetchStore(merchantId);
-      toast.success('Store settings saved');
-    } catch {
-      toast.error('Could not save your store settings. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    if (storeInfo) setIsPublished(!!storeInfo.isPublished);
+  }, [storeInfo?.isPublished]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeOrders = storeOrders.filter(o => !['completed', 'cancelled'].includes(o.status));
   const completedOrders = storeOrders.filter(o => o.status === 'completed');
@@ -179,6 +154,9 @@ export default function MerchantStorePage() {
         </Link>
         <div className="font-display text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{storeInfo?.name || user?.merchantProfile?.tradingName || user?.merchantProfile?.businessName || 'My store'}</div>
         <div className="flex gap-2 items-center">
+          <Link href="/merchant/settings" className="h-9 px-3 rounded-full flex items-center gap-1 text-xs font-semibold" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+            <Settings size={13} /> Edit store
+          </Link>
           <button onClick={handleRefresh} disabled={isRefreshing} className="h-9 px-3 rounded-full flex items-center gap-1 text-xs font-semibold disabled:opacity-50" style={{ background: 'rgba(111,232,214,0.1)', color: 'var(--accent-text)' }}>
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
@@ -217,12 +195,11 @@ export default function MerchantStorePage() {
 
       {/* Tab navigation */}
       <div className="flex border-b" style={{ borderColor: 'var(--border)' }}>
-        {(['products', 'orders', 'settings'] as const).map(tab => (
+        {(['products', 'orders'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 pb-3 text-center text-sm font-semibold capitalize transition-all border-b-2 ${activeTab === tab ? 'border-[#6fe8d6] text-[var(--accent-text)]' : 'border-transparent text-[var(--text-secondary)]'
             }`}>
             {tab === 'products' && `Products (${storeProducts.length})`}
             {tab === 'orders' && `Orders (${activeOrders.length})`}
-            {tab === 'settings' && 'Settings'}
           </button>
         ))}
       </div>
@@ -390,45 +367,6 @@ export default function MerchantStorePage() {
         </div>
       )}
 
-      {/* Settings tab */}
-      {activeTab === 'settings' && (
-        <div className="space-y-4">
-          {/* Logo and banner side by side (banner gets more room); stacked on phones */}
-          <div
-            className="grid grid-cols-2 gap-4 rounded-2xl p-4"
-            style={{
-              background: 'var(--card)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            <FileUpload
-              kind="store_logo"
-              label="Store logo"
-              shape="square"
-              value={logoUrl}
-              onChange={setLogoUrl}
-              onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))}
-            />
-
-            <FileUpload
-              kind="store_banner"
-              label="Store banner"
-              shape="wide"
-              value={bannerUrl}
-              onChange={setBannerUrl}
-              onBusyChange={(b) => setUploadsBusy((n) => n + (b ? 1 : -1))}
-            />
-          </div>
-
-          <div className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-            <div className="text-xs font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Store Description</div>
-            <textarea value={storeDesc} onChange={e => setStoreDesc(e.target.value)} rows={3} placeholder="Describe your store..." className="w-full rounded-xl px-3 py-2.5 text-sm outline-none resize-none" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
-            <button onClick={handleSaveSettings} disabled={isSaving || uploadsBusy > 0} className="w-full mt-3 rounded-xl py-2.5 text-sm font-black disabled:opacity-60" style={{ background: '#6fe8d6', color: '#1a1a1a' }}>
-              {uploadsBusy > 0 ? 'Uploading…' : isSaving ? 'Saving…' : 'Save Settings'}
-            </button>
-          </div>
-        </div>
-      )}
       {editing && (
         <ProductEditor
           product={editing.product}

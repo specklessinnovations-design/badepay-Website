@@ -12,7 +12,7 @@ export function useMerchantBrand() {
   useEffect(() => {
     if (user?.id && !store) void useMerchantStoreData.getState().fetchStore(user.id);
   }, [user?.id, store]);
-  const name = user?.merchantProfile?.tradingName || user?.merchantProfile?.businessName || store?.name || user?.firstName || 'Merchant';
+  const name = store?.name || user?.merchantProfile?.tradingName || user?.merchantProfile?.businessName || user?.firstName || 'Merchant';
   return { name, logoUrl: store?.logoUrl || undefined };
 }
 

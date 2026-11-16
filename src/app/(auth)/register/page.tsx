@@ -17,10 +17,10 @@ import { getPostAuthPath } from '@/lib/authRouting';
 import { PrivacyPolicyModal } from '@/components/ui/privacy-policy-modal';
 import { ConsentModal } from '@/components/ui/consent-modal';
 
-const STEPS = ['Email', 'Verify', 'Profile', 'Location', 'Secure PIN'];
+const STEPS = ['Email', 'Verify', 'Profile', 'Phone', 'Location', 'Secure PIN'];
 // The email is proven before anything else and the account is created last. The date of birth is
 // not asked here: it's entered with the BVN, checked against the BVN record and saved from it.
-const S = { email: 0, verify: 1, profile: 2, location: 3, pin: 4 } as const;
+const S = { email: 0, verify: 1, profile: 2, phone: 3, location: 4, pin: 5 } as const;
 
 /** Same rules as the backend's password check. */
 const PASSWORD_RULES: { label: string; test: (p: string) => boolean }[] = [
@@ -93,6 +93,8 @@ function RegisterForm() {
   const { register, isLoading: authLoading } = useAuthStore();
   /** Proof the email was verified (from the emailed code); the backend won't create the account without it. */
   const [emailProof, setEmailProof] = useState('');
+  /** Proof the phone number was verified by SMS, and the number it was for. */
+  const [phoneProof, setPhoneProof] = useState({ phone: '', token: '' });
   const [pilotMessage, setPilotMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -149,9 +151,9 @@ function RegisterForm() {
     }
   }, [step]);
 
-  // Resend countdown on the email code step
+  // Resend countdown on the email and phone code steps
   useEffect(() => {
-    if (step === S.verify && resendTimer > 0) {
+    if ((step === S.verify || step === S.phone) && resendTimer > 0) {
       const interval = setInterval(() => setResendTimer(t => t - 1), 1000);
       return () => clearInterval(interval);
     }
@@ -254,6 +256,7 @@ function RegisterForm() {
         location: data.location,
         pin,
         emailVerificationToken: emailProof,
+        phoneVerificationToken: phoneProof.phone === data.phone ? phoneProof.token : undefined,
       });
       bpToast.success(`Welcome to BadePay, ${data.firstName.trim()}!`);
       // Remember the business sign-up through BVN verification (the flag in the URL can be lost on redirects).
@@ -306,7 +309,30 @@ function RegisterForm() {
       const broken = PASSWORD_RULES.find(r => !r.test(data.password));
       if (broken) { setError(`Password needs: ${broken.label.toLowerCase()}`); return; }
       if (data.password !== data.confirmPassword) { setError("Passwords don't match"); return; }
-      setStep(S.location);
+      if (phoneProof.token && phoneProof.phone === data.phone) { setStep(S.location); return; } // already verified
+      setLoading(true);
+      try {
+        await authService.sendPhoneCode(data.phone);
+        setData(p => ({ ...p, otp: ['', '', '', '', '', ''] }));
+        setResendTimer(42);
+        setStep(S.phone);
+      } catch (err: any) {
+        setError(err?.message || 'We could not text that number. Check it and try again.');
+      } finally {
+        setLoading(false);
+      }
+    } else if (step === S.phone) {
+      const code = data.otp.join('');
+      if (code.length !== 6) { setError('Enter all 6 digits'); return; }
+      setLoading(true);
+      try {
+        setPhoneProof({ phone: data.phone, token: await authService.confirmPhone(data.phone, code) });
+        setStep(S.location);
+      } catch (err: any) {
+        setError(err?.message || 'That code didn’t work. Check it or request a new one.');
+      } finally {
+        setLoading(false);
+      }
     } else if (step === S.location) {
       if (!selectedCountry) { setError('Please select a country'); return; }
       if (!selectedState) { setError('Please select a state / region'); return; }
@@ -390,7 +416,7 @@ function RegisterForm() {
       {/* Back link */}
       <div className="mb-6 flex items-center justify-between">
         {step > 0 ? (
-          <button onClick={() => { setError(''); if (step === S.pin) { setPinStep('enter'); setData(p => ({ ...p, pin: '', confirmPin: '' })); } setStep(s => (s === S.profile ? S.email : s - 1)); }}
+          <button onClick={() => { setError(''); if (step === S.pin) { setPinStep('enter'); setData(p => ({ ...p, pin: '', confirmPin: '' })); } setStep(s => (s === S.profile ? S.email : s === S.location ? S.profile : s - 1)); }}
             className="flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-80" style={{ color: 'var(--text-secondary)' }}>
             <ArrowLeft size={15} /> Back
           </button>
@@ -825,6 +851,56 @@ function RegisterForm() {
             </div>
           )}
 
+          {/* ─── Phone code (SMS) ─── */}
+          {step === S.phone && (
+            <div>
+              <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1.5">Verify your phone</h1>
+              <p className="text-sm text-[var(--text-secondary)] mb-6">
+                We texted a 6-digit code to{' '}
+                <span className="font-semibold text-[var(--text-primary)]">{data.phone}</span>
+              </p>
+
+              <div className="flex justify-between gap-2 mb-5" onPaste={handleOtpPaste}>
+                {data.otp.map((digit, i) => (
+                  <input key={i}
+                    ref={el => { otpInputs.current[i] = el; }}
+                    type="text" inputMode="numeric" autoComplete={i === 0 ? 'one-time-code' : 'off'} maxLength={1} value={digit}
+                    onChange={e => handleOtpChange(i, e.target.value)}
+                    onKeyDown={e => handleOtpKeyDown(i, e)}
+                    className="w-12 h-11 flex-shrink-0 text-center text-lg font-black rounded-xl focus:outline-none font-mono transition-all duration-200"
+                    style={{
+                      background: digit ? 'rgba(111,232,214,0.08)' : 'var(--surface-secondary)',
+                      border: `2px solid ${digit ? 'var(--accent-text)' : 'var(--border)'}`,
+                      color: 'var(--text-primary)',
+                    }}
+                    placeholder="·"
+                  />
+                ))}
+              </div>
+
+              <div className="flex items-center justify-center gap-5">
+                <button type="button" disabled={resendTimer > 0}
+                  onClick={async () => {
+                    setResendTimer(42);
+                    try {
+                      await authService.sendPhoneCode(data.phone);
+                      bpToast.success('New code sent to your phone');
+                    } catch {
+                      bpToast.error('Failed to resend code');
+                    }
+                  }}
+                  className="text-sm font-semibold transition-colors"
+                  style={{ color: resendTimer > 0 ? 'var(--text-tertiary)' : 'var(--accent-text)' }}>
+                  {resendTimer > 0 ? `Resend in 0:${resendTimer.toString().padStart(2, '0')}` : 'Resend code'}
+                </button>
+                <button type="button" onClick={() => { setError(''); setStep(S.profile); }}
+                  className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                  Change number
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ─── PIN ─── */}
           {step === S.pin && (
             <div>
@@ -889,7 +965,7 @@ function RegisterForm() {
       {step < S.pin && (
         <div className="mt-8">
           <PremiumButton type="button" fullWidth size="lg" onClick={handleNext} isLoading={isLoading} disabled={isLoading}>
-            {!isLoading && <>{step === S.email ? 'Send code' : step === S.verify ? 'Verify email' : 'Continue'} <ArrowRight size={17} /></>}
+            {!isLoading && <>{step === S.email ? 'Send code' : step === S.verify ? 'Verify email' : step === S.phone ? 'Verify phone' : 'Continue'} <ArrowRight size={17} /></>}
           </PremiumButton>
         </div>
       )}

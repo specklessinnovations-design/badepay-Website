@@ -73,7 +73,7 @@ export function Badge({ tone = 'neutral', children, className }: { tone?: Tone; 
 
 const STATUS_TONE: Record<string, Tone> = {
   success: 'success', successful: 'success', approved: 'success', verified: 'success', active: 'success', executed: 'success',
-  resolved: 'success', completed: 'success', delivered: 'success', paid: 'success', clear: 'success', met: 'success', published: 'success',
+  resolved: 'success', completed: 'success', delivered: 'success', paid: 'success', clear: 'success', met: 'success', published: 'success', live: 'success', scheduled: 'warning',
   pending: 'warning', open: 'warning', review: 'warning', under_review: 'warning', held: 'warning', unverified: 'neutral',
   processing: 'info', queued: 'info', running: 'info', in_progress: 'info', draft: 'neutral',
   failed: 'danger', failure: 'danger', rejected: 'danger', suspended: 'danger', reversed: 'violet', denied: 'danger',

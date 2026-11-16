@@ -34,7 +34,6 @@ const SERVICE_CATEGORIES: { key: string; label: string; items: ServiceItem[] }[]
     items: [
       { label: 'Airtime', icon: Smartphone, href: '/bills?type=airtime', color: '#3B82F6' },
       { label: 'Data', icon: Wifi, href: '/bills?type=data', color: '#14B8A6' },
-      { label: 'Betting', icon: Wallet, href: '/bills', color: '#7C6CF0' },
       { label: 'Uber', icon: Car, href: '/bills', color: '#64748b' },
       { label: 'Electricity', icon: Zap, href: '/bills?type=electricity', color: '#EF4444' },
       { label: 'Exchange', icon: Coins, href: '/insights', color: '#F59E0B' },
@@ -72,7 +71,6 @@ const SERVICE_CATEGORIES: { key: string; label: string; items: ServiceItem[] }[]
     label: 'Shop',
     items: [
       { label: 'Amart', icon: ShoppingBag, href: '/marketplace', color: '#EC4899' },
-      { label: 'Betting', icon: Wallet, href: '/bills', color: '#7C6CF0' },
       { label: 'Amazon', icon: Package, href: '/marketplace', color: '#F59E0B' },
       { label: 'Temu', icon: ShoppingCart, href: '/marketplace', color: '#EF4444' },
       { label: 'Alibaba', icon: Globe, href: '/marketplace', color: '#F97316' },
@@ -96,11 +94,48 @@ const SERVICE_CATEGORIES: { key: string; label: string; items: ServiceItem[] }[]
   },
 ];
 
-const SPECIAL_OFFERS = [
-  { pct: '7% off', title: 'Weekend Hotel Deals', sub: 'Save up to ₦10,000', cta: 'Claim', color: '#7C6CF0' },
-  { pct: '15% off', title: 'Airtime Top-up', sub: 'Save up to ₦2,000', cta: 'Claim', color: '#14B8A6' },
-  { pct: '5% off', title: 'Data Bundles', sub: 'Save up to ₦1,500', cta: 'Claim', color: '#3B82F6' },
-];
+/** Per-app switches set in Admin → Settings → App features. Betting stays off until the backend says otherwise. */
+type AppFeatures = { specialOffers: boolean; newsFeed: boolean; aiAssistant: boolean; weather: boolean; betting: boolean };
+const DEFAULT_FEATURES: AppFeatures = { specialOffers: true, newsFeed: true, aiAssistant: true, weather: true, betting: false };
+/** A "Special Offers" banner managed in Admin → Content → Special offers. */
+type Advert = { id: string; title: string; subtitle: string | null; imageUrl: string; linkUrl: string | null };
+type Forecast = { place: string; temperature: number; code: number; max: number; min: number };
+
+/** The apps' in-app paths that the website has too; anything else falls back to the dashboard. */
+const WEB_PATHS: Record<string, string> = { '/bills': '/bills', '/savings': '/savings', '/marketplace': '/marketplace', '/cards': '/cards', '/add-money': '/add-money', '/transfer': '/transfer', '/insights': '/insights', '/news': '/news' };
+
+function weatherLabel(code: number): string {
+  if (code === 0) return 'Clear';
+  if (code <= 2) return 'Partly cloudy';
+  if (code === 3) return 'Cloudy';
+  if (code === 45 || code === 48) return 'Fog';
+  if (code >= 51 && code <= 67) return 'Rain';
+  if (code >= 80 && code <= 82) return 'Showers';
+  if (code >= 95) return 'Thunderstorm';
+  return 'Mixed';
+}
+
+type GeoHit = { name: string; latitude: number; longitude: number; country_code?: string };
+async function geocode(name: string | undefined): Promise<GeoHit | null> {
+  if (!name) return null;
+  const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${new URLSearchParams({ name, count: '5', language: 'en' })}`).then((r) => r.json());
+  const results: GeoHit[] = geo?.results ?? [];
+  return results.find((r) => r.country_code === 'NG') ?? results[0] ?? null;
+}
+
+/** Today's weather for the registered town (Open-Meteo: free, no key; only the town name / coordinates are sent). */
+async function loadForecast(location: string | null | undefined): Promise<Forecast | null> {
+  // Stored as "City, State, Country": the city, or failing that the state.
+  const [city, state] = (location ?? '').split(',').map((p) => p.trim()).filter(Boolean);
+  const hit = (await geocode(city)) ?? (await geocode(state?.replace(/ State$/, '')));
+  if (!hit) return null;
+  const q = new URLSearchParams({
+    latitude: hit.latitude.toFixed(2), longitude: hit.longitude.toFixed(2), current: 'temperature_2m,weather_code',
+    daily: 'temperature_2m_max,temperature_2m_min', timezone: 'auto', forecast_days: '1',
+  });
+  const d = await fetch(`https://api.open-meteo.com/v1/forecast?${q}`).then((r) => r.json());
+  return { place: hit.name, temperature: Math.round(d.current.temperature_2m), code: d.current.weather_code, max: Math.round(d.daily.temperature_2m_max[0]), min: Math.round(d.daily.temperature_2m_min[0]) };
+}
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 16 },
@@ -143,6 +178,39 @@ export default function DashboardHome() {
   const [aiDraft, setAiDraft] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [features, setFeatures] = useState<AppFeatures>(DEFAULT_FEATURES);
+  const [adverts, setAdverts] = useState<Advert[]>([]);
+  const [forecast, setForecast] = useState<Forecast | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiClient.get('/app-config');
+        const f = { ...DEFAULT_FEATURES, ...(res?.data?.features ?? {}) } as AppFeatures;
+        if (cancelled) return;
+        setFeatures(f);
+        if (f.specialOffers) {
+          const ads = await apiClient.get('/adverts');
+          if (!cancelled) setAdverts(ads?.data?.adverts ?? []);
+        }
+      } catch { /* keep defaults */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!features.weather) return;
+    let cancelled = false;
+    loadForecast(user?.location).then((f) => { if (!cancelled) setForecast(f); }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [features.weather, user?.location]);
+
+  const openAdvert = (ad: Advert) => {
+    if (!ad.linkUrl) return;
+    if (ad.linkUrl.startsWith('https://')) window.open(ad.linkUrl, '_blank', 'noopener');
+    else navigate(WEB_PATHS[ad.linkUrl.split('?')[0]!] ?? '/dashboard');
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -198,11 +266,12 @@ export default function DashboardHome() {
   const handleAiSend = async (message?: string) => {
     const text = (message || aiDraft).trim();
     if (!text) return;
+    const history = aiMessages.slice(1).slice(-12); // the conversation so far, after the greeting
     setAiMessages(prev => [...prev, { role: 'user', content: text }]);
     setAiDraft('');
     setAiLoading(true);
     try {
-      const response = await apiClient.post('/ai/chat', { message: text });
+      const response = await apiClient.post('/ai/chat', { message: text, history });
       const answer = response?.data?.response || 'I can help you with transfers, bills, QR payments, savings, and more.';
       setAiMessages(prev => [...prev, { role: 'assistant', content: answer }]);
     } catch {
@@ -227,11 +296,11 @@ export default function DashboardHome() {
             <h1 className="mt-0.5 text-xl font-black text-white">{formatDisplayName(user.firstName)} 👋</h1>
           </div>
           <div className="flex items-center gap-2.5">
-            <button type="button" onClick={() => setIsAiOpen(true)} aria-label="Open AI assistant"
+            {features.aiAssistant && <button type="button" onClick={() => setIsAiOpen(true)} aria-label="Open AI assistant"
               className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-white/20"
               style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
               <Sparkles size={17} className="text-white" />
-            </button>
+            </button>}
             <Link href="/profile/notifications" aria-label={unreadCount ? `${unreadCount} unread notifications` : 'Notifications'}
               className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-white/20"
               style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}>
@@ -347,48 +416,60 @@ export default function DashboardHome() {
             style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}
           >
             <Bell size={17} style={{ color: '#0b7367' }} className="shrink-0" />
-            <span className="text-[13.5px] flex-1 font-medium" style={{ color: 'var(--text-primary)' }}>
-              {unreadCount > 0 ? `${unreadCount} new notification${unreadCount > 1 ? 's' : ''}` : 'No new notifications'}
-            </span>
-            {unreadCount > 0 && <span className="h-2 w-2 rounded-full shrink-0" style={{ background: '#EF4444' }} />}
+            <span className="text-[13.5px] flex-1 font-medium" style={{ color: 'var(--text-primary)' }}>View all notifications</span>
+            {unreadCount > 0 && (
+              <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: '#EF4444' }}>
+                {unreadCount > 99 ? '99+' : unreadCount} new
+              </span>
+            )}
             <ChevronRight size={16} style={{ color: 'var(--text-tertiary)' }} className="shrink-0" />
           </Link>
         </motion.div>
 
-        {/* Special Offers */}
+        {/* Special Offers (Admin → Content → Special offers) */}
+        {features.specialOffers && adverts.length > 0 && (
         <motion.div {...fadeUp(0.13)}>
-          <div className="px-4 flex items-center justify-between mb-3">
+          <div className="px-4 mb-3">
             <h2 className="text-[17px] font-black" style={{ color: 'var(--text-primary)' }}>Special Offers</h2>
-            <Link href="/activity" className="flex items-center text-[13px] font-medium transition-opacity hover:opacity-70"
-              style={{ color: 'var(--text-secondary)' }}>
-              More <ChevronRight size={14} />
-            </Link>
           </div>
-          <div className="pl-4 flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-            {SPECIAL_OFFERS.map((offer, idx) => (
-              <div key={idx}
-                className="shrink-0 w-[280px] h-[92px] rounded-2xl flex items-center px-4 gap-3 cursor-pointer transition-transform hover:scale-[1.01]"
-                style={{ background: `${offer.color}10`, border: `1.5px solid ${offer.color}25` }}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold" style={{ color: offer.color }}>{offer.pct}</p>
-                  <p className="text-[14px] font-bold leading-tight mt-0.5 truncate" style={{ color: 'var(--text-primary)' }}>{offer.title}</p>
-                  <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>{offer.sub}</p>
+          <div className="px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-1" style={{ scrollbarWidth: 'none' }}>
+            {adverts.map(ad => (
+              <button key={ad.id} type="button" onClick={() => openAdvert(ad)} aria-label={ad.title}
+                className="relative shrink-0 snap-start w-[88%] max-w-[460px] aspect-[16/7] rounded-2xl overflow-hidden text-left transition-transform hover:scale-[1.01]"
+                style={{ background: 'var(--surface-secondary)', cursor: ad.linkUrl ? 'pointer' : 'default' }}>
+                <img src={ad.imageUrl} alt={ad.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/15 to-transparent" />
+                <div className="relative flex h-full max-w-[70%] flex-col justify-end gap-0.5 p-4">
+                  <span className="text-[17px] font-black leading-tight text-white line-clamp-2">{ad.title}</span>
+                  {ad.subtitle && <span className="text-[12px] leading-snug text-white/85 line-clamp-2">{ad.subtitle}</span>}
                 </div>
-                <button className="shrink-0 h-8 px-4 rounded-full text-[12px] font-bold text-white transition-all hover:scale-105"
-                  style={{ background: offer.color }}>
-                  {offer.cta}
-                </button>
-              </div>
+              </button>
             ))}
           </div>
         </motion.div>
+        )}
 
-        {/* Latest news (the app's home shows the same) */}
-        {(isExploreLoading || exploreItems.length > 0) && (
+        {/* Weather for the user's town */}
+        {features.weather && forecast && (
+        <motion.div {...fadeUp(0.14)} className="px-4">
+          <div className="flex items-center gap-3.5 rounded-2xl px-4 py-3" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)' }}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B' }}>
+              <CloudSun size={22} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13.5px] font-bold" style={{ color: 'var(--text-primary)' }}>{weatherLabel(forecast.code)} · {forecast.place}</p>
+              <p className="text-[11.5px]" style={{ color: 'var(--text-secondary)' }}>H {forecast.max}° · L {forecast.min}°</p>
+            </div>
+            <span className="text-[26px] font-black tabular-nums" style={{ color: 'var(--text-primary)' }}>{forecast.temperature}°</span>
+          </div>
+        </motion.div>
+        )}
+
+        {/* Explore and News Feed (the app's home shows the same) */}
+        {features.newsFeed && (isExploreLoading || exploreItems.length > 0) && (
         <motion.div {...fadeUp(0.16)}>
           <Link href="/news" className="px-4 flex items-center justify-between mb-3">
-            <h2 className="text-[17px] font-black" style={{ color: 'var(--text-primary)' }}>Latest news</h2>
+            <h2 className="text-[17px] font-black" style={{ color: 'var(--text-primary)' }}>Explore and News Feed</h2>
             <ChevronRight size={18} style={{ color: 'var(--text-tertiary)' }} />
           </Link>
           <div className="pl-4 flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>

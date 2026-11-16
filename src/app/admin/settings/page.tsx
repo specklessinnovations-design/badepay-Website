@@ -18,7 +18,19 @@ interface PlatformSettings {
   pilot: { enabled: boolean; message: string; caps: Limits };
   approvals: { superadminAbove: number };
   supportEmail: string; supportPhone: string;
+  appFeatures: Record<AppId, Record<AppFeature, boolean>>;
 }
+
+type AppId = 'rccgpay' | 'badepay';
+type AppFeature = 'specialOffers' | 'newsFeed' | 'aiAssistant' | 'weather' | 'betting';
+const APPS: { id: AppId; label: string }[] = [{ id: 'rccgpay', label: 'RCCGPay' }, { id: 'badepay', label: 'BadePay' }];
+const FEATURES: { key: AppFeature; label: string; hint: string }[] = [
+  { key: 'specialOffers', label: 'Special Offers', hint: 'Banners on the home screen (Content → Special offers)' },
+  { key: 'newsFeed', label: 'Explore & News Feed', hint: 'News stories on the home screen' },
+  { key: 'aiAssistant', label: 'AI assistant', hint: 'The sparkle button, top right of the home screen' },
+  { key: 'weather', label: 'Weather', hint: 'Forecast card for the user’s location' },
+  { key: 'betting', label: 'Betting top-ups', hint: 'Fund Bet9ja, SportyBet… wallets (Nomba). Keep off for RCCGPay.' },
+];
 
 const TIER_LABEL = { '0': 'Level 0 — unverified', '1': 'Level 1 — BVN', '2': 'Level 2 — NIN + selfie', '3': 'Level 3 — admin approved' } as const;
 
@@ -156,6 +168,26 @@ export default function SettingsPage() {
               ))}
             </div>
             {limitErrors(draft.pilot.caps) && <p className="text-xs text-[#b91c1c]">{limitErrors(draft.pilot.caps)}</p>}
+          </div>
+        </Card>
+
+        <Card title="App features" description="Switch home-screen features and services on or off for each app. Apps pick up changes within a few minutes; no release needed." className="xl:col-span-2">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead><tr className="text-left text-xs text-(--ad-muted)"><th className="py-1.5 pr-3">Feature</th>{APPS.map((a) => <th key={a.id} className="px-3 text-center">{a.label}</th>)}</tr></thead>
+              <tbody>
+                {FEATURES.map((f) => (
+                  <tr key={f.key} className="border-t border-(--ad-border)">
+                    <td className="py-2.5 pr-3"><span className="font-medium">{f.label}</span><br /><span className="text-xs text-(--ad-muted)">{f.hint}</span></td>
+                    {APPS.map((a) => (
+                      <td key={a.id} className="px-3 text-center">
+                        <div className="inline-flex"><Toggle label={`${f.label} in ${a.label}`} checked={draft.appFeatures[a.id][f.key]} disabled={ro} onChange={(v) => set((d) => { d.appFeatures[a.id][f.key] = v; })} /></div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
 

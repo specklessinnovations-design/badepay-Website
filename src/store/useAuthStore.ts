@@ -40,6 +40,8 @@ export interface User {
   dateOfBirth?: string;
   isActive?: boolean;
   avatar?: string;
+  /** "Country, State, City" chosen at sign-up */
+  location?: string | null;
 }
 
 export interface AuthState {
@@ -95,6 +97,8 @@ export interface RegisterData {
   pin?: string;
   /** From the sign-up email code (authService.confirmSignupEmail). */
   emailVerificationToken: string;
+  /** From the sign-up SMS code (authService.confirmPhone). */
+  phoneVerificationToken?: string;
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => {
@@ -176,6 +180,7 @@ export const useAuthStore = create<AuthState>()((set, get) => {
             location: data.location,
             pin: data.pin,
             emailVerificationToken: data.emailVerificationToken,
+            phoneVerificationToken: data.phoneVerificationToken,
           });
           if (!response.token) throw new Error('Your account was created, but we could not sign you in. Please sign in.');
 

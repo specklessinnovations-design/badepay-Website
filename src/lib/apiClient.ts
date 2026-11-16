@@ -66,7 +66,8 @@ async function request<T = any>(
   const url = `${BASE_URL}${path.startsWith("/") ? path : "/" + path}`;
   const token = getAccessToken();
 
-  const headers: Record<string, string> = {};
+  // Which app this is (RCCGPay and BadePay share the backend); admins switch features per app.
+  const headers: Record<string, string> = { "X-App": import.meta.env.VITE_APP_ID === "rccgpay" ? "rccgpay" : "badepay" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   if (!isFormData) headers["Content-Type"] = "application/json";
   if (extraHeaders) Object.assign(headers, extraHeaders);

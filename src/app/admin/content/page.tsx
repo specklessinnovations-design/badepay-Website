@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
-import { PageHeader, Tabs, DataTable, StatusBadge, Badge, Button, Drawer, Field, TextInput, TextArea, Toggle, EmptyState, Can } from '@/components/admin/ui';
+import { PageHeader, Tabs, DataTable, StatusBadge, Badge, Button, Drawer, Field, TextInput, TextArea, Select, Toggle, EmptyState, Can } from '@/components/admin/ui';
 import { useAdminQuery, useAdminAction } from '@/components/admin/hooks';
 import { useConfirmAction } from '@/components/admin/ConfirmActionDialog';
 import adminApiClient from '@/lib/adminApiClient';
@@ -11,14 +11,29 @@ import { FileUpload } from '@/components/ui/file-upload';
 interface Post { id: string; title: string; slug: string; content: string; excerpt: string | null; coverImageUrl: string | null; category: string; tags: string[]; isPublished: boolean; featured: boolean; publishedAt: string | null; updatedAt: string }
 interface Video { id: string; title: string; description: string; videoUrl: string; thumbnailUrl: string | null; category: string; location: string | null; duration: number | null; isPublished: boolean; featured: boolean; publishedAt: string | null; updatedAt: string }
 type Kind = 'news' | 'videos';
+type Tab = Kind | 'offers';
+/** A "Special Offers" banner on the apps' home screens. */
+interface Advert { id: string; title: string; subtitle: string | null; imageUrl: string; linkUrl: string | null; apps: string[]; sortOrder: number; isActive: boolean; startsAt: string | null; endsAt: string | null; updatedAt: string }
+const APP_LABEL: Record<string, string> = { rccgpay: 'RCCGPay', badepay: 'BadePay' };
+
+/** Live / scheduled / ended / paused, from the switch and the dates. */
+function offerStatus(a: Advert): string {
+  if (!a.isActive) return 'paused';
+  const now = Date.now();
+  if (a.startsAt && Date.parse(a.startsAt) > now) return 'scheduled';
+  if (a.endsAt && Date.parse(a.endsAt) <= now) return 'ended';
+  return 'live';
+}
 
 
 export default function ContentPage() {
   const canManage = useCan('content.manage');
-  const [tab, setTab] = useState<Kind>('news');
+  const [tab, setTab] = useState<Tab>('news');
   const news = useAdminQuery<{ posts: Post[] }>('/admin/news');
   const videos = useAdminQuery<{ videos: Video[] }>('/admin/videos');
+  const offers = useAdminQuery<{ adverts: Advert[] }>('/admin/adverts');
   const [editing, setEditing] = useState<{ kind: Kind; item: Post | Video | null } | null>(null);
+  const [editingOffer, setEditingOffer] = useState<{ item: Advert | null } | null>(null);
   const { run, pending } = useAdminAction();
   const { confirm, dialog } = useConfirmAction();
 
@@ -34,6 +49,18 @@ export default function ContentPage() {
     if (ok) await run(`del-${item.id}`, () => adminApiClient.delete(`/admin/${kind}/${item.id}`, { reason: ok.note }), 'Deleted');
   };
 
+  const toggleOffer = async (a: Advert) => {
+    const ok = await confirm({
+      title: a.isActive ? 'Pause this offer?' : 'Show this offer?', tone: a.isActive ? 'danger' : 'success', confirmLabel: a.isActive ? 'Pause' : 'Show',
+      description: <>“{a.title}” {a.isActive ? 'disappears from the home screens.' : 'shows on the home screens (within its dates).'}</>,
+    });
+    if (ok) await run(`pub-${a.id}`, () => adminApiClient.put(`/admin/adverts/${a.id}`, { isActive: !a.isActive }), a.isActive ? 'Paused' : 'Live');
+  };
+  const removeOffer = async (a: Advert) => {
+    const ok = await confirm({ title: 'Delete permanently?', tone: 'danger', confirmLabel: 'Delete', requireNote: true, description: <>“{a.title}” is removed for good.</> });
+    if (ok) await run(`del-${a.id}`, () => adminApiClient.delete(`/admin/adverts/${a.id}`, { reason: ok.note }), 'Deleted');
+  };
+
   const actions = (kind: Kind, item: Post | Video) => canManage && (
     <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
       <Button size="sm" onClick={() => setEditing({ kind, item })}>Edit</Button>
@@ -46,12 +73,39 @@ export default function ContentPage() {
     <div>
       <PageHeader
         eyebrow="Content"
-        title="News & videos"
-        description="Articles and videos shown in the BadePay apps and website. Drafts are only visible here."
-        actions={<Can perm="content.manage"><Button variant="primary" icon={<Plus size={14} />} onClick={() => setEditing({ kind: tab, item: null })}>New {tab === 'news' ? 'article' : 'video'}</Button></Can>}
+        title="News, videos & offers"
+        description="Articles, videos and Special Offers banners shown in the apps and website. Drafts are only visible here."
+        actions={<Can perm="content.manage"><Button variant="primary" icon={<Plus size={14} />} onClick={() => (tab === 'offers' ? setEditingOffer({ item: null }) : setEditing({ kind: tab, item: null }))}>New {tab === 'news' ? 'article' : tab === 'videos' ? 'video' : 'offer'}</Button></Can>}
       />
-      <Tabs value={tab} onChange={setTab} tabs={[{ value: 'news', label: 'News', count: news.data?.posts.length }, { value: 'videos', label: 'Videos', count: videos.data?.videos.length }]} />
-      {tab === 'news' ? (
+      <Tabs value={tab} onChange={setTab} tabs={[{ value: 'news', label: 'News', count: news.data?.posts.length }, { value: 'videos', label: 'Videos', count: videos.data?.videos.length }, { value: 'offers', label: 'Special offers', count: offers.data?.adverts.length }]} />
+      {tab === 'offers' ? (
+        <DataTable
+          rows={offers.data?.adverts}
+          loading={offers.isLoading}
+          error={offers.error}
+          onRetry={() => offers.refetch()}
+          rowKey={(a) => a.id}
+          onRowClick={canManage ? (a) => setEditingOffer({ item: a }) : undefined}
+          empty={<EmptyState title="No offers yet" description="Offers appear as swipeable banners under “Special Offers” on the home screen." />}
+          columns={[
+            { key: 'image', header: <span className="sr-only">Image</span>, cell: (a) => <img src={a.imageUrl} alt="" className="h-10 w-24 rounded-md object-cover" /> },
+            { key: 'title', header: 'Offer', cell: (a) => <span><span className="font-medium text-(--ad-fg-strong)">{a.title}</span><br /><span className="text-xs text-(--ad-muted)">{a.linkUrl ?? 'No link'}</span></span> },
+            { key: 'apps', header: 'Apps', cell: (a) => <span className="text-xs">{a.apps.length ? a.apps.map((x) => APP_LABEL[x] ?? x).join(', ') : 'All apps'}</span> },
+            { key: 'status', header: 'Status', cell: (a) => <StatusBadge status={offerStatus(a)} /> },
+            { key: 'when', header: 'Runs', cell: (a) => <span className="text-xs text-(--ad-muted)">{a.startsAt ? formatDateTime(a.startsAt) : 'Now'} →<br />{a.endsAt ? formatDateTime(a.endsAt) : 'No end'}</span> },
+            { key: 'order', header: 'Order', align: 'right', cell: (a) => <span className="tabular-nums text-xs">{a.sortOrder}</span> },
+            {
+              key: 'actions', header: <span className="sr-only">Actions</span>, align: 'right', cell: (a) => canManage && (
+                <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Button size="sm" onClick={() => setEditingOffer({ item: a })}>Edit</Button>
+                  <Button size="sm" variant={a.isActive ? 'secondary' : 'success'} loading={pending === `pub-${a.id}`} onClick={() => toggleOffer(a)}>{a.isActive ? 'Pause' : 'Show'}</Button>
+                  <Button size="sm" variant="danger" loading={pending === `del-${a.id}`} onClick={() => removeOffer(a)}>Delete</Button>
+                </div>
+              ),
+            },
+          ]}
+        />
+      ) : tab === 'news' ? (
         <DataTable
           rows={news.data?.posts}
           loading={news.isLoading}
@@ -85,6 +139,7 @@ export default function ContentPage() {
         />
       )}
       {editing && <ContentEditor kind={editing.kind} item={editing.item} onClose={() => setEditing(null)} />}
+      {editingOffer && <OfferEditor item={editingOffer.item} onClose={() => setEditingOffer(null)} />}
       {dialog}
     </div>
   );
@@ -152,6 +207,70 @@ function ContentEditor({ kind, item, onClose }: { kind: Kind; item: Post | Video
           </div>
         </div>
       )}
+    </Drawer>
+  );
+}
+
+/** ISO → value for <input type="datetime-local"> (local time), and back. */
+const toLocalInput = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '');
+const fromLocalInput = (v: string) => (v ? new Date(v).toISOString() : null);
+
+function OfferEditor({ item, onClose }: { item: Advert | null; onClose: () => void }) {
+  const [f, setF] = useState({
+    title: item?.title ?? '', subtitle: item?.subtitle ?? '', imageUrl: item?.imageUrl ?? '', linkUrl: item?.linkUrl ?? '',
+    apps: item ? (item.apps.length === 1 ? item.apps[0]! : 'all') : 'all',
+    sortOrder: String(item?.sortOrder ?? 0), isActive: item?.isActive ?? true,
+    startsAt: toLocalInput(item?.startsAt ?? null), endsAt: toLocalInput(item?.endsAt ?? null),
+  });
+  const [uploading, setUploading] = useState(0);
+  const { run, pending } = useAdminAction();
+  const linkOk = !f.linkUrl || /^(\/\S*|https:\/\/\S+)$/.test(f.linkUrl.trim());
+  const datesOk = !f.startsAt || !f.endsAt || f.startsAt < f.endsAt;
+  const valid = f.title.trim().length >= 2 && f.imageUrl && linkOk && datesOk && uploading === 0;
+
+  const save = async () => {
+    const body = {
+      title: f.title.trim(), subtitle: f.subtitle.trim() || null, imageUrl: f.imageUrl, linkUrl: f.linkUrl.trim() || null,
+      apps: f.apps === 'all' ? [] : [f.apps], sortOrder: Number(f.sortOrder) || 0, isActive: f.isActive,
+      startsAt: fromLocalInput(f.startsAt), endsAt: fromLocalInput(f.endsAt),
+    };
+    const done = await run('save', () => (item ? adminApiClient.put(`/admin/adverts/${item.id}`, body) : adminApiClient.post('/admin/adverts', body)), 'Saved');
+    if (done) onClose();
+  };
+
+  return (
+    <Drawer open onClose={onClose} width="max-w-xl" title={`${item ? 'Edit' : 'New'} offer`}
+      footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!valid} loading={pending === 'save'} onClick={save}>{uploading ? 'Uploading…' : 'Save offer'}</Button></>}>
+      <div className="space-y-4">
+        {f.imageUrl && (
+          <div className="relative aspect-[16/7] overflow-hidden rounded-xl">
+            <img src={f.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/15 to-transparent" />
+            <div className="relative flex h-full max-w-[70%] flex-col justify-end p-4 text-white">
+              <span className="text-lg font-bold leading-tight">{f.title || 'Title'}</span>
+              {f.subtitle && <span className="text-xs opacity-85">{f.subtitle}</span>}
+            </div>
+          </div>
+        )}
+        <FileUpload kind="content_image" label="Banner image *" shape="wide" value={f.imageUrl} onChange={(url) => setF({ ...f, imageUrl: url })} onBusyChange={(b) => setUploading((n) => n + (b ? 1 : -1))} />
+        <p className="-mt-2 text-xs text-(--ad-muted)">Wide image, about 16:7 (e.g. 1600×700). Text on the left stays readable.</p>
+        <Field label="Title" required>{(id) => <TextInput id={id} maxLength={80} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />}</Field>
+        <Field label="Subtitle">{(id) => <TextInput id={id} maxLength={140} value={f.subtitle} onChange={(e) => setF({ ...f, subtitle: e.target.value })} />}</Field>
+        <Field label="Link" hint="An app screen such as /bills, /savings, /marketplace — or a website starting with https://" error={linkOk ? null : 'Start with / or https://'}>
+          {(id) => <TextInput id={id} placeholder="/bills" value={f.linkUrl} onChange={(e) => setF({ ...f, linkUrl: e.target.value })} />}
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Show in">
+            {(id) => <Select id={id} value={f.apps} onChange={(e) => setF({ ...f, apps: e.target.value })} options={[{ value: 'all', label: 'All apps' }, { value: 'rccgpay', label: 'RCCGPay only' }, { value: 'badepay', label: 'BadePay only' }]} />}
+          </Field>
+          <Field label="Order" hint="Lower shows first">{(id) => <TextInput id={id} type="number" min={0} max={999} value={f.sortOrder} onChange={(e) => setF({ ...f, sortOrder: e.target.value })} />}</Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Starts" hint="Empty = now">{(id) => <TextInput id={id} type="datetime-local" value={f.startsAt} onChange={(e) => setF({ ...f, startsAt: e.target.value })} />}</Field>
+          <Field label="Ends" hint="Empty = no end" error={datesOk ? null : 'Must be after the start'}>{(id) => <TextInput id={id} type="datetime-local" value={f.endsAt} onChange={(e) => setF({ ...f, endsAt: e.target.value })} />}</Field>
+        </div>
+        <label className="flex items-center gap-2 border-t border-(--ad-border) pt-3 text-sm"><Toggle label="Active" checked={f.isActive} onChange={(v) => setF({ ...f, isActive: v })} /> Active</label>
+      </div>
     </Drawer>
   );
 }

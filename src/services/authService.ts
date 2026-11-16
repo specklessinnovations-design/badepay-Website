@@ -201,6 +201,19 @@ export const authService = {
     return proof;
   },
 
+  /** Texts a 6-digit code to the phone number (sign-up). */
+  sendPhoneCode: async (phone: string): Promise<void> => {
+    await apiClient.post('/auth/phone/send-otp', { phone: phone.replace(/\s/g, '') });
+  },
+
+  /** Checks the SMS code; returns the proof /auth/register takes as `phoneVerificationToken`. */
+  confirmPhone: async (phone: string, code: string): Promise<string> => {
+    const resp = await apiClient.post('/auth/phone/verify', { phone: phone.replace(/\s/g, ''), code });
+    const proof = resp?.data?.phoneVerificationToken;
+    if (!proof) throw new Error('That code didn’t work. Request a new one and try again.');
+    return proof;
+  },
+
   /** Whether sign-up is invite-only right now (private pilot). */
   pilot: async (): Promise<{ inviteOnly: boolean; message: string | null }> => {
     const resp = await apiClient.get('/auth/pilot');
@@ -226,6 +239,7 @@ export const authService = {
     location?: string;
     pin?: string;
     emailVerificationToken: string;
+    phoneVerificationToken?: string;
   }): Promise<AuthResponse & { pinId?: string }> => {
     const resp = await apiClient.post('/auth/register', {
       ...data,

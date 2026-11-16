@@ -14,7 +14,8 @@ type Kind = 'news' | 'videos';
 type Tab = Kind | 'offers';
 /** A "Special Offers" banner on the apps' home screens. */
 interface Advert { id: string; title: string; subtitle: string | null; imageUrl: string; linkUrl: string | null; apps: string[]; sortOrder: number; isActive: boolean; startsAt: string | null; endsAt: string | null; updatedAt: string }
-const APP_LABEL: Record<string, string> = { rccgpay: 'RCCGPay', badepay: 'BadePay' };
+/** A white-label app registered in Settings → Apps. */
+interface AppRef { id: string; name: string }
 
 /** Live / scheduled / ended / paused, from the switch and the dates. */
 function offerStatus(a: Advert): string {
@@ -31,7 +32,8 @@ export default function ContentPage() {
   const [tab, setTab] = useState<Tab>('news');
   const news = useAdminQuery<{ posts: Post[] }>('/admin/news');
   const videos = useAdminQuery<{ videos: Video[] }>('/admin/videos');
-  const offers = useAdminQuery<{ adverts: Advert[] }>('/admin/adverts');
+  const offers = useAdminQuery<{ adverts: Advert[]; apps?: AppRef[] }>('/admin/adverts');
+  const appName = (id: string) => offers.data?.apps?.find((a) => a.id === id)?.name ?? id;
   const [editing, setEditing] = useState<{ kind: Kind; item: Post | Video | null } | null>(null);
   const [editingOffer, setEditingOffer] = useState<{ item: Advert | null } | null>(null);
   const { run, pending } = useAdminAction();
@@ -90,7 +92,7 @@ export default function ContentPage() {
           columns={[
             { key: 'image', header: <span className="sr-only">Image</span>, cell: (a) => <img src={a.imageUrl} alt="" className="h-10 w-24 rounded-md object-cover" /> },
             { key: 'title', header: 'Offer', cell: (a) => <span><span className="font-medium text-(--ad-fg-strong)">{a.title}</span><br /><span className="text-xs text-(--ad-muted)">{a.linkUrl ?? 'No link'}</span></span> },
-            { key: 'apps', header: 'Apps', cell: (a) => <span className="text-xs">{a.apps.length ? a.apps.map((x) => APP_LABEL[x] ?? x).join(', ') : 'All apps'}</span> },
+            { key: 'apps', header: 'Apps', cell: (a) => <span className="text-xs">{a.apps.length ? a.apps.map(appName).join(', ') : 'All apps'}</span> },
             { key: 'status', header: 'Status', cell: (a) => <StatusBadge status={offerStatus(a)} /> },
             { key: 'when', header: 'Runs', cell: (a) => <span className="text-xs text-(--ad-muted)">{a.startsAt ? formatDateTime(a.startsAt) : 'Now'} →<br />{a.endsAt ? formatDateTime(a.endsAt) : 'No end'}</span> },
             { key: 'order', header: 'Order', align: 'right', cell: (a) => <span className="tabular-nums text-xs">{a.sortOrder}</span> },
@@ -139,7 +141,7 @@ export default function ContentPage() {
         />
       )}
       {editing && <ContentEditor kind={editing.kind} item={editing.item} onClose={() => setEditing(null)} />}
-      {editingOffer && <OfferEditor item={editingOffer.item} onClose={() => setEditingOffer(null)} />}
+      {editingOffer && <OfferEditor item={editingOffer.item} apps={offers.data?.apps ?? []} onClose={() => setEditingOffer(null)} />}
       {dialog}
     </div>
   );
@@ -215,10 +217,11 @@ function ContentEditor({ kind, item, onClose }: { kind: Kind; item: Post | Video
 const toLocalInput = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : '');
 const fromLocalInput = (v: string) => (v ? new Date(v).toISOString() : null);
 
-function OfferEditor({ item, onClose }: { item: Advert | null; onClose: () => void }) {
+function OfferEditor({ item, apps, onClose }: { item: Advert | null; apps: AppRef[]; onClose: () => void }) {
   const [f, setF] = useState({
     title: item?.title ?? '', subtitle: item?.subtitle ?? '', imageUrl: item?.imageUrl ?? '', linkUrl: item?.linkUrl ?? '',
-    apps: item ? (item.apps.length === 1 ? item.apps[0]! : 'all') : 'all',
+    /** Empty = every app */
+    apps: item?.apps ?? ([] as string[]),
     sortOrder: String(item?.sortOrder ?? 0), isActive: item?.isActive ?? true,
     startsAt: toLocalInput(item?.startsAt ?? null), endsAt: toLocalInput(item?.endsAt ?? null),
   });
@@ -231,7 +234,7 @@ function OfferEditor({ item, onClose }: { item: Advert | null; onClose: () => vo
   const save = async () => {
     const body = {
       title: f.title.trim(), subtitle: f.subtitle.trim() || null, imageUrl: f.imageUrl, linkUrl: f.linkUrl.trim() || null,
-      apps: f.apps === 'all' ? [] : [f.apps], sortOrder: Number(f.sortOrder) || 0, isActive: f.isActive,
+      apps: f.apps, sortOrder: Number(f.sortOrder) || 0, isActive: f.isActive,
       startsAt: fromLocalInput(f.startsAt), endsAt: fromLocalInput(f.endsAt),
     };
     const done = await run('save', () => (item ? adminApiClient.put(`/admin/adverts/${item.id}`, body) : adminApiClient.post('/admin/adverts', body)), 'Saved');
@@ -259,12 +262,23 @@ function OfferEditor({ item, onClose }: { item: Advert | null; onClose: () => vo
         <Field label="Link" hint="An app screen such as /bills, /savings, /marketplace — or a website starting with https://" error={linkOk ? null : 'Start with / or https://'}>
           {(id) => <TextInput id={id} placeholder="/bills" value={f.linkUrl} onChange={(e) => setF({ ...f, linkUrl: e.target.value })} />}
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Show in">
-            {(id) => <Select id={id} value={f.apps} onChange={(e) => setF({ ...f, apps: e.target.value })} options={[{ value: 'all', label: 'All apps' }, { value: 'rccgpay', label: 'RCCGPay only' }, { value: 'badepay', label: 'BadePay only' }]} />}
-          </Field>
-          <Field label="Order" hint="Lower shows first">{(id) => <TextInput id={id} type="number" min={0} max={999} value={f.sortOrder} onChange={(e) => setF({ ...f, sortOrder: e.target.value })} />}</Field>
+        <div>
+          <p className="text-xs font-semibold text-(--ad-fg-strong)">Show in</p>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {[...apps, ...f.apps.filter((id) => !apps.some((a) => a.id === id)).map((id) => ({ id, name: id }))].map((a) => {
+              const on = f.apps.includes(a.id);
+              return (
+                <button key={a.id} type="button" aria-pressed={on}
+                  onClick={() => setF({ ...f, apps: on ? f.apps.filter((x) => x !== a.id) : [...f.apps, a.id] })}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${on ? 'border-[#0f766e] bg-[#0f766e]/10 text-[#0f766e]' : 'border-(--ad-border) text-(--ad-muted) hover:text-(--ad-fg-strong)'}`}>
+                  {a.name}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-xs text-(--ad-muted)">{f.apps.length ? `Only in ${f.apps.length === 1 ? 'this app' : 'these apps'}.` : 'None selected — shown in every app.'} Apps are added in Settings → Apps.</p>
         </div>
+        <Field label="Order" hint="Lower shows first">{(id) => <TextInput id={id} type="number" min={0} max={999} value={f.sortOrder} onChange={(e) => setF({ ...f, sortOrder: e.target.value })} />}</Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Starts" hint="Empty = now">{(id) => <TextInput id={id} type="datetime-local" value={f.startsAt} onChange={(e) => setF({ ...f, startsAt: e.target.value })} />}</Field>
           <Field label="Ends" hint="Empty = no end" error={datesOk ? null : 'Must be after the start'}>{(id) => <TextInput id={id} type="datetime-local" value={f.endsAt} onChange={(e) => setF({ ...f, endsAt: e.target.value })} />}</Field>
